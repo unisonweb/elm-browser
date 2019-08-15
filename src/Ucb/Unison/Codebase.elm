@@ -1,3 +1,6 @@
+-- | The root of the .unison/v1/ codebase.
+
+
 module Ucb.Unison.Codebase exposing
     ( Codebase
     , GetCodebaseError(..)

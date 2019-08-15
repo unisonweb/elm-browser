@@ -42,6 +42,7 @@ viewCodebase codebase =
         []
         [ row [ spacing 10 ] [ text "dependents", text codebase.dependents.git_url ]
         , row [ spacing 10 ] [ text "patches", text codebase.patches.git_url ]
+        , row [ spacing 10 ] [ text "paths", text codebase.paths.git_url ]
         , row [ spacing 10 ] [ text "terms", text codebase.terms.git_url ]
         , row [ spacing 10 ] [ text "type-index", text codebase.type_index.git_url ]
         , row [ spacing 10 ] [ text "type-mentions-index", text codebase.type_mentions_index.git_url ]

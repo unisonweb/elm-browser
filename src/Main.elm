@@ -5,7 +5,7 @@ import Http
 import Ucb.Main.Message exposing (Message(..))
 import Ucb.Main.Model exposing (Model)
 import Ucb.Main.View exposing (view)
-import Ucb.Unison.Codebase exposing (Codebase, GetCodebaseError, getCodebase)
+import Ucb.Unison.Codebase.Path exposing (getHeadPath)
 
 
 main : Program () Model Message
@@ -21,7 +21,7 @@ main =
 init : () -> ( Model, Cmd Message )
 init _ =
     ( { result = Nothing }
-    , Cmd.map DownloadedCodebase (getCodebase "unisonweb" "unisonbase")
+    , Cmd.map DownloadedHeadPath (getHeadPath "unisonweb" "unisonbase")
     )
 
 
@@ -33,5 +33,5 @@ subscriptions _ =
 update : Message -> Model -> ( Model, Cmd Message )
 update message model =
     case message of
-        DownloadedCodebase result ->
+        DownloadedHeadPath result ->
             ( { model | result = Just result }, Cmd.none )

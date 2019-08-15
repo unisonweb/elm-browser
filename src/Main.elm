@@ -1,21 +1,14 @@
 module Main exposing (..)
 
 import Browser
-import Html exposing (Html)
 import Http
-import Unison.GitHub
+import Ucb.Main.Message exposing (Message(..))
+import Ucb.Main.Model exposing (Model)
+import Ucb.Main.View exposing (view)
+import Ucb.Unison.Codebase exposing (Codebase, GetCodebaseError, getCodebase)
 
 
-type alias Model =
-    { result : Maybe (Result Http.Error Unison.GitHub.RepoContents)
-    }
-
-
-type Msg
-    = Msg (Result Http.Error Unison.GitHub.RepoContents)
-
-
-main : Program () Model Msg
+main : Program () Model Message
 main =
     Browser.element
         { init = init
@@ -25,25 +18,20 @@ main =
         }
 
 
-init : () -> ( Model, Cmd Msg )
+init : () -> ( Model, Cmd Message )
 init _ =
     ( { result = Nothing }
-    , Cmd.map Msg (Unison.GitHub.getRepoContents "unisonweb" "unisonbase" ".unison/v1")
+    , Cmd.map DownloadedCodebase (getCodebase "unisonweb" "unisonbase")
     )
 
 
-subscriptions : Model -> Sub Msg
+subscriptions : Model -> Sub Message
 subscriptions _ =
     Sub.none
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
-    case msg of
-        Msg result ->
+update : Message -> Model -> ( Model, Cmd Message )
+update message model =
+    case message of
+        DownloadedCodebase result ->
             ( { model | result = Just result }, Cmd.none )
-
-
-view : Model -> Html Msg
-view model =
-    Html.text <| Debug.toString model

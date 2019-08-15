@@ -1,4 +1,9 @@
-module Unison.GitHub exposing (..)
+module Ucb.GitHub exposing
+    ( Dirent
+    , File
+    , RepoContents(..)
+    , getRepoContents
+    )
 
 import Array exposing (Array)
 import Http
@@ -7,6 +12,10 @@ import Json.Decode.Pipeline as Decode
 
 
 {-| <https://developer.github.com/v3/repos/contents/#get-contents>
+
+    Get repository "contents" (file or directory), given an owner, repo, and
+    relative path.
+
 -}
 getRepoContents :
     String
@@ -20,6 +29,8 @@ getRepoContents owner repo path =
         }
 
 
+{-| Repo contents: a file or a directory.
+-}
 type RepoContents
     = FileContents File
     | DirectoryContents (Array Dirent)
@@ -33,6 +44,8 @@ repoContentsDecoder =
         ]
 
 
+{-| A file.
+-}
 type alias File =
     { content : String
     , download_url : String
@@ -66,6 +79,8 @@ fileDecoder =
         |> Decode.required "url" Decode.string
 
 
+{-| A directory entry.
+-}
 type alias Dirent =
     { download_url : Maybe String
     , git_url : String

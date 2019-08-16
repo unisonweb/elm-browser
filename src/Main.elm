@@ -1,5 +1,7 @@
 module Main exposing (..)
 
+-- Unison.* imports are unused, but there temporarily so 'elm make' typechecks
+
 import Browser
 import Http
 import Task
@@ -7,6 +9,8 @@ import Ucb.Main.Message exposing (Message(..))
 import Ucb.Main.Model exposing (Model)
 import Ucb.Main.View exposing (view)
 import Ucb.Unison.Codebase.Path exposing (httpGetHeadPath)
+import Unison.Codebase.Branch
+import Unison.Codebase.Causal
 
 
 main : Program () Model Message

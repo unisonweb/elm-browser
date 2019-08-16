@@ -14,8 +14,13 @@ Module guide:
 
 * `Ucb.Unison.*`
 
-  Unison stuff (needs better organization).
+  Unison-specific app stuff (needs better organization).
 
 * `Ucb.Util.*`
 
   Miscellaneous stuff missing from the core Elm ecosystem.
+
+* `Unison.*`
+
+  Core Unison language kit, suitable as a standalone library. Contains types and
+  pure functions that roughly match the Haskell source.

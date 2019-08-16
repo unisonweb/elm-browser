@@ -7,8 +7,10 @@ module Ucb.GitHub exposing
 
 import Array exposing (Array)
 import Http
-import Json.Decode as Decode exposing (Decoder, Value)
+import Json.Decode as Decode exposing (Decoder, Value, decodeString)
 import Json.Decode.Pipeline as Decode
+import Task exposing (Task)
+import Ucb.Util.Http as Http
 
 
 {-| <https://developer.github.com/v3/repos/contents/#get-contents>
@@ -21,11 +23,15 @@ getRepoContents :
     String
     -> String
     -> String
-    -> Cmd (Result Http.Error RepoContents)
+    -> Task Http.Error RepoContents
 getRepoContents owner repo path =
-    Http.get
-        { url = "https://api.github.com/repos/" ++ owner ++ "/" ++ repo ++ "/contents/" ++ path
-        , expect = Http.expectJson identity repoContentsDecoder
+    Http.task
+        { body = Http.emptyBody
+        , headers = []
+        , method = "GET"
+        , resolver = Http.jsonResolver repoContentsDecoder
+        , timeout = Nothing
+        , url = "https://api.github.com/repos/" ++ owner ++ "/" ++ repo ++ "/contents/" ++ path
         }
 
 

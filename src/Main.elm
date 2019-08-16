@@ -2,10 +2,11 @@ module Main exposing (..)
 
 import Browser
 import Http
+import Task
 import Ucb.Main.Message exposing (Message(..))
 import Ucb.Main.Model exposing (Model)
 import Ucb.Main.View exposing (view)
-import Ucb.Unison.Codebase.Path exposing (getHeadPath)
+import Ucb.Unison.Codebase.Path exposing (httpGetHeadPath)
 
 
 main : Program () Model Message
@@ -21,7 +22,8 @@ main =
 init : () -> ( Model, Cmd Message )
 init _ =
     ( { result = Nothing }
-    , Cmd.map DownloadedHeadPath (getHeadPath "unisonweb" "unisonbase")
+    , httpGetHeadPath "unisonweb" "unisonbase"
+        |> Task.attempt DownloadedHeadPath
     )
 
 

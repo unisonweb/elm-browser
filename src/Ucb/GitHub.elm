@@ -3,9 +3,11 @@ module Ucb.GitHub exposing
     , File
     , RepoContents(..)
     , getRepoContents
+    , httpGetRawFile
     )
 
 import Array exposing (Array)
+import Bytes exposing (Bytes)
 import Http
 import Json.Decode as Decode exposing (Decoder, Value, decodeString)
 import Json.Decode.Pipeline as Decode
@@ -13,10 +15,30 @@ import Task exposing (Task)
 import Ucb.Util.Http as Http
 
 
+{-| TODO(mitchell) docs
+-}
+httpGetRawFile :
+    String
+    -> String
+    -> String
+    -> Task Http.Error Bytes
+httpGetRawFile owner repo path =
+    Http.task
+        { body = Http.emptyBody
+        , headers = [ Http.header "Accept" "application/vnd.github.VERSION.raw+json" ]
+        , method = "GET"
+        , resolver = Http.simpleBytesResolver
+        , timeout = Nothing
+        , url = "https://api.github.com/repos/" ++ owner ++ "/" ++ repo ++ "/contents/" ++ path
+        }
+
+
 {-| <https://developer.github.com/v3/repos/contents/#get-contents>
 
     Get repository "contents" (file or directory), given an owner, repo, and
     relative path.
+
+    TODO(mitchell) rename to httpGetRepoContents
 
 -}
 getRepoContents :

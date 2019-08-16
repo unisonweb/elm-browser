@@ -8,12 +8,15 @@ module Ucb.Unison.Codebase.Path exposing
     )
 
 import Array exposing (Array)
+import Bytes exposing (Bytes)
 import Http
 import Task exposing (Task)
 import Ucb.GitHub
+import Ucb.Util.Task as Task
 
 
 {-| Something went wrong when getting the head path.
+TODO(mitchell) change name to GetPathError
 -}
 type GetHeadPathError
     = GetHeadPathError_Http Http.Error
@@ -32,18 +35,14 @@ smarter to do instead.
 httpGetHeadPath :
     String
     -> String
-    -> Task GetHeadPathError String
+    -> Task GetHeadPathError Bytes
 httpGetHeadPath owner repo =
     Ucb.GitHub.getRepoContents owner repo ".unison/v1/paths/_head"
         |> Task.mapError GetHeadPathError_Http
+        |> Task.andThen (parseHeadPath >> Task.fromResult)
         |> Task.andThen
-            (\contents ->
-                case parseHeadPath contents of
-                    Err err ->
-                        Task.fail err
-
-                    Ok path ->
-                        Task.succeed path
+            (\path ->
+                httpGetPath owner repo (".unison/v1/paths/" ++ path ++ ".ub")
             )
 
 
@@ -67,3 +66,13 @@ parseHeadPath2 dirents =
 
         _ ->
             Err (GetHeadPathError_Other "expected only one path")
+
+
+httpGetPath :
+    String
+    -> String
+    -> String
+    -> Task GetHeadPathError Bytes
+httpGetPath owner repo path =
+    Ucb.GitHub.httpGetRawFile owner repo path
+        |> Task.mapError GetHeadPathError_Http

@@ -1,5 +1,6 @@
 module Ucb.Main.View exposing (..)
 
+import Bytes
 import Element exposing (..)
 import Html exposing (Html)
 import Ucb.Main.Message exposing (Message)
@@ -19,15 +20,15 @@ view2 model =
         [ spacing 10 ]
         (case model.result of
             Nothing ->
-                [ text "I'm downloading unisonweb/unisonbase/.unison/v1/paths/_head" ]
+                [ text "I'm downloading the head path of unisonweb/unisonbase" ]
 
             Just (Err err) ->
-                [ text "I tried downloading unisonweb/unisonbase/.unison/v1/paths/_head but it failed:"
+                [ text "I tried downloading the head path of unisonweb/unisonbase it failed:"
                 , text (Debug.toString err)
                 ]
 
-            Just (Ok path) ->
-                [ text "I downloaded unisonweb/unisonbase/.unison/v1/paths/_head"
-                , text path
+            Just (Ok bytes) ->
+                [ text "I downloaded the head path of unisonweb/unisonbase"
+                , text ("It's " ++ String.fromInt (Bytes.width bytes) ++ " bytes")
                 ]
         )

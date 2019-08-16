@@ -4,11 +4,12 @@
 
 module Ucb.Unison.Codebase.Path exposing
     ( GetHeadPathError(..)
-    , getHeadPath
+    , httpGetHeadPath
     )
 
 import Array exposing (Array)
 import Http
+import Task exposing (Task)
 import Ucb.GitHub
 
 
@@ -28,42 +29,38 @@ assert that here, and fail if it isn't the case, but perhaps there is something
 smarter to do instead.
 
 -}
-getHeadPath :
+httpGetHeadPath :
     String
     -> String
-    -> Cmd (Result GetHeadPathError String)
-getHeadPath owner repo =
-    Cmd.map
-        parseHeadPath
-        (Ucb.GitHub.getRepoContents owner repo ".unison/v1/paths/_head")
+    -> Task GetHeadPathError String
+httpGetHeadPath owner repo =
+    Ucb.GitHub.getRepoContents owner repo ".unison/v1/paths/_head"
+        |> Task.mapError GetHeadPathError_Http
+        |> Task.andThen
+            (\contents ->
+                case parseHeadPath contents of
+                    Err err ->
+                        Task.fail err
+
+                    Ok path ->
+                        Task.succeed path
+            )
 
 
 parseHeadPath :
-    Result Http.Error Ucb.GitHub.RepoContents
-    -> Result GetHeadPathError String
-parseHeadPath result =
-    case result of
-        Err err ->
-            Err (GetHeadPathError_Http err)
-
-        Ok contents ->
-            parseHeadPath2 contents
-
-
-parseHeadPath2 :
     Ucb.GitHub.RepoContents
     -> Result GetHeadPathError String
-parseHeadPath2 contents =
+parseHeadPath contents =
     case contents of
         Ucb.GitHub.FileContents _ ->
             Err (GetHeadPathError_Other "expected dir, found file")
 
         Ucb.GitHub.DirectoryContents dirents ->
-            parseHeadPath3 dirents
+            parseHeadPath2 dirents
 
 
-parseHeadPath3 : Array Ucb.GitHub.Dirent -> Result GetHeadPathError String
-parseHeadPath3 dirents =
+parseHeadPath2 : Array Ucb.GitHub.Dirent -> Result GetHeadPathError String
+parseHeadPath2 dirents =
     case ( Array.get 0 dirents, Array.length dirents > 1 ) of
         ( Just dirent, False ) ->
             Ok dirent.name

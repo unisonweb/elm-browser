@@ -9,8 +9,7 @@ import Ucb.Main.Message exposing (Message(..))
 import Ucb.Main.Model exposing (Model)
 import Ucb.Main.View exposing (view)
 import Ucb.Unison.Codebase.Path exposing (httpGetHeadPath)
-import Unison.Codebase.Branch
-import Unison.Codebase.Causal
+import Unison.Codebase.Serialization.V1
 
 
 main : Program () Model Message

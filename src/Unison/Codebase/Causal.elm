@@ -7,7 +7,7 @@ import Unison.Hash exposing (Hash)
 
 {-| Haskell type: Unison.Codebase.Causal.Raw
 -}
-type Causal
-    = RawOne Branch
-    | RawCons Branch Hash
-    | RawMerge Branch (Set Hash)
+type RawCausal
+    = RawOne RawBranch
+    | RawCons RawBranch Hash
+    | RawMerge RawBranch (Set Hash)

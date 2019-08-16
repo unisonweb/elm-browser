@@ -1,7 +1,7 @@
 module Ucb.Main.Message exposing (..)
 
-import Ucb.Unison.Codebase exposing (Codebase, GetCodebaseError)
+import Ucb.Unison.Codebase.Path exposing (GetHeadPathError)
 
 
 type Message
-    = DownloadedCodebase (Result GetCodebaseError Codebase)
+    = DownloadedHeadPath (Result GetHeadPathError String)

@@ -1,4 +1,5 @@
--- | The root of the .unison/v1/ codebase.
+-- Utilities that have to do with the .unison/v1 folder. Currently hard-coded
+-- to fetch from GitHub.
 
 
 module Ucb.Unison.Codebase exposing

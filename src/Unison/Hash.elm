@@ -1,11 +1,14 @@
 module Unison.Hash exposing
     ( Hash
+    , Hash32
     , encodeHash
+    , hashHash
     )
 
 import Bitwise exposing (and, or, shiftLeftBy, shiftRightBy)
 import Bytes exposing (Bytes)
 import Bytes.Decode as Decode exposing (Decoder, Step(..))
+import Typeclasses.Classes.Hashing as Hashing
 
 
 {-| Haskell type: Unison.Hash.Hash
@@ -14,10 +17,16 @@ type alias Hash =
     Bytes
 
 
+{-| A base32hex-encoded hash.
+-}
+type alias Hash32 =
+    String
+
+
 {-| base32hex encode, with padding stripped.
 -}
 encodeHash :
-    Bytes
+    Hash
     -> String
 encodeHash bytes =
     case Decode.decode (decoder (Bytes.width bytes)) bytes of
@@ -162,7 +171,18 @@ step ( remaining, acc ) =
 chr : Int -> Char
 chr n =
     if n <= 9 then
+        -- digits
         Char.fromCode (n + 48)
 
     else
-        Char.fromCode (n + 55)
+        -- and lowercase letters
+        Char.fromCode (n + 87)
+
+
+{-| Hash-ception... hashing a Hash32 to an Int for use in hashable containers.
+This function just hard-codes a decent(-seeming) number of characters to use in
+the hash.
+-}
+hashHash : Hash32 -> Int
+hashHash =
+    (Hashing.string 6).hash

@@ -1,11 +1,15 @@
 module Unison.Reference exposing
     ( Id
     , Reference(..)
+    , referenceEquality
+    , referenceHashing
     )
 
 import Bytes.Encode
-import HashingContainers exposing (Equality, Hashing)
-import Unison.Hash exposing (Hash)
+import Misc exposing (tumble)
+import Typeclasses.Classes.Equality as Equality exposing (Equality)
+import Typeclasses.Classes.Hashing as Hashing exposing (Hashing)
+import Unison.Hash exposing (..)
 
 
 {-| Haskell type: Unison.Reference.Reference
@@ -15,24 +19,18 @@ type Reference
     | Derived Id
 
 
-{-| Just don't ask.
--}
-type alias ReferenceOrdering =
-    ( Int, String, Id )
-
-
 {-| Haskell type: Unison.Reference.Id
 -}
 type alias Id =
-    { hash : Hash
+    { hash : Hash32
     , pos : Int
     , size : Int
     }
 
 
-referenceEquality : HashingContainers.Equality Reference
+referenceEquality : Equality Reference
 referenceEquality =
-    HashingContainers.eq
+    Equality.eq
         (\rx ry ->
             case ( rx, ry ) of
                 ( Builtin x, Builtin y ) ->
@@ -47,6 +45,17 @@ referenceEquality =
         )
 
 
-referenceHashing : HashingContainers.Hashing Reference
+referenceHashing : Hashing Reference
 referenceHashing =
-    Debug.todo ""
+    Hashing.hash
+        (\reference ->
+            case reference of
+                Builtin name ->
+                    -- 100 means "use whole str"
+                    (Hashing.string 100).hash name
+
+                Derived id ->
+                    1
+                        |> tumble (hashHash id.hash)
+                        |> tumble id.pos
+        )

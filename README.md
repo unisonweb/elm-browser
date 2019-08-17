@@ -4,6 +4,10 @@
 
 Module guide:
 
+* `Misc`
+
+  Random junk! Find a home for me pls!
+
 * `Ucb.GitHub`
 
   Sin-bin for GitHub API bindings.

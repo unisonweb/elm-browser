@@ -6,4 +6,6 @@ type Pattern
 
 
 type SeqOp
-    = Undefined2
+    = Cons
+    | Snoc
+    | Concat

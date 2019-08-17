@@ -5,7 +5,7 @@ import Bytes exposing (..)
 import Bytes.Decode exposing (..)
 import HashingContainers.HashDict as HashDict exposing (HashDict)
 import HashingContainers.HashSet as HashSet exposing (HashSet)
-import Int64 exposing (Int64)
+import Int64 exposing (..)
 import Typeclasses.Classes.Equality exposing (Equality)
 import Typeclasses.Classes.Hashing exposing (Hashing)
 import Unison.Codebase.Branch as Branch exposing (RawBranch)
@@ -150,7 +150,7 @@ eitherDecoder leftDecoder rightDecoder =
 
 intDecoder : Decoder Int64
 intDecoder =
-    fail
+    map2 intsToInt64 (unsignedInt32 BE) (unsignedInt32 BE)
 
 
 kindDecoder : Decoder Kind
@@ -312,7 +312,20 @@ relationDecoder _ _ =
 
 seqOpDecoder : Decoder SeqOp
 seqOpDecoder =
-    fail
+    tagged <|
+        \n ->
+            case n of
+                0 ->
+                    succeed Cons
+
+                1 ->
+                    succeed Snoc
+
+                2 ->
+                    succeed Concat
+
+                _ ->
+                    Debug.todo "unknown seqOp"
 
 
 symbolDecoder : Decoder Symbol
@@ -354,7 +367,8 @@ termEditDecoder =
 
 textDecoder : Decoder String
 textDecoder =
-    fail
+    lengthDecoder
+        |> andThen string
 
 
 typeDecoder : Decoder Type

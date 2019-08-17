@@ -27,7 +27,7 @@ type alias Hash32 =
 -}
 encodeHash :
     Hash
-    -> String
+    -> Hash32
 encodeHash bytes =
     case Decode.decode (decoder (Bytes.width bytes)) bytes of
         Nothing ->

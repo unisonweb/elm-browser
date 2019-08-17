@@ -22,6 +22,7 @@ import Unison.Pattern exposing (..)
 import Unison.Reference exposing (..)
 import Unison.Referent exposing (..)
 import Unison.Symbol exposing (..)
+import Unison.Term exposing (..)
 import Unison.Type exposing (..)
 import Unison.Util.Relation exposing (..)
 import Unison.Util.Star3 exposing (..)
@@ -253,142 +254,153 @@ rawBranchDecoder =
 
 rawCausalDecoder : Decoder RawCausal
 rawCausalDecoder =
-    tagged <|
-        \n ->
-            case n of
-                0 ->
-                    map RawOne rawBranchDecoder
+    Debug.log "rawCausalDecoder" <|
+        tagged <|
+            \n ->
+                case n of
+                    0 ->
+                        map RawOne rawBranchDecoder
 
-                1 ->
-                    map2
-                        (\hash branch -> RawCons branch hash)
-                        hash32Decoder
-                        rawBranchDecoder
+                    1 ->
+                        map2
+                            (\hash branch -> RawCons branch hash)
+                            hash32Decoder
+                            rawBranchDecoder
 
-                2 ->
-                    map2
-                        (\hashes branch -> RawMerge branch hashes)
-                        (hashSetDecoder hash32Equality hash32Hashing hash32Decoder)
-                        rawBranchDecoder
+                    2 ->
+                        map2
+                            (\hashes branch -> RawMerge branch hashes)
+                            (hashSetDecoder hash32Equality hash32Hashing hash32Decoder)
+                            rawBranchDecoder
 
-                _ ->
-                    fail
+                    _ ->
+                        fail
 
 
 referenceDecoder : Decoder Reference
 referenceDecoder =
-    tagged <|
-        \n ->
-            case n of
-                0 ->
-                    map Builtin textDecoder
+    Debug.log "referenceDecoder" <|
+        tagged <|
+            \n ->
+                case n of
+                    0 ->
+                        map Builtin textDecoder
 
-                1 ->
-                    map Derived (map3 Id hash32Decoder lengthDecoder lengthDecoder)
+                    1 ->
+                        map Derived (map3 Id hash32Decoder lengthDecoder lengthDecoder)
 
-                _ ->
-                    fail
+                    _ ->
+                        fail
 
 
 referentDecoder : Decoder Referent
 referentDecoder =
-    tagged <|
-        \n ->
-            case n of
-                0 ->
-                    map Ref referenceDecoder
+    Debug.log "referentDecoder" <|
+        tagged <|
+            \n ->
+                case n of
+                    0 ->
+                        map Ref referenceDecoder
 
-                1 ->
-                    map3 Con referenceDecoder lengthDecoder constructorTypeDecoder
+                    1 ->
+                        map3 Con referenceDecoder lengthDecoder constructorTypeDecoder
 
-                _ ->
-                    fail
+                    _ ->
+                        fail
 
 
 relationDecoder : Decoder a -> Decoder b -> Decoder (Relation a b)
 relationDecoder _ _ =
-    fail
+    Debug.log "relationDecoder" <|
+        fail
 
 
 seqOpDecoder : Decoder SeqOp
 seqOpDecoder =
-    tagged <|
-        \n ->
-            case n of
-                0 ->
-                    succeed Cons
+    Debug.log "seqOpDecoder" <|
+        tagged <|
+            \n ->
+                case n of
+                    0 ->
+                        succeed Cons
 
-                1 ->
-                    succeed Snoc
+                    1 ->
+                        succeed Snoc
 
-                2 ->
-                    succeed Concat
+                    2 ->
+                        succeed Concat
 
-                _ ->
-                    Debug.todo "unknown seqOp"
+                    _ ->
+                        Debug.todo "unknown seqOp"
 
 
 symbolDecoder : Decoder Symbol
 symbolDecoder =
-    fail
+    Debug.log "symbolDecoder" <|
+        fail
 
 
 termEditDecoder : Decoder TermEdit
 termEditDecoder =
-    tagged <|
-        \n ->
-            case n of
-                1 ->
-                    map2
-                        TermEditReplace
-                        referenceDecoder
-                        (tagged <|
-                            \m ->
-                                case m of
-                                    1 ->
-                                        succeed Same
+    Debug.log "termEditDecoder" <|
+        tagged <|
+            \n ->
+                case n of
+                    1 ->
+                        map2
+                            TermEditReplace
+                            referenceDecoder
+                            (tagged <|
+                                \m ->
+                                    case m of
+                                        1 ->
+                                            succeed Same
 
-                                    2 ->
-                                        succeed Subtype
+                                        2 ->
+                                            succeed Subtype
 
-                                    3 ->
-                                        succeed Different
+                                        3 ->
+                                            succeed Different
 
-                                    _ ->
-                                        fail
-                        )
+                                        _ ->
+                                            fail
+                            )
 
-                2 ->
-                    succeed TermEditDeprecate
+                    2 ->
+                        succeed TermEditDeprecate
 
-                _ ->
-                    fail
+                    _ ->
+                        fail
 
 
 textDecoder : Decoder String
 textDecoder =
-    lengthDecoder
-        |> andThen string
+    Debug.log "textDecoder" <|
+        (lengthDecoder
+            |> andThen string
+        )
 
 
 typeDecoder : Decoder Type
 typeDecoder =
-    fail
+    Debug.log "typeDecoder" <|
+        fail
 
 
 typeEditDecoder : Decoder TypeEdit
 typeEditDecoder =
-    tagged <|
-        \n ->
-            case n of
-                1 ->
-                    map TypeEditReplace referenceDecoder
+    Debug.log "typeEditDecoder" <|
+        tagged <|
+            \n ->
+                case n of
+                    1 ->
+                        map TypeEditReplace referenceDecoder
 
-                2 ->
-                    succeed TypeEditDeprecate
+                    2 ->
+                        succeed TypeEditDeprecate
 
-                _ ->
-                    fail
+                    _ ->
+                        fail
 
 
 {-| TODO This is busted for ints that can't fit into JS nums, the actual type
@@ -397,23 +409,25 @@ right now.
 -}
 varIntDecoder : Decoder Int
 varIntDecoder =
-    unsignedInt8
-        |> andThen
-            (\n ->
-                if Bitwise.and n 128 == 128 then
-                    succeed n
+    Debug.log "varIntDecoder" <|
+        (unsignedInt8
+            |> andThen
+                (\n ->
+                    if Bitwise.and n 128 == 128 then
+                        succeed n
 
-                else
-                    varIntDecoder
-                        |> andThen
-                            (\m ->
-                                succeed
-                                    (Bitwise.or
-                                        (Bitwise.shiftLeftBy 7 m)
-                                        (Bitwise.and n 127)
-                                    )
-                            )
-            )
+                    else
+                        varIntDecoder
+                            |> andThen
+                                (\m ->
+                                    succeed
+                                        (Bitwise.or
+                                            (Bitwise.shiftLeftBy 7 m)
+                                            (Bitwise.and n 127)
+                                        )
+                                )
+                )
+        )
 
 
 

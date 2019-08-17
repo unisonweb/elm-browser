@@ -5,7 +5,7 @@ import Bytes exposing (..)
 import Bytes.Decode exposing (..)
 import HashingContainers.HashDict as HashDict exposing (HashDict)
 import HashingContainers.HashSet as HashSet exposing (HashSet)
-import Int64 exposing (Int64)
+import Int64 exposing (..)
 import Typeclasses.Classes.Equality exposing (Equality)
 import Typeclasses.Classes.Hashing exposing (Hashing)
 import Unison.Codebase.Branch as Branch exposing (RawBranch)
@@ -37,9 +37,8 @@ decodeRawCausal =
 --------------------------------------------------------------------------------
 -- Decoders
 --------------------------------------------------------------------------------
-
-
 booleanDecoder : Decoder Bool
+<<<<<<< Updated upstream
 booleanDecoder =
     tagged <|
         \n ->
@@ -73,7 +72,6 @@ branchStarDecoder equalityA hashingA decoderA decoderB =
             (map2 Tuple.pair referenceDecoder referenceDecoder)
         )
 
-
 charDecoder : Decoder Char
 charDecoder =
     map Char.fromCode varIntDecoder
@@ -86,6 +84,32 @@ constructorTypeDecoder =
             case n of
                 0 ->
                     succeed Data
+=======
+booleanDecoder = Decode.unsignedInt8 
+  |> Decode.andThen (\n -> case n of
+    0 -> Decode.succeed False
+    1 -> Decode.succeed True
+    _ -> Debug.todo "unknown Bool"
+  )
+
+branchStarDecoder : Decoder (Branch.Star Referent NameSegment)
+branchStarDecoder =
+    Debug.todo ""
+
+
+charDecoder : Decoder Char
+charDecoder =
+  
+
+
+constructorTypeDecoder : Decoder ConstructorType
+constructorTypeDecoder = Decode.unsignedInt8
+  |> Decode.andThen (\n -> case n of
+    0 -> Decode.succeed CT.Data
+    1 -> Decode.succeed CT.Effect
+    _ -> Debug.todo "unknown ConstructorType"
+  )
+>>>>>>> Stashed changes
 
                 1 ->
                     succeed Effect
@@ -97,7 +121,6 @@ constructorTypeDecoder =
 floatDecoder : Decoder Float
 floatDecoder =
     float64 BE
-
 
 hashDecoder : Decoder Hash
 hashDecoder =
@@ -120,7 +143,6 @@ hashDictDecoder keyEquality keyHashing keyDecoder valDecoder =
     map
         (HashDict.fromList keyEquality keyHashing)
         (listDecoder (map2 Tuple.pair keyDecoder valDecoder))
-
 
 hashSetDecoder :
     Equality a
@@ -150,9 +172,9 @@ eitherDecoder leftDecoder rightDecoder =
 
 intDecoder : Decoder Int64
 intDecoder =
-    fail
+  map2 (intsToInt64) (unsignedInt32 BE) (unsignedInt32 BE)
 
-
+<<<<<<< Updated upstream
 kindDecoder : Decoder Kind
 kindDecoder =
     tagged <|
@@ -160,17 +182,24 @@ kindDecoder =
             case n of
                 0 ->
                     succeed Star
-
                 1 ->
                     map2 Arrow kindDecoder kindDecoder
-
                 _ ->
                     fail
-
 
 lengthDecoder : Decoder Int
 lengthDecoder =
     fail
+=======
+maybeDecoder : Decoder a -> Decoder (Maybe a)
+maybeDecoder getA = Decode.unsignedInt8
+  |> Decode.andThen (\n -> case n of
+    0 -> Decode.succeed Nothing
+    1 -> Decode.succeed (Just getA)
+    _ -> Debug.todo "unknown Maybe"
+  )
+    
+>>>>>>> Stashed changes
 
 
 listDecoder : Decoder a -> Decoder (List a)
@@ -178,8 +207,7 @@ listDecoder decoder =
     lengthDecoder
         |> andThen
             (\n -> replicate n decoder)
-
-
+          
 maybeDecoder : Decoder a -> Decoder (Maybe a)
 maybeDecoder decoder =
     tagged <|
@@ -207,7 +235,6 @@ natDecoder =
         (unsignedInt32 BE)
         (unsignedInt32 BE)
 
-
 patchDecoder : Decoder Patch
 patchDecoder =
     map2
@@ -219,7 +246,6 @@ patchDecoder =
 patternDecoder : Decoder Pattern
 patternDecoder =
     fail
-
 
 rawBranchDecoder : Decoder RawBranch
 rawBranchDecoder =
@@ -301,8 +327,18 @@ referentDecoder =
                 1 ->
                     map3 Con referenceDecoder lengthDecoder constructorTypeDecoder
 
+<<<<<<< Updated upstream
                 _ ->
                     fail
+=======
+seqOpDecoder : Decoder SeqOp
+seqOpDecoder = Decode.unsignedInt8
+  |> Decode.andThen (\n -> case n of
+    0 -> Decode.succeed Cons
+    1 -> Decode.succeed Snoc
+    2 -> Decode.succed Concat
+  )
+>>>>>>> Stashed changes
 
 
 relationDecoder : Decoder a -> Decoder b -> Decoder (Relation a b)
@@ -311,10 +347,15 @@ relationDecoder _ _ =
 
 
 seqOpDecoder : Decoder SeqOp
-seqOpDecoder =
-    fail
-
-
+seqOpDecoder = 
+  tagged <| 
+    \n -> 
+      case n of
+        0 -> succeed Cons
+        1 -> succeed Snoc
+        2 -> succeed Concat
+        _ -> Debug.todo "unknown seqOp"
+  
 symbolDecoder : Decoder Symbol
 symbolDecoder =
     fail
@@ -354,7 +395,8 @@ termEditDecoder =
 
 textDecoder : Decoder String
 textDecoder =
-    fail
+  lengthDecoder
+  |> andThen string
 
 
 typeDecoder : Decoder Type

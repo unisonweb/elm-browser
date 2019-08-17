@@ -56,6 +56,6 @@ referenceHashing =
 
                 Derived id ->
                     1
-                        |> tumble (hashHash id.hash)
+                        |> tumble (hashHash32 id.hash)
                         |> tumble id.pos
         )

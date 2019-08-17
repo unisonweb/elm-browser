@@ -1,7 +1,13 @@
-module Unison.Codebase.Serialization.V1 exposing (..)
+module Unison.Codebase.Serialization.V1 exposing (decodeRawCausal)
 
+import Bitwise
 import Bytes exposing (..)
 import Bytes.Decode exposing (..)
+import HashingContainers.HashDict as HashDict exposing (HashDict)
+import HashingContainers.HashSet as HashSet exposing (HashSet)
+import Int64 exposing (Int64)
+import Typeclasses.Classes.Equality exposing (Equality)
+import Typeclasses.Classes.Hashing exposing (Hashing)
 import Unison.Codebase.Branch as Branch exposing (RawBranch)
 import Unison.Codebase.Causal exposing (..)
 import Unison.Codebase.Metadata exposing (..)
@@ -18,18 +24,19 @@ import Unison.Referent exposing (..)
 import Unison.Symbol exposing (..)
 import Unison.Type exposing (..)
 import Unison.Util.Relation exposing (..)
+import Unison.Util.Star3 exposing (..)
+import Word64 exposing (..)
 
 
-{-| FIXME
--}
-type alias Word64 =
-    ()
+decodeRawCausal : Bytes -> Maybe RawCausal
+decodeRawCausal =
+    decode rawCausalDecoder
 
 
-{-| FIXME
--}
-type alias Int64 =
-    ()
+
+--------------------------------------------------------------------------------
+-- Decoders
+--------------------------------------------------------------------------------
 
 
 booleanDecoder : Decoder Bool
@@ -47,19 +54,29 @@ booleanDecoder =
                     fail
 
 
-branchStarDecoder : Decoder (Branch.Star Referent NameSegment)
-branchStarDecoder =
-    Debug.todo ""
-
-
-bytesDecoder : Int -> Decoder Bytes
-bytesDecoder =
-    Debug.todo ""
+branchStarDecoder :
+    Equality a
+    -> Hashing a
+    -> Decoder a
+    -> Decoder b
+    -> Decoder (Branch.Star a b)
+branchStarDecoder equalityA hashingA decoderA decoderB =
+    map4
+        Star3_
+        (map
+            (HashSet.fromList equalityA hashingA)
+            (listDecoder decoderA)
+        )
+        (relationDecoder decoderA decoderB)
+        (relationDecoder decoderA referenceDecoder)
+        (relationDecoder decoderA
+            (map2 Tuple.pair referenceDecoder referenceDecoder)
+        )
 
 
 charDecoder : Decoder Char
 charDecoder =
-    Debug.todo ""
+    map Char.fromCode varIntDecoder
 
 
 constructorTypeDecoder : Decoder ConstructorType
@@ -79,17 +96,41 @@ constructorTypeDecoder =
 
 floatDecoder : Decoder Float
 floatDecoder =
-    Debug.todo ""
+    float64 BE
 
 
 hashDecoder : Decoder Hash
 hashDecoder =
-    andThen bytesDecoder lengthDecoder
+    lengthDecoder
+        |> andThen bytes
 
 
 hash32Decoder : Decoder Hash32
 hash32Decoder =
     map encodeHash hashDecoder
+
+
+hashDictDecoder :
+    Equality k
+    -> Hashing k
+    -> Decoder k
+    -> Decoder v
+    -> Decoder (HashDict k v)
+hashDictDecoder keyEquality keyHashing keyDecoder valDecoder =
+    map
+        (HashDict.fromList keyEquality keyHashing)
+        (listDecoder (map2 Tuple.pair keyDecoder valDecoder))
+
+
+hashSetDecoder :
+    Equality a
+    -> Hashing a
+    -> Decoder a
+    -> Decoder (HashSet a)
+hashSetDecoder equality hashing decoder =
+    map
+        (HashSet.fromList equality hashing)
+        (listDecoder decoder)
 
 
 eitherDecoder : Decoder a -> Decoder b -> Decoder (Result a b)
@@ -109,7 +150,7 @@ eitherDecoder leftDecoder rightDecoder =
 
 intDecoder : Decoder Int64
 intDecoder =
-    Debug.todo ""
+    fail
 
 
 kindDecoder : Decoder Kind
@@ -129,19 +170,14 @@ kindDecoder =
 
 lengthDecoder : Decoder Int
 lengthDecoder =
-    Debug.todo ""
+    fail
 
 
 listDecoder : Decoder a -> Decoder (List a)
 listDecoder decoder =
-    andThen
-        (\n -> replicate n decoder)
-        lengthDecoder
-
-
-mapDecoder : Decoder k -> Decoder v -> Decoder (List ( k, v ))
-mapDecoder keyDecoder valDecoder =
-    listDecoder (map2 Tuple.pair keyDecoder valDecoder)
+    lengthDecoder
+        |> andThen
+            (\n -> replicate n decoder)
 
 
 maybeDecoder : Decoder a -> Decoder (Maybe a)
@@ -166,7 +202,10 @@ nameSegmentDecoder =
 
 natDecoder : Decoder Word64
 natDecoder =
-    Debug.todo ""
+    map2
+        intsToWord64
+        (unsignedInt32 BE)
+        (unsignedInt32 BE)
 
 
 patchDecoder : Decoder Patch
@@ -179,17 +218,61 @@ patchDecoder =
 
 patternDecoder : Decoder Pattern
 patternDecoder =
-    Debug.todo ""
+    fail
 
 
 rawBranchDecoder : Decoder RawBranch
 rawBranchDecoder =
-    Debug.todo ""
+    map4
+        RawBranch
+        (branchStarDecoder
+            referentEquality
+            referentHashing
+            referentDecoder
+            nameSegmentDecoder
+        )
+        (branchStarDecoder
+            referenceEquality
+            referenceHashing
+            referenceDecoder
+            nameSegmentDecoder
+        )
+        (hashDictDecoder
+            nameSegmentEquality
+            nameSegmentHashing
+            nameSegmentDecoder
+            hashDecoder
+        )
+        (hashDictDecoder
+            nameSegmentEquality
+            nameSegmentHashing
+            nameSegmentDecoder
+            hashDecoder
+        )
 
 
 rawCausalDecoder : Decoder RawCausal
 rawCausalDecoder =
-    Debug.todo ""
+    tagged <|
+        \n ->
+            case n of
+                0 ->
+                    map RawOne rawBranchDecoder
+
+                1 ->
+                    map2
+                        (\hash branch -> RawCons branch hash)
+                        hash32Decoder
+                        rawBranchDecoder
+
+                2 ->
+                    map2
+                        (\hashes branch -> RawMerge branch hashes)
+                        (hashSetDecoder hash32Equality hash32Hashing hash32Decoder)
+                        rawBranchDecoder
+
+                _ ->
+                    fail
 
 
 referenceDecoder : Decoder Reference
@@ -223,18 +306,18 @@ referentDecoder =
 
 
 relationDecoder : Decoder a -> Decoder b -> Decoder (Relation a b)
-relationDecoder =
-    Debug.todo ""
+relationDecoder _ _ =
+    fail
 
 
 seqOpDecoder : Decoder SeqOp
 seqOpDecoder =
-    Debug.todo ""
+    fail
 
 
 symbolDecoder : Decoder Symbol
 symbolDecoder =
-    Debug.todo ""
+    fail
 
 
 termEditDecoder : Decoder TermEdit
@@ -271,12 +354,12 @@ termEditDecoder =
 
 textDecoder : Decoder String
 textDecoder =
-    Debug.todo ""
+    fail
 
 
 typeDecoder : Decoder Type
 typeDecoder =
-    Debug.todo ""
+    fail
 
 
 typeEditDecoder : Decoder TypeEdit
@@ -294,15 +377,51 @@ typeEditDecoder =
                     fail
 
 
+{-| TODO This is busted for ints that can't fit into JS nums, the actual type
+should return Int64. But I (mitchell) don't feel like writing bit-fiddly code
+right now.
+-}
+varIntDecoder : Decoder Int
+varIntDecoder =
+    unsignedInt8
+        |> andThen
+            (\n ->
+                if Bitwise.and n 128 == 128 then
+                    succeed n
+
+                else
+                    varIntDecoder
+                        |> andThen
+                            (\m ->
+                                succeed
+                                    (Bitwise.or
+                                        (Bitwise.shiftLeftBy 7 m)
+                                        (Bitwise.and n 127)
+                                    )
+                            )
+            )
+
+
+
+--------------------------------------------------------------------------------
+-- Helpers
+--------------------------------------------------------------------------------
+
+
 {-| Run a decoder N times.
 -}
 replicate : Int -> Decoder a -> Decoder (List a)
-replicate =
-    Debug.todo ""
+replicate n decoder =
+    if n == 0 then
+        succeed []
+
+    else
+        map2 (::) decoder (replicate (n - 1) decoder)
 
 
 {-| Helper decoder that first decodes a one-byte tag.
 -}
 tagged : (Int -> Decoder a) -> Decoder a
 tagged f =
-    andThen f unsignedInt8
+    unsignedInt8
+        |> andThen f

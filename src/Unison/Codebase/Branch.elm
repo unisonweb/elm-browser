@@ -1,7 +1,7 @@
 module Unison.Codebase.Branch exposing (..)
 
-import Dict exposing (Dict)
-import Set exposing (Set)
+import HashingContainers.HashDict exposing (HashDict)
+import HashingContainers.HashSet exposing (HashSet)
 import Unison.Codebase.NameSegment exposing (NameSegment)
 import Unison.Hash exposing (Hash)
 import Unison.Reference exposing (..)
@@ -27,6 +27,6 @@ type alias Star a n =
 type alias RawBranch =
     { terms : Star Referent NameSegment
     , types : Star Reference NameSegment
-    , children : Dict NameSegment Hash
-    , edits : Dict NameSegment Hash
+    , children : HashDict NameSegment Hash
+    , edits : HashDict NameSegment Hash
     }

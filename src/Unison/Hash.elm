@@ -2,13 +2,16 @@ module Unison.Hash exposing
     ( Hash
     , Hash32
     , encodeHash
-    , hashHash
+    , hash32Equality
+    , hash32Hashing
+    , hashHash32
     )
 
 import Bitwise exposing (and, or, shiftLeftBy, shiftRightBy)
 import Bytes exposing (Bytes)
 import Bytes.Decode as Decode exposing (Decoder, Step(..))
-import Typeclasses.Classes.Hashing as Hashing
+import Typeclasses.Classes.Equality as Equality exposing (Equality)
+import Typeclasses.Classes.Hashing as Hashing exposing (Hashing)
 
 
 {-| Haskell type: Unison.Hash.Hash
@@ -21,6 +24,16 @@ type alias Hash =
 -}
 type alias Hash32 =
     String
+
+
+hash32Equality : Equality Hash32
+hash32Equality =
+    Equality.eq (==)
+
+
+hash32Hashing : Hashing Hash32
+hash32Hashing =
+    Hashing.hash hashHash32
 
 
 {-| base32hex encode, with padding stripped.
@@ -183,6 +196,6 @@ chr n =
 This function just hard-codes a decent(-seeming) number of characters to use in
 the hash.
 -}
-hashHash : Hash32 -> Int
-hashHash =
+hashHash32 : Hash32 -> Int
+hashHash32 =
     (Hashing.string 6).hash

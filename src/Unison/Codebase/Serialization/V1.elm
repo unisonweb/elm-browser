@@ -37,6 +37,8 @@ decodeRawCausal =
 --------------------------------------------------------------------------------
 -- Decoders
 --------------------------------------------------------------------------------
+
+
 booleanDecoder : Decoder Bool
 booleanDecoder =
     tagged <|
@@ -71,6 +73,7 @@ branchStarDecoder equalityA hashingA decoderA decoderB =
             (map2 Tuple.pair referenceDecoder referenceDecoder)
         )
 
+
 charDecoder : Decoder Char
 charDecoder =
     map Char.fromCode varIntDecoder
@@ -95,6 +98,7 @@ floatDecoder : Decoder Float
 floatDecoder =
     float64 BE
 
+
 hashDecoder : Decoder Hash
 hashDecoder =
     lengthDecoder
@@ -116,6 +120,7 @@ hashDictDecoder keyEquality keyHashing keyDecoder valDecoder =
     map
         (HashDict.fromList keyEquality keyHashing)
         (listDecoder (map2 Tuple.pair keyDecoder valDecoder))
+
 
 hashSetDecoder :
     Equality a
@@ -145,7 +150,8 @@ eitherDecoder leftDecoder rightDecoder =
 
 intDecoder : Decoder Int64
 intDecoder =
-  map2 (intsToInt64) (unsignedInt32 BE) (unsignedInt32 BE)
+    map2 intsToInt64 (unsignedInt32 BE) (unsignedInt32 BE)
+
 
 kindDecoder : Decoder Kind
 kindDecoder =
@@ -154,10 +160,13 @@ kindDecoder =
             case n of
                 0 ->
                     succeed Star
+
                 1 ->
                     map2 Arrow kindDecoder kindDecoder
+
                 _ ->
                     fail
+
 
 lengthDecoder : Decoder Int
 lengthDecoder =
@@ -169,7 +178,8 @@ listDecoder decoder =
     lengthDecoder
         |> andThen
             (\n -> replicate n decoder)
-          
+
+
 maybeDecoder : Decoder a -> Decoder (Maybe a)
 maybeDecoder decoder =
     tagged <|
@@ -197,6 +207,7 @@ natDecoder =
         (unsignedInt32 BE)
         (unsignedInt32 BE)
 
+
 patchDecoder : Decoder Patch
 patchDecoder =
     map2
@@ -208,6 +219,7 @@ patchDecoder =
 patternDecoder : Decoder Pattern
 patternDecoder =
     fail
+
 
 rawBranchDecoder : Decoder RawBranch
 rawBranchDecoder =
@@ -293,22 +305,29 @@ referentDecoder =
                     fail
 
 
-
 relationDecoder : Decoder a -> Decoder b -> Decoder (Relation a b)
 relationDecoder _ _ =
     fail
 
 
 seqOpDecoder : Decoder SeqOp
-seqOpDecoder = 
-  tagged <| 
-    \n -> 
-      case n of
-        0 -> succeed Cons
-        1 -> succeed Snoc
-        2 -> succeed Concat
-        _ -> Debug.todo "unknown seqOp"
-  
+seqOpDecoder =
+    tagged <|
+        \n ->
+            case n of
+                0 ->
+                    succeed Cons
+
+                1 ->
+                    succeed Snoc
+
+                2 ->
+                    succeed Concat
+
+                _ ->
+                    Debug.todo "unknown seqOp"
+
+
 symbolDecoder : Decoder Symbol
 symbolDecoder =
     fail
@@ -348,8 +367,8 @@ termEditDecoder =
 
 textDecoder : Decoder String
 textDecoder =
-  lengthDecoder
-  |> andThen string
+    lengthDecoder
+        |> andThen string
 
 
 typeDecoder : Decoder Type

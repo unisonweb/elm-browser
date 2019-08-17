@@ -36,7 +36,7 @@ booleanDecoder =
     Debug.todo ""
 
 
-branchStarDecoder : Decoder (Branch.Star ReferentOrdering NameSegment Referent NameSegment)
+branchStarDecoder : Decoder (Branch.Star Referent NameSegment)
 branchStarDecoder =
     Debug.todo ""
 

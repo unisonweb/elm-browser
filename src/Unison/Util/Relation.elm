@@ -1,12 +1,13 @@
 module Unison.Util.Relation exposing (..)
 
 import Dict.Any exposing (AnyDict)
+import HashingContainers
 import Set.Any exposing (AnySet)
 
 
 {-| Haskell type: Unison.Util.Relation.Relation
 -}
-type alias Relation compareA compareB a b =
-    { domain : AnyDict compareA a (AnySet compareB b)
-    , range : AnyDict compareB b (AnySet compareA a)
+type alias Relation a b =
+    { domain : HashingContainers.HashDict a (HashingContainers.HashSet b)
+    , range : HashingContainers.HashDict b (HashingContainers.HashSet a)
     }

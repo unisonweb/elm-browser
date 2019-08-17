@@ -1,12 +1,10 @@
 module Unison.Reference exposing
     ( Id
     , Reference(..)
-    , ReferenceOrdering
-    , bogusReferenceOrdering
-    , referenceOrdering
     )
 
 import Bytes.Encode
+import HashingContainers exposing (Equality, Hashing)
 import Unison.Hash exposing (Hash)
 
 
@@ -32,28 +30,23 @@ type alias Id =
     }
 
 
-bogusId : Id
-bogusId =
-    { hash = Bytes.Encode.encode (Bytes.Encode.sequence [])
-    , pos = 0
-    , size = 0
-    }
+referenceEquality : HashingContainers.Equality Reference
+referenceEquality =
+    HashingContainers.eq
+        (\rx ry ->
+            case ( rx, ry ) of
+                ( Builtin x, Builtin y ) ->
+                    x == y
+
+                ( Derived x, Derived y ) ->
+                    -- hash implies size
+                    x.hash == y.hash && x.pos == y.pos
+
+                _ ->
+                    False
+        )
 
 
-referenceOrdering : Reference -> ReferenceOrdering
-referenceOrdering reference =
-    let
-        bogusString =
-            ""
-    in
-    case reference of
-        Builtin string ->
-            ( 0, string, bogusId )
-
-        Derived id ->
-            ( 1, bogusString, id )
-
-
-bogusReferenceOrdering : ReferenceOrdering
-bogusReferenceOrdering =
-    ( -1, "", bogusId )
+referenceHashing : HashingContainers.Hashing Reference
+referenceHashing =
+    Debug.todo ""

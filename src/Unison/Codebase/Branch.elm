@@ -18,15 +18,15 @@ type alias Value =
     Reference
 
 
-type alias Star ca cn a n =
-    Star3_ ca cn ReferenceOrdering ( ReferenceOrdering, ReferenceOrdering ) a n Type ( Type, Value )
+type alias Star a n =
+    Star3_ a n Type ( Type, Value )
 
 
 {-| Haskell type: Unison.Codebase.Branch.Raw
 -}
 type alias RawBranch =
-    { terms : Star ReferentOrdering NameSegment Referent NameSegment
-    , types : Star ReferentOrdering NameSegment Reference NameSegment
+    { terms : Star Referent NameSegment
+    , types : Star Reference NameSegment
     , children : Dict NameSegment Hash
     , edits : Dict NameSegment Hash
     }

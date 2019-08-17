@@ -108,7 +108,7 @@ floatDecoder =
 hashDecoder : Decoder Hash
 hashDecoder =
     Debug.log "hash" <|
-        (lengthDecoder
+        (varIntDecoder
             |> andThen bytes
         )
 
@@ -183,16 +183,11 @@ kindDecoder =
         )
 
 
-lengthDecoder : Decoder Int
-lengthDecoder =
-    Debug.log "length" <|
-        fail
-
 
 listDecoder : Decoder a -> Decoder (List a)
 listDecoder decoder =
     Debug.log "list" <|
-        (lengthDecoder
+        (varIntDecoder
             |> andThen
                 (\n -> replicate n decoder)
         )
@@ -310,7 +305,7 @@ referenceDecoder =
                         map Builtin textDecoder
 
                     1 ->
-                        map Derived (map3 Id hash32Decoder lengthDecoder lengthDecoder)
+                        map Derived (map3 Id hash32Decoder varIntDecoder varIntDecoder)
 
                     _ ->
                         fail
@@ -326,7 +321,7 @@ referentDecoder =
                         map Ref referenceDecoder
 
                     1 ->
-                        map3 Con referenceDecoder lengthDecoder constructorTypeDecoder
+                        map3 Con referenceDecoder varIntDecoder constructorTypeDecoder
 
                     _ ->
                         fail
@@ -399,7 +394,7 @@ termEditDecoder =
 textDecoder : Decoder String
 textDecoder =
     Debug.log "text" <|
-        (lengthDecoder
+        (varIntDecoder
             |> andThen string
         )
 

@@ -5,4 +5,7 @@ type Pattern
     = Undefined1
 
 
-type SeqOp = Cons | Snoc | Concat
+type SeqOp
+    = Cons
+    | Snoc
+    | Concat

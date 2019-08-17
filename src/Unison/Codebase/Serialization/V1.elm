@@ -38,7 +38,6 @@ decodeRawCausal =
 -- Decoders
 --------------------------------------------------------------------------------
 booleanDecoder : Decoder Bool
-<<<<<<< Updated upstream
 booleanDecoder =
     tagged <|
         \n ->
@@ -84,32 +83,6 @@ constructorTypeDecoder =
             case n of
                 0 ->
                     succeed Data
-=======
-booleanDecoder = Decode.unsignedInt8 
-  |> Decode.andThen (\n -> case n of
-    0 -> Decode.succeed False
-    1 -> Decode.succeed True
-    _ -> Debug.todo "unknown Bool"
-  )
-
-branchStarDecoder : Decoder (Branch.Star Referent NameSegment)
-branchStarDecoder =
-    Debug.todo ""
-
-
-charDecoder : Decoder Char
-charDecoder =
-  
-
-
-constructorTypeDecoder : Decoder ConstructorType
-constructorTypeDecoder = Decode.unsignedInt8
-  |> Decode.andThen (\n -> case n of
-    0 -> Decode.succeed CT.Data
-    1 -> Decode.succeed CT.Effect
-    _ -> Debug.todo "unknown ConstructorType"
-  )
->>>>>>> Stashed changes
 
                 1 ->
                     succeed Effect
@@ -174,7 +147,6 @@ intDecoder : Decoder Int64
 intDecoder =
   map2 (intsToInt64) (unsignedInt32 BE) (unsignedInt32 BE)
 
-<<<<<<< Updated upstream
 kindDecoder : Decoder Kind
 kindDecoder =
     tagged <|
@@ -190,16 +162,6 @@ kindDecoder =
 lengthDecoder : Decoder Int
 lengthDecoder =
     fail
-=======
-maybeDecoder : Decoder a -> Decoder (Maybe a)
-maybeDecoder getA = Decode.unsignedInt8
-  |> Decode.andThen (\n -> case n of
-    0 -> Decode.succeed Nothing
-    1 -> Decode.succeed (Just getA)
-    _ -> Debug.todo "unknown Maybe"
-  )
-    
->>>>>>> Stashed changes
 
 
 listDecoder : Decoder a -> Decoder (List a)
@@ -327,18 +289,9 @@ referentDecoder =
                 1 ->
                     map3 Con referenceDecoder lengthDecoder constructorTypeDecoder
 
-<<<<<<< Updated upstream
                 _ ->
                     fail
-=======
-seqOpDecoder : Decoder SeqOp
-seqOpDecoder = Decode.unsignedInt8
-  |> Decode.andThen (\n -> case n of
-    0 -> Decode.succeed Cons
-    1 -> Decode.succeed Snoc
-    2 -> Decode.succed Concat
-  )
->>>>>>> Stashed changes
+
 
 
 relationDecoder : Decoder a -> Decoder b -> Decoder (Relation a b)

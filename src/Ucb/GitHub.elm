@@ -21,14 +21,15 @@ httpGetFile :
     String
     -> String
     -> String
+    -> String
     -> Bytes.Decode.Decoder a
     -> Task (Http.Error Bytes) (Http.Response a)
-httpGetFile owner repo path decoder =
+httpGetFile owner repo ref path decoder =
     Http.getBytes
         { decoder = decoder
-        , headers = [ ( "Accept", "application/vnd.github.VERSION.raw+json" ) ]
+        , headers = []
         , timeout = Nothing
-        , url = "https://api.github.com/repos/" ++ owner ++ "/" ++ repo ++ "/contents/" ++ path
+        , url = "https://raw.githubusercontent.com/" ++ owner ++ "/" ++ repo ++ "/master/" ++ path
         }
 
 

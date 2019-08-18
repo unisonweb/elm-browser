@@ -63,6 +63,8 @@ update message model =
                 Ok response ->
                     ( { model
                         | head = Just response.body
+                        , rateLimit =
+                            Dict.get "x-ratelimit-remaining" response.headers
                       }
                     , httpGetRawCausal owner repo response.body
                         |> Task.attempt Http_GetRawCausal
@@ -84,8 +86,6 @@ update message model =
                                     response.body
                                     model.codebase.branches
                             }
-                        , rateLimit =
-                            Dict.get "x-ratelimit-remaining" response.headers
                       }
                     , Cmd.none
                     )

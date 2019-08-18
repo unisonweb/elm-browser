@@ -102,6 +102,8 @@ httpGetRawCausal owner repo hash =
     Ucb.GitHub.httpGetFile
         owner
         repo
+        -- TODO probably want to get default branch somehow?
+        "master"
         (".unison/v1/paths/" ++ hash ++ ".ub")
         V1.rawCausalDecoder
         |> Task.mapError GetRawCausalError_Http

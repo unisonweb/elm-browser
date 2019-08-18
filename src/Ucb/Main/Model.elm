@@ -23,6 +23,9 @@ type alias Model =
 
     -- The errors we've seen.
     , errors : List Error
+
+    -- GitHub rate limit (??)
+    , rateLimit : Maybe String
     }
 
 

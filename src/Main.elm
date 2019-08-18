@@ -3,6 +3,7 @@ module Main exposing (..)
 -- Unison.* imports are unused, but there temporarily so 'elm make' typechecks
 
 import Browser
+import Dict
 import HashingContainers.HashDict as HashDict
 import Task
 import Ucb.Main.Message exposing (Message(..))
@@ -33,12 +34,13 @@ init _ =
                     HashDict.empty hash32Equality hash32Hashing
                 }
             , errors = []
+            , rateLimit = Nothing
             }
 
         initialCommand : Cmd Message
         initialCommand =
             httpGetHeadHash owner repo
-                |> Task.attempt GetHeadHash
+                |> Task.attempt Http_GetHeadHash
     in
     ( initialModel, initialCommand )
 
@@ -51,19 +53,7 @@ subscriptions _ =
 update : Message -> Model -> ( Model, Cmd Message )
 update message model =
     case message of
-        -- Fetch the branch if we haven't already.
-        ClickBranchHash hash ->
-            case HashDict.get hash model.codebase.branches of
-                Nothing ->
-                    ( model
-                    , httpGetRawCausal owner repo hash
-                        |> Task.attempt GetRawCausal
-                    )
-
-                Just _ ->
-                    ( model, Cmd.none )
-
-        GetHeadHash result ->
+        Http_GetHeadHash result ->
             case result of
                 Err err ->
                     ( accumulateError (Err_GetHeadHash err) model
@@ -75,10 +65,10 @@ update message model =
                         | head = Just response.body
                       }
                     , httpGetRawCausal owner repo response.body
-                        |> Task.attempt GetRawCausal
+                        |> Task.attempt Http_GetRawCausal
                     )
 
-        GetRawCausal result ->
+        Http_GetRawCausal result ->
             case result of
                 Err err ->
                     ( accumulateError (Err_GetRawCausal err) model
@@ -94,9 +84,30 @@ update message model =
                                     response.body
                                     model.codebase.branches
                             }
+                        , rateLimit =
+                            Dict.get "x-ratelimit-remaining" response.headers
                       }
                     , Cmd.none
                     )
+
+        -- Fetch the branch if we haven't already, and possibly focus it.
+        User_GetBranch { hash, focus } ->
+            let
+                command : Cmd Message
+                command =
+                    case HashDict.get hash model.codebase.branches of
+                        Nothing ->
+                            httpGetRawCausal owner repo hash
+                                |> Task.attempt Http_GetRawCausal
+
+                        Just _ ->
+                            Cmd.none
+            in
+            if focus then
+                ( { model | head = Just hash }, command )
+
+            else
+                ( model, command )
 
 
 {-| Hard-coded test repo, not permanent.

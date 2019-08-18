@@ -4,6 +4,7 @@ import Bytes
 import Element exposing (..)
 import Element.Events exposing (..)
 import HashingContainers.HashDict as HashDict exposing (HashDict)
+import HashingContainers.HashSet as HashSet exposing (HashSet)
 import Html exposing (Html)
 import Misc exposing (hashSetSize)
 import Ucb.Main.Message exposing (..)
@@ -45,6 +46,9 @@ view2 model =
                             :: List.map viewError (List.reverse model.errors)
                         )
                     )
+            , Maybe.map
+                (\limit -> text ("GitHub rate limit: " ++ limit))
+                model.rateLimit
             ]
         )
 
@@ -79,17 +83,14 @@ viewRawBranch branches branch =
             List.map Tuple.first (HashDict.toList branch.edits)
     in
     column []
-        [ text "Terms"
-        , column [] (List.map text terms)
-        , text "Types"
+        [ column [] (List.map text terms)
         , column [] (List.map text types)
-        , text "Children"
         , column
             []
             (List.map
                 (\( name, hash ) ->
                     el
-                        [ onClick (ClickBranchHash hash) ]
+                        [ onClick (User_GetBranch { hash = hash, focus = False }) ]
                         (column
                             []
                             [ text name
@@ -110,7 +111,6 @@ viewRawBranch branches branch =
                 )
                 children
             )
-        , text (String.fromInt (List.length children) ++ " edits")
         , column [] (List.map text edits)
         ]
 
@@ -120,7 +120,42 @@ viewRawCausal :
     -> RawCausal
     -> Element Message
 viewRawCausal branches causal =
-    viewRawBranch branches (rawCausalHead causal)
+    let
+        viewPrevBranch : Hash32 -> Element Message
+        viewPrevBranch hash =
+            el
+                [ onClick (User_GetBranch { hash = hash, focus = True }) ]
+                (text hash)
+    in
+    case causal of
+        RawOne branch ->
+            viewRawBranch branches branch
+
+        RawCons branch hash ->
+            column
+                [ spacing 10 ]
+                [ row
+                    [ spacing 10 ]
+                    [ text "Prev"
+                    , viewPrevBranch hash
+                    ]
+                , viewRawBranch
+                    branches
+                    branch
+                ]
+
+        RawMerge branch hashes ->
+            column
+                [ spacing 10 ]
+                [ row
+                    [ spacing 10 ]
+                    [ text "Prev"
+                    , row [] (List.map viewPrevBranch (HashSet.toList hashes))
+                    ]
+                , viewRawBranch
+                    branches
+                    branch
+                ]
 
 
 viewMaybe :

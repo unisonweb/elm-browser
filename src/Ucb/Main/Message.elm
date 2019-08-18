@@ -7,6 +7,6 @@ import Unison.Hash exposing (..)
 
 
 type Message
-    = ClickBranchHash Hash32
-    | GetHeadHash (Result GetHeadHashError (Http.Response Hash32))
-    | GetRawCausal (Result GetRawCausalError ( Hash32, Http.Response RawCausal ))
+    = User_GetBranch { hash : Hash32, focus : Bool }
+    | Http_GetHeadHash (Result GetHeadHashError (Http.Response Hash32))
+    | Http_GetRawCausal (Result GetRawCausalError ( Hash32, Http.Response RawCausal ))

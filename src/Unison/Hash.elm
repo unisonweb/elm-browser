@@ -47,12 +47,7 @@ encodeHash bytes =
             impossible ()
 
         Just string ->
-            Debug.log
-                (String.filter
-                    (\c -> not (Char.isDigit c || Char.isLower c))
-                    string
-                )
-                (Debug.log string string)
+            string
 
 
 impossible : () -> String

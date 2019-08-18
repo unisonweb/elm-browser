@@ -1,6 +1,6 @@
 module Ucb.Main.Model exposing (..)
 
-import HashingContainers.HashDict exposing (HashDict)
+import HashingContainers.HashDict as HashDict exposing (HashDict)
 import Ucb.Unison.Codebase.Path exposing (..)
 import Ucb.Util.Http as Http
 import Unison.Codebase.Causal exposing (..)
@@ -19,6 +19,12 @@ type alias Model =
     -- The codebase
     , codebase :
         { branches : HashDict Hash32 RawCausal
+        }
+
+    -- UI state
+    , ui :
+        -- Visible?
+        { branches : HashDict Hash32 Bool
         }
 
     -- The errors we've seen.

@@ -33,6 +33,10 @@ init _ =
                 { branches =
                     HashDict.empty hash32Equality hash32Hashing
                 }
+            , ui =
+                { branches =
+                    HashDict.empty hash32Equality hash32Hashing
+                }
             , errors = []
             , rateLimit = Nothing
             }
@@ -107,7 +111,21 @@ update message model =
                 ( { model | head = Just hash }, command )
 
             else
-                ( model, command )
+                ( { model
+                    | ui =
+                        case HashDict.get hash model.ui.branches of
+                            Nothing ->
+                                { branches =
+                                    HashDict.insert hash True model.ui.branches
+                                }
+
+                            Just show ->
+                                { branches =
+                                    HashDict.insert hash (not show) model.ui.branches
+                                }
+                  }
+                , command
+                )
 
 
 {-| Hard-coded test repo, not permanent.

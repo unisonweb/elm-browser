@@ -8,7 +8,7 @@ import HashingContainers.HashSet as HashSet exposing (HashSet)
 import Html exposing (Html)
 import Misc exposing (hashSetSize)
 import Ucb.Main.Message exposing (..)
-import Ucb.Main.Model exposing (Error(..), Model)
+import Ucb.Main.Model exposing (..)
 import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)
 import Unison.Codebase.NameSegment exposing (..)
@@ -19,21 +19,24 @@ import Unison.Util.Relation exposing (..)
 view : Model -> Html Message
 view model =
     layout
-        [ padding 10 ]
+        []
         (view2 model)
 
 
 view2 : Model -> Element Message
 view2 model =
     column
-        [ spacing 10 ]
+        []
         (List.filterMap identity
-            [ Maybe.map text model.head
-            , model.head
+            [ model.head
                 |> Maybe.andThen
                     (\head ->
                         Maybe.map
-                            (viewRawCausal model.codebase.branches)
+                            (viewRawCausal
+                                model.codebase.branches
+                                model.ui.branches
+                                head
+                            )
                             (HashDict.get head model.codebase.branches)
                     )
             , if List.isEmpty model.errors then
@@ -62,9 +65,10 @@ viewError error =
 
 viewRawBranch :
     HashDict Hash32 RawCausal
+    -> HashDict Hash32 Bool
     -> RawBranch
     -> Element Message
-viewRawBranch branches branch =
+viewRawBranch branches visible branch =
     let
         terms : List NameSegment
         terms =
@@ -89,25 +93,33 @@ viewRawBranch branches branch =
             []
             (List.map
                 (\( name, hash ) ->
-                    el
-                        [ onClick (User_GetBranch { hash = hash, focus = False }) ]
-                        (column
-                            []
-                            [ text name
-                            , el
-                                [ paddingEach
-                                    { bottom = 0
-                                    , left = 10
-                                    , right = 0
-                                    , top = 0
-                                    }
-                                ]
-                                (viewMaybe
-                                    (viewRawCausal branches)
-                                    (HashDict.get hash branches)
-                                )
+                    column
+                        []
+                        [ el
+                            [ onClick (User_GetBranch { hash = hash, focus = False })
+                            , pointer
                             ]
-                        )
+                            (text name)
+                        , el
+                            [ paddingEach
+                                { bottom = 0
+                                , left = 10
+                                , right = 0
+                                , top = 0
+                                }
+                            ]
+                            (viewMaybe
+                                (\causal ->
+                                    case HashDict.get hash visible of
+                                        Just True ->
+                                            viewRawCausal branches visible hash causal
+
+                                        _ ->
+                                            none
+                                )
+                                (HashDict.get hash branches)
+                            )
+                        ]
                 )
                 children
             )
@@ -117,45 +129,55 @@ viewRawBranch branches branch =
 
 viewRawCausal :
     HashDict Hash32 RawCausal
+    -> HashDict Hash32 Bool
+    -> Hash32
     -> RawCausal
     -> Element Message
-viewRawCausal branches causal =
+viewRawCausal branches visible hash causal =
     let
         viewPrevBranch : Hash32 -> Element Message
-        viewPrevBranch hash =
+        viewPrevBranch hash_ =
             el
-                [ onClick (User_GetBranch { hash = hash, focus = True }) ]
-                (text hash)
+                [ onClick (User_GetBranch { hash = hash_, focus = True }) ]
+                (text hash_)
     in
-    case causal of
-        RawOne branch ->
-            viewRawBranch branches branch
+    el [ padding 10 ]
+        (column
+            []
+            [ text hash
+            , case causal of
+                RawOne branch ->
+                    viewRawBranch branches visible branch
 
-        RawCons branch hash ->
-            column
-                [ spacing 10 ]
-                [ row
-                    [ spacing 10 ]
-                    [ text "Prev"
-                    , viewPrevBranch hash
-                    ]
-                , viewRawBranch
-                    branches
-                    branch
-                ]
+                RawCons branch hash_ ->
+                    column
+                        [ spacing 5 ]
+                        [ row
+                            [ spacing 10 ]
+                            [ text "Prev"
+                            , viewPrevBranch hash_
+                            ]
+                        , viewRawBranch
+                            branches
+                            visible
+                            branch
+                        ]
 
-        RawMerge branch hashes ->
-            column
-                [ spacing 10 ]
-                [ row
-                    [ spacing 10 ]
-                    [ text "Prev"
-                    , row [] (List.map viewPrevBranch (HashSet.toList hashes))
-                    ]
-                , viewRawBranch
-                    branches
-                    branch
-                ]
+                RawMerge branch hashes ->
+                    column
+                        [ spacing 5 ]
+                        [ row
+                            [ spacing 10 ]
+                            [ text "Prev"
+                            , row [] (List.map viewPrevBranch (HashSet.toList hashes))
+                            ]
+                        , viewRawBranch
+                            branches
+                            visible
+                            branch
+                        ]
+            ]
+        )
 
 
 viewMaybe :

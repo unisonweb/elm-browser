@@ -1,5 +1,6 @@
 module Ucb.Main.Model exposing (..)
 
+import HashingContainers.HashDict exposing (HashDict)
 import Ucb.Unison.Codebase.Path exposing (..)
 import Ucb.Util.Http as Http
 import Unison.Codebase.Causal exposing (..)
@@ -12,11 +13,13 @@ type Error
 
 
 type alias Model =
-    -- The head hash
-    { headHash : Maybe Hash32
+    -- The current head
+    { head : Maybe Hash32
 
-    -- The head branch
-    , head : Maybe RawCausal
+    -- The codebase
+    , codebase :
+        { branches : HashDict Hash32 RawCausal
+        }
 
     -- The errors we've seen.
     , errors : List Error

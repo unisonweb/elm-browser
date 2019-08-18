@@ -11,3 +11,18 @@ type RawCausal
     = RawOne RawBranch
     | RawCons RawBranch Hash32
     | RawMerge RawBranch (HashSet Hash32)
+
+
+rawCausalHead :
+    RawCausal
+    -> RawBranch
+rawCausalHead causal =
+    case causal of
+        RawOne branch ->
+            branch
+
+        RawCons branch _ ->
+            branch
+
+        RawMerge branch _ ->
+            branch

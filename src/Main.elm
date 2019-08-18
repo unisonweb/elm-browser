@@ -3,11 +3,13 @@ module Main exposing (..)
 -- Unison.* imports are unused, but there temporarily so 'elm make' typechecks
 
 import Browser
+import HashingContainers.HashDict as HashDict
 import Task
 import Ucb.Main.Message exposing (Message(..))
 import Ucb.Main.Model exposing (..)
 import Ucb.Main.View exposing (view)
 import Ucb.Unison.Codebase.Path exposing (..)
+import Unison.Hash exposing (..)
 
 
 main : Program () Model Message
@@ -25,8 +27,11 @@ init _ =
     let
         initialModel : Model
         initialModel =
-            { headHash = Nothing
-            , head = Nothing
+            { head = Nothing
+            , codebase =
+                { branches =
+                    HashDict.empty hash32Equality hash32Hashing
+                }
             , errors = []
             }
 
@@ -46,6 +51,18 @@ subscriptions _ =
 update : Message -> Model -> ( Model, Cmd Message )
 update message model =
     case message of
+        -- Fetch the branch if we haven't already.
+        ClickBranchHash hash ->
+            case HashDict.get hash model.codebase.branches of
+                Nothing ->
+                    ( model
+                    , httpGetRawCausal owner repo hash
+                        |> Task.attempt GetRawCausal
+                    )
+
+                Just _ ->
+                    ( model, Cmd.none )
+
         GetHeadHash result ->
             case result of
                 Err err ->
@@ -55,7 +72,7 @@ update message model =
 
                 Ok response ->
                     ( { model
-                        | headHash = Just response.body
+                        | head = Just response.body
                       }
                     , httpGetRawCausal owner repo response.body
                         |> Task.attempt GetRawCausal
@@ -68,9 +85,15 @@ update message model =
                     , Cmd.none
                     )
 
-                Ok response ->
+                Ok ( hash, response ) ->
                     ( { model
-                        | head = Just response.body
+                        | codebase =
+                            { branches =
+                                HashDict.insert
+                                    hash
+                                    response.body
+                                    model.codebase.branches
+                            }
                       }
                     , Cmd.none
                     )

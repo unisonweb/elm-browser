@@ -1,6 +1,6 @@
 module Unison.Util.Relation exposing (..)
 
-import HashingContainers.HashDict exposing (HashDict)
+import HashingContainers.HashDict as HashDict exposing (HashDict)
 import HashingContainers.HashSet exposing (HashSet)
 import Misc exposing (hashDictFromListWith, hashSetSingleton, hashSetUnion)
 import Typeclasses.Classes.Equality exposing (Equality)
@@ -42,3 +42,10 @@ relationFromList equalityA hashingA equalityB hashingB elements =
                 elements
             )
     }
+
+
+relationRange :
+    Relation a b
+    -> List b
+relationRange =
+    .range >> HashDict.toList >> List.map Tuple.first

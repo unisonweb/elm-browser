@@ -266,13 +266,13 @@ rawBranchDecoder =
             nameSegmentEquality
             nameSegmentHashing
             nameSegmentDecoder
-            hashDecoder
+            hash32Decoder
         )
         (hashDictDecoder
             nameSegmentEquality
             nameSegmentHashing
             nameSegmentDecoder
-            hashDecoder
+            hash32Decoder
         )
 
 

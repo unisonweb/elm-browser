@@ -7,7 +7,7 @@ module Unison.Hash exposing
     , hashHash32
     )
 
-import Bitwise exposing (and, or, shiftLeftBy, shiftRightBy)
+import Bitwise exposing (and, or, shiftLeftBy, shiftRightZfBy)
 import Bytes exposing (Bytes)
 import Bytes.Decode as Decode exposing (Decoder, Step(..))
 import Typeclasses.Classes.Equality as Equality exposing (Equality)
@@ -47,7 +47,12 @@ encodeHash bytes =
             impossible ()
 
         Just string ->
-            string
+            Debug.log
+                (String.filter
+                    (\c -> not (Char.isDigit c || Char.isLower c))
+                    string
+                )
+                (Debug.log string string)
 
 
 impossible : () -> String
@@ -74,13 +79,13 @@ step ( remaining, acc ) =
                     decoded : String
                     decoded =
                         String.fromList
-                            [ chr (shiftRightBy 27 a)
-                            , chr (and (shiftRightBy 22 a) 31)
-                            , chr (and (shiftRightBy 17 a) 31)
-                            , chr (and (shiftRightBy 12 a) 31)
-                            , chr (and (shiftRightBy 7 a) 31)
-                            , chr (and (shiftRightBy 2 a) 31)
-                            , chr (or (shiftLeftBy 3 (and a 3)) (shiftRightBy 5 b))
+                            [ chr (shiftRightZfBy 27 a)
+                            , chr (and (shiftRightZfBy 22 a) 31)
+                            , chr (and (shiftRightZfBy 17 a) 31)
+                            , chr (and (shiftRightZfBy 12 a) 31)
+                            , chr (and (shiftRightZfBy 7 a) 31)
+                            , chr (and (shiftRightZfBy 2 a) 31)
+                            , chr (or (shiftLeftBy 3 (and a 3)) (shiftRightZfBy 5 b))
                             , chr (and b 31)
                             ]
                 in
@@ -102,13 +107,13 @@ step ( remaining, acc ) =
                     decoded : String
                     decoded =
                         String.fromList
-                            [ chr (shiftRightBy 27 a)
-                            , chr (and (shiftRightBy 22 a) 31)
-                            , chr (and (shiftRightBy 17 a) 31)
-                            , chr (and (shiftRightBy 12 a) 31)
-                            , chr (and (shiftRightBy 7 a) 31)
-                            , chr (and (shiftRightBy 2 a) 31)
-                            , chr (shiftLeftBy 2 (and a 3))
+                            [ chr (shiftRightZfBy 27 a)
+                            , chr (and (shiftRightZfBy 22 a) 31)
+                            , chr (and (shiftRightZfBy 17 a) 31)
+                            , chr (and (shiftRightZfBy 12 a) 31)
+                            , chr (and (shiftRightZfBy 7 a) 31)
+                            , chr (and (shiftRightZfBy 2 a) 31)
+                            , chr (shiftLeftBy 3 (and a 3))
                             ]
                 in
                 Done (acc ++ decoded)
@@ -125,11 +130,11 @@ step ( remaining, acc ) =
                     decoded : String
                     decoded =
                         String.fromList
-                            [ chr (shiftRightBy 11 a)
-                            , chr (and (shiftRightBy 6 a) 31)
-                            , chr (and (shiftRightBy 1 a) 31)
-                            , chr (or (shiftLeftBy 4 (and a 1)) (shiftRightBy 4 b))
-                            , chr (and (shiftRightBy 3 b) 30)
+                            [ chr (shiftRightZfBy 11 a)
+                            , chr (and (shiftRightZfBy 6 a) 31)
+                            , chr (and (shiftRightZfBy 1 a) 31)
+                            , chr (or (shiftLeftBy 4 (and a 1)) (shiftRightZfBy 4 b))
+                            , chr (and (shiftRightZfBy 3 b) 30)
                             ]
                 in
                 Done (acc ++ decoded)
@@ -147,9 +152,9 @@ step ( remaining, acc ) =
                     decoded : String
                     decoded =
                         String.fromList
-                            [ chr (shiftRightBy 11 a)
-                            , chr (and (shiftRightBy 6 a) 31)
-                            , chr (and (shiftRightBy 1 a) 31)
+                            [ chr (shiftRightZfBy 11 a)
+                            , chr (and (shiftRightZfBy 6 a) 31)
+                            , chr (and (shiftRightZfBy 1 a) 31)
                             , chr (shiftLeftBy 4 (and a 1))
                             ]
                 in
@@ -167,7 +172,7 @@ step ( remaining, acc ) =
                     decoded : String
                     decoded =
                         String.fromList
-                            [ chr (shiftRightBy 3 a)
+                            [ chr (shiftRightZfBy 3 a)
                             , chr (shiftLeftBy 2 (and a 7))
                             ]
                 in

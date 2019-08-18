@@ -41,6 +41,13 @@ hashSetSingleton equality hashing x =
     HashSet.insert x (HashSet.empty equality hashing)
 
 
+hashSetSize :
+    HashSet a
+    -> Int
+hashSetSize =
+    HashSet.toList >> List.length
+
+
 {-| TODO upstream this
 -}
 hashSetUnion :

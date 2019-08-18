@@ -97,7 +97,7 @@ httpGetRawCausal :
     String
     -> String
     -> Hash32
-    -> Task GetRawCausalError (Http.Response RawCausal)
+    -> Task GetRawCausalError ( Hash32, Http.Response RawCausal )
 httpGetRawCausal owner repo hash =
     Ucb.GitHub.httpGetFile
         owner
@@ -105,3 +105,4 @@ httpGetRawCausal owner repo hash =
         (".unison/v1/paths/" ++ hash ++ ".ub")
         V1.rawCausalDecoder
         |> Task.mapError GetRawCausalError_Http
+        |> Task.map (\response -> ( hash, response ))

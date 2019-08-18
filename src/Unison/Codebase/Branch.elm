@@ -3,7 +3,7 @@ module Unison.Codebase.Branch exposing (..)
 import HashingContainers.HashDict exposing (HashDict)
 import HashingContainers.HashSet exposing (HashSet)
 import Unison.Codebase.NameSegment exposing (NameSegment)
-import Unison.Hash exposing (Hash)
+import Unison.Hash exposing (Hash32)
 import Unison.Reference exposing (..)
 import Unison.Referent exposing (..)
 import Unison.Util.Relation exposing (Relation)
@@ -27,8 +27,8 @@ type alias Star a n =
 type alias RawBranch =
     { terms : Star Referent NameSegment
     , types : Star Reference NameSegment
-    , children : HashDict NameSegment Hash
-    , edits : HashDict NameSegment Hash
+    , children : HashDict NameSegment Hash32
+    , edits : HashDict NameSegment Hash32
     }
 
 
@@ -45,6 +45,6 @@ type alias RawBranch2 =
     , typesNames : Relation Reference NameSegment
     , typesTypes : Relation Reference Type
     , typesThings : Relation Reference ( Type, Value ) -- what are these?
-    , children : HashDict NameSegment Hash
-    , edits : HashDict NameSegment Hash
+    , children : HashDict NameSegment Hash32
+    , edits : HashDict NameSegment Hash32
     }

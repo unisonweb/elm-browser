@@ -3,6 +3,7 @@ module Ucb.Main.View exposing (..)
 import Bytes
 import Element exposing (..)
 import Element.Events exposing (..)
+import Element.Font exposing (..)
 import HashingContainers.HashDict as HashDict exposing (HashDict)
 import HashingContainers.HashSet as HashSet exposing (HashSet)
 import Html exposing (Html)
@@ -101,7 +102,12 @@ viewRawBranch branches nexts visible branch =
                             [ onClick (User_GetBranch { hash = hash, focus = False })
                             , pointer
                             ]
-                            (text name)
+                            (row
+                                [ spacing 5 ]
+                                [ text name
+                                , viewShortHash hash
+                                ]
+                            )
                         , el
                             [ paddingEach
                                 { bottom = 0
@@ -174,24 +180,31 @@ viewRawCausal branches nexts visible hash causal =
             RawOne branch ->
                 column
                     [ spacing 5 ]
-                    [ column [] [ text hash, viewNext ]
+                    [ column [] [ viewHash hash, viewNext ]
                     , viewRawBranch branches nexts visible branch
                     ]
 
             RawCons branch hash_ ->
                 column
                     [ spacing 5 ]
-                    [ column [] [ text hash, viewPrev [ hash_ ], viewNext ]
+                    [ column [] [ viewHash hash, viewPrev [ hash_ ], viewNext ]
                     , viewRawBranch branches nexts visible branch
                     ]
 
             RawMerge branch hashes ->
                 column
                     [ spacing 5 ]
-                    [ column [] [ text hash, viewPrev (HashSet.toList hashes), viewNext ]
+                    [ column [] [ viewHash hash, viewPrev (HashSet.toList hashes), viewNext ]
                     , viewRawBranch branches nexts visible branch
                     ]
         )
+
+
+viewShortHash :
+    Hash32
+    -> Element message
+viewShortHash hash =
+    el [ color (rgb 0.5 0.5 0.5) ] (text (String.left 7 hash))
 
 
 viewMaybe :

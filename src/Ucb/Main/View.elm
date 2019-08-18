@@ -31,7 +31,7 @@ view2 model =
             Just (Ok bytes) ->
                 [ text "I downloaded the head path of unisonweb/unisonbase"
                 , text ("It's " ++ String.fromInt (Bytes.width bytes) ++ " bytes")
-                , text "Now I'm going to try to parse it, which will surely fail."
+                , text "Now I'm going to try to parse it."
                 , text (Debug.toString (decodeRawCausal bytes))
                 ]
         )

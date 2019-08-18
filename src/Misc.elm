@@ -32,6 +32,15 @@ hashDictFromListWith equality hashing combine =
         (HashDict.empty equality hashing)
 
 
+hashSetSingleton :
+    Equality a
+    -> Hashing a
+    -> a
+    -> HashSet a
+hashSetSingleton equality hashing x =
+    HashSet.insert x (HashSet.empty equality hashing)
+
+
 {-| TODO upstream this
 -}
 hashSetUnion :

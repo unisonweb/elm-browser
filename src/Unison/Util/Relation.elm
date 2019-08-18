@@ -2,7 +2,7 @@ module Unison.Util.Relation exposing (..)
 
 import HashingContainers.HashDict exposing (HashDict)
 import HashingContainers.HashSet exposing (HashSet)
-import Misc exposing (hashDictFromListWith)
+import Misc exposing (hashDictFromListWith, hashSetSingleton, hashSetUnion)
 import Typeclasses.Classes.Equality exposing (Equality)
 import Typeclasses.Classes.Hashing exposing (Hashing)
 
@@ -27,12 +27,18 @@ relationFromList equalityA hashingA equalityB hashingB elements =
         hashDictFromListWith
             equalityA
             hashingA
-            (\x y -> Debug.todo "x")
-            (Debug.todo "y")
+            (hashSetUnion equalityB hashingB)
+            (List.map
+                (\( x, y ) -> ( x, hashSetSingleton equalityB hashingB y ))
+                elements
+            )
     , range =
         hashDictFromListWith
             equalityB
             hashingB
-            (Debug.todo "z")
-            (Debug.todo "a")
+            (hashSetUnion equalityA hashingA)
+            (List.map
+                (\( x, y ) -> ( y, hashSetSingleton equalityA hashingA x ))
+                elements
+            )
     }

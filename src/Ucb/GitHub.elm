@@ -2,32 +2,31 @@ module Ucb.GitHub exposing
     ( Dirent
     , File
     , RepoContents(..)
-    , getRepoContents
-    , httpGetRawFile
+    , httpGetFile
+    , httpGetRepoContents
     )
 
 import Array exposing (Array)
 import Bytes exposing (Bytes)
-import Http
-import Json.Decode as Decode exposing (Decoder, Value, decodeString)
-import Json.Decode.Pipeline as Decode
+import Bytes.Decode
+import Json.Decode
+import Json.Decode.Pipeline
 import Task exposing (Task)
 import Ucb.Util.Http as Http
 
 
 {-| TODO(mitchell) docs
 -}
-httpGetRawFile :
+httpGetFile :
     String
     -> String
     -> String
-    -> Task Http.Error Bytes
-httpGetRawFile owner repo path =
-    Http.task
-        { body = Http.emptyBody
-        , headers = [ Http.header "Accept" "application/vnd.github.VERSION.raw+json" ]
-        , method = "GET"
-        , resolver = Http.simpleBytesResolver
+    -> Bytes.Decode.Decoder a
+    -> Task (Http.Error Bytes) (Http.Response a)
+httpGetFile owner repo path decoder =
+    Http.getBytes
+        { decoder = decoder
+        , headers = [ ( "Accept", "application/vnd.github.VERSION.raw+json" ) ]
         , timeout = Nothing
         , url = "https://api.github.com/repos/" ++ owner ++ "/" ++ repo ++ "/contents/" ++ path
         }
@@ -38,20 +37,16 @@ httpGetRawFile owner repo path =
     Get repository "contents" (file or directory), given an owner, repo, and
     relative path.
 
-    TODO(mitchell) rename to httpGetRepoContents
-
 -}
-getRepoContents :
+httpGetRepoContents :
     String
     -> String
     -> String
-    -> Task Http.Error RepoContents
-getRepoContents owner repo path =
-    Http.task
-        { body = Http.emptyBody
+    -> Task (Http.Error String) (Http.Response RepoContents)
+httpGetRepoContents owner repo path =
+    Http.getJson
+        { decoder = repoContentsDecoder
         , headers = []
-        , method = "GET"
-        , resolver = Http.jsonResolver repoContentsDecoder
         , timeout = Nothing
         , url = "https://api.github.com/repos/" ++ owner ++ "/" ++ repo ++ "/contents/" ++ path
         }
@@ -64,11 +59,11 @@ type RepoContents
     | DirectoryContents (Array Dirent)
 
 
-repoContentsDecoder : Decoder RepoContents
+repoContentsDecoder : Json.Decode.Decoder RepoContents
 repoContentsDecoder =
-    Decode.oneOf
-        [ Decode.map FileContents fileDecoder
-        , Decode.map DirectoryContents (Decode.array direntDecoder)
+    Json.Decode.oneOf
+        [ Json.Decode.map FileContents fileDecoder
+        , Json.Decode.map DirectoryContents (Json.Decode.array direntDecoder)
         ]
 
 
@@ -90,21 +85,21 @@ type alias File =
     }
 
 
-fileDecoder : Decoder File
+fileDecoder : Json.Decode.Decoder File
 fileDecoder =
-    Decode.succeed File
-        |> Decode.required "content" Decode.string
-        |> Decode.required "download_url" Decode.string
-        |> Decode.required "encoding" Decode.string
-        |> Decode.required "git_url" Decode.string
-        |> Decode.required "html_url" Decode.string
-        |> Decode.required "_links" linksDecoder
-        |> Decode.required "path" Decode.string
-        |> Decode.required "name" Decode.string
-        |> Decode.required "sha" Decode.string
-        |> Decode.required "size" Decode.int
-        |> Decode.required "type" Decode.string
-        |> Decode.required "url" Decode.string
+    Json.Decode.succeed File
+        |> Json.Decode.Pipeline.required "content" Json.Decode.string
+        |> Json.Decode.Pipeline.required "download_url" Json.Decode.string
+        |> Json.Decode.Pipeline.required "encoding" Json.Decode.string
+        |> Json.Decode.Pipeline.required "git_url" Json.Decode.string
+        |> Json.Decode.Pipeline.required "html_url" Json.Decode.string
+        |> Json.Decode.Pipeline.required "_links" linksDecoder
+        |> Json.Decode.Pipeline.required "path" Json.Decode.string
+        |> Json.Decode.Pipeline.required "name" Json.Decode.string
+        |> Json.Decode.Pipeline.required "sha" Json.Decode.string
+        |> Json.Decode.Pipeline.required "size" Json.Decode.int
+        |> Json.Decode.Pipeline.required "type" Json.Decode.string
+        |> Json.Decode.Pipeline.required "url" Json.Decode.string
 
 
 {-| A directory entry.
@@ -123,24 +118,24 @@ type alias Dirent =
     }
 
 
-direntDecoder : Decoder Dirent
+direntDecoder : Json.Decode.Decoder Dirent
 direntDecoder =
-    Decode.succeed Dirent
-        |> Decode.required "download_url" (Decode.nullable Decode.string)
-        |> Decode.required "git_url" Decode.string
-        |> Decode.required "html_url" Decode.string
-        |> Decode.required "_links" linksDecoder
-        |> Decode.required "name" Decode.string
-        |> Decode.required "path" Decode.string
-        |> Decode.required "sha" Decode.string
-        |> Decode.required "size" Decode.int
-        |> Decode.required "type" Decode.string
-        |> Decode.required "url" Decode.string
+    Json.Decode.succeed Dirent
+        |> Json.Decode.Pipeline.required "download_url" (Json.Decode.nullable Json.Decode.string)
+        |> Json.Decode.Pipeline.required "git_url" Json.Decode.string
+        |> Json.Decode.Pipeline.required "html_url" Json.Decode.string
+        |> Json.Decode.Pipeline.required "_links" linksDecoder
+        |> Json.Decode.Pipeline.required "name" Json.Decode.string
+        |> Json.Decode.Pipeline.required "path" Json.Decode.string
+        |> Json.Decode.Pipeline.required "sha" Json.Decode.string
+        |> Json.Decode.Pipeline.required "size" Json.Decode.int
+        |> Json.Decode.Pipeline.required "type" Json.Decode.string
+        |> Json.Decode.Pipeline.required "url" Json.Decode.string
 
 
-linksDecoder : Decoder { self : String, git : String, html : String }
+linksDecoder : Json.Decode.Decoder { self : String, git : String, html : String }
 linksDecoder =
-    Decode.succeed (\self git html -> { self = self, git = git, html = html })
-        |> Decode.required "self" Decode.string
-        |> Decode.required "git" Decode.string
-        |> Decode.required "html" Decode.string
+    Json.Decode.succeed (\self git html -> { self = self, git = git, html = html })
+        |> Json.Decode.Pipeline.required "self" Json.Decode.string
+        |> Json.Decode.Pipeline.required "git" Json.Decode.string
+        |> Json.Decode.Pipeline.required "html" Json.Decode.string

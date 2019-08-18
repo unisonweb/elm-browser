@@ -1,4 +1,4 @@
-module Unison.Codebase.Serialization.V1 exposing (decodeRawCausal)
+module Unison.Codebase.Serialization.V1 exposing (..)
 
 import Bitwise
 import Bytes exposing (..)
@@ -28,17 +28,6 @@ import Unison.Type exposing (..)
 import Unison.Util.Relation exposing (..)
 import Unison.Util.Star3 exposing (..)
 import Word64 exposing (..)
-
-
-decodeRawCausal : Bytes -> Maybe RawCausal
-decodeRawCausal =
-    decode rawCausalDecoder
-
-
-
---------------------------------------------------------------------------------
--- Decoders
---------------------------------------------------------------------------------
 
 
 booleanDecoder : Decoder Bool

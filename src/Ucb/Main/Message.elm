@@ -1,8 +1,11 @@
 module Ucb.Main.Message exposing (..)
 
-import Bytes exposing (Bytes)
-import Ucb.Unison.Codebase.Path exposing (GetHeadPathError)
+import Ucb.Unison.Codebase.Path exposing (..)
+import Ucb.Util.Http as Http
+import Unison.Codebase.Causal exposing (..)
+import Unison.Hash exposing (..)
 
 
 type Message
-    = DownloadedHeadPath (Result GetHeadPathError Bytes)
+    = GetHeadHash (Result GetHeadHashError (Http.Response Hash32))
+    | GetRawCausal (Result GetRawCausalError (Http.Response RawCausal))

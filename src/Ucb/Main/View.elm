@@ -4,8 +4,8 @@ import Bytes
 import Element exposing (..)
 import Html exposing (Html)
 import Ucb.Main.Message exposing (Message)
-import Ucb.Main.Model exposing (Model)
-import Unison.Codebase.Serialization.V1 exposing (decodeRawCausal)
+import Ucb.Main.Model exposing (Error(..), Model)
+import Unison.Codebase.Causal exposing (..)
 
 
 view : Model -> Html Message
@@ -19,19 +19,59 @@ view2 : Model -> Element Message
 view2 model =
     column
         [ spacing 10 ]
-        (case model.result of
-            Nothing ->
-                [ text "I'm downloading the head path of unisonweb/unisonbase" ]
+        (List.filterMap identity
+            [ Maybe.map
+                (\hash ->
+                    column []
+                        [ text "Head hash:"
+                        , text hash
+                        ]
+                )
+                model.headHash
+            , Maybe.map
+                (\causal ->
+                    column []
+                        [ text "Head:"
+                        , viewRawCausal causal
+                        ]
+                )
+                model.head
+            , if List.isEmpty model.errors then
+                Nothing
 
-            Just (Err err) ->
-                [ text "I tried downloading the head path of unisonweb/unisonbase it failed:"
-                , text (Debug.toString err)
-                ]
-
-            Just (Ok bytes) ->
-                [ text "I downloaded the head path of unisonweb/unisonbase"
-                , text ("It's " ++ String.fromInt (Bytes.width bytes) ++ " bytes")
-                , text "Now I'm going to try to parse it."
-                , text (Debug.toString (decodeRawCausal bytes))
-                ]
+              else
+                Just
+                    (column []
+                        (text "Errors:"
+                            :: List.map viewError (List.reverse model.errors)
+                        )
+                    )
+            ]
         )
+
+
+viewError :
+    Error
+    -> Element message
+viewError error =
+    text (Debug.toString error)
+
+
+viewRawCausal :
+    RawCausal
+    -> Element message
+viewRawCausal causal =
+    text (Debug.toString causal)
+
+
+viewMaybe :
+    (a -> Element message)
+    -> Maybe a
+    -> Element message
+viewMaybe f mx =
+    case mx of
+        Nothing ->
+            none
+
+        Just x ->
+            f x

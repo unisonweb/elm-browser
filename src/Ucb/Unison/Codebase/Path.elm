@@ -3,24 +3,28 @@
 
 
 module Ucb.Unison.Codebase.Path exposing
-    ( GetHeadPathError(..)
-    , httpGetHeadPath
+    ( GetHeadHashError(..)
+    , GetRawCausalError(..)
+    , httpGetHeadHash
+    , httpGetRawCausal
     )
 
 import Array exposing (Array)
 import Bytes exposing (Bytes)
-import Http
 import Task exposing (Task)
 import Ucb.GitHub
+import Ucb.Util.Http as Http
 import Ucb.Util.Task as Task
+import Unison.Codebase.Causal exposing (..)
+import Unison.Codebase.Serialization.V1 as V1
+import Unison.Hash exposing (Hash32)
 
 
-{-| Something went wrong when getting the head path.
-TODO(mitchell) change name to GetPathError
+{-| Something went wrong when getting the head hash.
 -}
-type GetHeadPathError
-    = GetHeadPathError_Http Http.Error
-    | GetHeadPathError_Other String
+type GetHeadHashError
+    = GetHeadHashError_Http (Http.Error String)
+    | GetHeadHashError_Other String
 
 
 {-| Given an owner (like "unisonweb") and a repo (like "unisonbase", return the
@@ -32,47 +36,72 @@ assert that here, and fail if it isn't the case, but perhaps there is something
 smarter to do instead.
 
 -}
-httpGetHeadPath :
+httpGetHeadHash :
     String
     -> String
-    -> Task GetHeadPathError Bytes
-httpGetHeadPath owner repo =
-    Ucb.GitHub.getRepoContents owner repo ".unison/v1/paths/_head"
-        |> Task.mapError GetHeadPathError_Http
-        |> Task.andThen (parseHeadPath >> Task.fromResult)
-        |> Task.andThen
-            (\path ->
-                httpGetPath owner repo (".unison/v1/paths/" ++ path ++ ".ub")
-            )
+    -> Task GetHeadHashError (Http.Response String)
+httpGetHeadHash owner repo =
+    Ucb.GitHub.httpGetRepoContents owner repo ".unison/v1/paths/_head"
+        |> Task.mapError GetHeadHashError_Http
+        |> Task.andThen httpGetHeadHash2
 
 
-parseHeadPath :
+httpGetHeadHash2 :
+    Http.Response Ucb.GitHub.RepoContents
+    -> Task GetHeadHashError (Http.Response Hash32)
+httpGetHeadHash2 response =
+    case parseHeadHash response.body of
+        Err err ->
+            Task.fail err
+
+        Ok hash ->
+            Task.succeed
+                { url = response.url
+                , statusCode = response.statusCode
+                , statusText = response.statusText
+                , headers = response.headers
+                , body = hash
+                }
+
+
+parseHeadHash :
     Ucb.GitHub.RepoContents
-    -> Result GetHeadPathError String
-parseHeadPath contents =
+    -> Result GetHeadHashError Hash32
+parseHeadHash contents =
     case contents of
         Ucb.GitHub.FileContents _ ->
-            Err (GetHeadPathError_Other "expected dir, found file")
+            Err (GetHeadHashError_Other "expected dir, found file")
 
         Ucb.GitHub.DirectoryContents dirents ->
-            parseHeadPath2 dirents
+            parseHeadHash2 dirents
 
 
-parseHeadPath2 : Array Ucb.GitHub.Dirent -> Result GetHeadPathError String
-parseHeadPath2 dirents =
+parseHeadHash2 : Array Ucb.GitHub.Dirent -> Result GetHeadHashError String
+parseHeadHash2 dirents =
     case ( Array.get 0 dirents, Array.length dirents > 1 ) of
         ( Just dirent, False ) ->
             Ok dirent.name
 
         _ ->
-            Err (GetHeadPathError_Other "expected only one path")
+            Err (GetHeadHashError_Other "expected only one path")
 
 
-httpGetPath :
+{-| Something went wrong when getting a raw causal.
+-}
+type GetRawCausalError
+    = GetRawCausalError_Http (Http.Error Bytes)
+    | GetRawCausalError_Parse
+
+
+httpGetRawCausal :
     String
     -> String
-    -> String
-    -> Task GetHeadPathError Bytes
-httpGetPath owner repo path =
-    Ucb.GitHub.httpGetRawFile owner repo path
-        |> Task.mapError GetHeadPathError_Http
+    -> Hash32
+    -> Task GetRawCausalError (Http.Response RawCausal)
+httpGetRawCausal owner repo hash =
+    Ucb.GitHub.httpGetFile
+        owner
+        repo
+        (".unison/v1/paths/" ++ hash ++ ".ub")
+        V1.rawCausalDecoder
+        |> Task.mapError GetRawCausalError_Http

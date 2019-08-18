@@ -3,13 +3,11 @@ module Main exposing (..)
 -- Unison.* imports are unused, but there temporarily so 'elm make' typechecks
 
 import Browser
-import Http
 import Task
 import Ucb.Main.Message exposing (Message(..))
-import Ucb.Main.Model exposing (Model)
+import Ucb.Main.Model exposing (..)
 import Ucb.Main.View exposing (view)
-import Ucb.Unison.Codebase.Path exposing (httpGetHeadPath)
-import Unison.Codebase.Serialization.V1
+import Ucb.Unison.Codebase.Path exposing (..)
 
 
 main : Program () Model Message
@@ -24,10 +22,20 @@ main =
 
 init : () -> ( Model, Cmd Message )
 init _ =
-    ( { result = Nothing }
-    , httpGetHeadPath "unisonweb" "unisonbase"
-        |> Task.attempt DownloadedHeadPath
-    )
+    let
+        initialModel : Model
+        initialModel =
+            { headHash = Nothing
+            , head = Nothing
+            , errors = []
+            }
+
+        initialCommand : Cmd Message
+        initialCommand =
+            httpGetHeadHash owner repo
+                |> Task.attempt GetHeadHash
+    in
+    ( initialModel, initialCommand )
 
 
 subscriptions : Model -> Sub Message
@@ -38,5 +46,45 @@ subscriptions _ =
 update : Message -> Model -> ( Model, Cmd Message )
 update message model =
     case message of
-        DownloadedHeadPath result ->
-            ( { model | result = Just result }, Cmd.none )
+        GetHeadHash result ->
+            case result of
+                Err err ->
+                    ( accumulateError (Err_GetHeadHash err) model
+                    , Cmd.none
+                    )
+
+                Ok response ->
+                    ( { model
+                        | headHash = Just response.body
+                      }
+                    , httpGetRawCausal owner repo response.body
+                        |> Task.attempt GetRawCausal
+                    )
+
+        GetRawCausal result ->
+            case result of
+                Err err ->
+                    ( accumulateError (Err_GetRawCausal err) model
+                    , Cmd.none
+                    )
+
+                Ok response ->
+                    ( { model
+                        | head = Just response.body
+                      }
+                    , Cmd.none
+                    )
+
+
+{-| Hard-coded test repo, not permanent.
+-}
+owner : String
+owner =
+    "unisonweb"
+
+
+{-| Hard-coded test repo, not permanent.
+-}
+repo : String
+repo =
+    "unisonbase"

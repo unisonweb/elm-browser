@@ -30,3 +30,21 @@ type alias RawBranch =
     , children : HashDict NameSegment Hash
     , edits : HashDict NameSegment Hash
     }
+
+
+{-| A flattened out RawBranch. Mitchell is not really sure if it would be nicer
+to work with for the UI, but wanted to see all the bits and pieces of a branch
+inlined, so here it is.
+-}
+type alias RawBranch2 =
+    { terms : HashSet Referent
+    , termsNames : Relation Referent NameSegment
+    , termsTypes : Relation Referent Type
+    , termsThings : Relation Referent ( Type, Value ) -- what are these?
+    , types : HashSet Reference
+    , typesNames : Relation Reference NameSegment
+    , typesTypes : Relation Reference Type
+    , typesThings : Relation Reference ( Type, Value ) -- what are these?
+    , children : HashDict NameSegment Hash
+    , edits : HashDict NameSegment Hash
+    }

@@ -6,7 +6,8 @@ import Bytes.Decode exposing (..)
 import HashingContainers.HashDict as HashDict exposing (HashDict)
 import HashingContainers.HashSet as HashSet exposing (HashSet)
 import Int64 exposing (..)
-import Typeclasses.Classes.Equality exposing (Equality)
+import Misc exposing (pairHashing)
+import Typeclasses.Classes.Equality as Equality exposing (Equality)
 import Typeclasses.Classes.Hashing exposing (Hashing)
 import Unison.Codebase.Branch as Branch exposing (RawBranch)
 import Unison.Codebase.Causal exposing (..)
@@ -59,20 +60,41 @@ booleanDecoder =
 branchStarDecoder :
     Equality a
     -> Hashing a
+    -> Equality b
+    -> Hashing b
     -> Decoder a
     -> Decoder b
     -> Decoder (Branch.Star a b)
-branchStarDecoder equalityA hashingA decoderA decoderB =
+branchStarDecoder equalityA hashingA equalityB hashingB decoderA decoderB =
     Debug.log "branchStar" <|
         map4
             Star3_
             (map
-                (HashSet.fromList equalityA hashingA)
+                (Debug.log "calling HashSet.fromList" <| HashSet.fromList equalityA hashingA)
                 (listDecoder decoderA)
             )
-            (relationDecoder decoderA decoderB)
-            (relationDecoder decoderA referenceDecoder)
-            (relationDecoder decoderA
+            (relationDecoder
+                equalityA
+                hashingA
+                equalityB
+                hashingB
+                decoderA
+                decoderB
+            )
+            (relationDecoder
+                equalityA
+                hashingA
+                referenceEquality
+                referenceHashing
+                decoderA
+                referenceDecoder
+            )
+            (relationDecoder
+                equalityA
+                hashingA
+                (Equality.tuple2 referenceEquality referenceEquality)
+                (pairHashing referenceHashing referenceHashing)
+                decoderA
                 (map2 Tuple.pair referenceDecoder referenceDecoder)
             )
 
@@ -109,7 +131,12 @@ hashDecoder : Decoder Hash
 hashDecoder =
     Debug.log "hash" <|
         (varIntDecoder
-            |> andThen bytes
+            |> andThen
+                (\n ->
+                    Debug.log
+                        ("trying to parse " ++ Debug.toString n ++ " bytes")
+                        (bytes n)
+                )
         )
 
 
@@ -183,13 +210,12 @@ kindDecoder =
         )
 
 
-
 listDecoder : Decoder a -> Decoder (List a)
 listDecoder decoder =
     Debug.log "list" <|
         (varIntDecoder
             |> andThen
-                (\n -> replicate n decoder)
+                (\n -> Debug.log ("I'm about to call replicate with " ++ Debug.toString n) (replicate n decoder))
         )
 
 
@@ -229,14 +255,27 @@ patchDecoder =
     Debug.log "patch" <|
         map2
             Patch
-            (relationDecoder referenceDecoder termEditDecoder)
-            (relationDecoder referenceDecoder typeEditDecoder)
+            (relationDecoder
+                referenceEquality
+                referenceHashing
+                termEditEquality
+                termEditHashing
+                referenceDecoder
+                termEditDecoder
+            )
+            (relationDecoder
+                referenceEquality
+                referenceHashing
+                typeEditEquality
+                typeEditHashing
+                referenceDecoder
+                typeEditDecoder
+            )
 
 
 patternDecoder : Decoder Pattern
 patternDecoder =
-    Debug.log "pattern" <|
-        fail
+    Debug.todo "patternDecoder"
 
 
 rawBranchDecoder : Decoder RawBranch
@@ -244,15 +283,20 @@ rawBranchDecoder =
     Debug.log "rawBranch" <|
         map4
             RawBranch
-            (branchStarDecoder
-                referentEquality
-                referentHashing
-                referentDecoder
-                nameSegmentDecoder
+            (Debug.log "rawBranchDecoder.branchStarDecoder" <|
+                branchStarDecoder
+                    referentEquality
+                    referentHashing
+                    nameSegmentEquality
+                    nameSegmentHashing
+                    referentDecoder
+                    nameSegmentDecoder
             )
             (branchStarDecoder
                 referenceEquality
                 referenceHashing
+                nameSegmentEquality
+                nameSegmentHashing
                 referenceDecoder
                 nameSegmentDecoder
             )
@@ -272,27 +316,32 @@ rawBranchDecoder =
 
 rawCausalDecoder : Decoder RawCausal
 rawCausalDecoder =
-    Debug.log "rawCausal" <|
-        tagged <|
+    Debug.log "rawCausal"
+        (tagged <|
             \n ->
                 case n of
                     0 ->
-                        map RawOne rawBranchDecoder
+                        Debug.log "rawCausal.0" <|
+                            map RawOne rawBranchDecoder
 
                     1 ->
-                        map2
-                            (\hash branch -> RawCons branch hash)
-                            hash32Decoder
-                            rawBranchDecoder
+                        Debug.log "rawCausal.1" <|
+                            map2
+                                (\hash branch -> RawCons branch hash)
+                                hash32Decoder
+                                (Debug.log "entering rawBranchDecoder" rawBranchDecoder)
 
                     2 ->
-                        map2
-                            (\hashes branch -> RawMerge branch hashes)
-                            (hashSetDecoder hash32Equality hash32Hashing hash32Decoder)
-                            rawBranchDecoder
+                        Debug.log "rawCausal.2" <|
+                            map2
+                                (\hashes branch -> RawMerge branch hashes)
+                                (hashSetDecoder hash32Equality hash32Hashing hash32Decoder)
+                                rawBranchDecoder
 
                     _ ->
-                        fail
+                        Debug.log "rawCausal fail" <|
+                            fail
+        )
 
 
 referenceDecoder : Decoder Reference
@@ -302,13 +351,16 @@ referenceDecoder =
             \n ->
                 case n of
                     0 ->
-                        map Builtin textDecoder
+                        Debug.log "reference.0" <|
+                            map Builtin textDecoder
 
                     1 ->
-                        map Derived (map3 Id hash32Decoder varIntDecoder varIntDecoder)
+                        Debug.log "reference.1" <|
+                            map Derived (map3 Id hash32Decoder varIntDecoder varIntDecoder)
 
                     _ ->
-                        fail
+                        Debug.log "reference fail" <|
+                            fail
 
 
 referentDecoder : Decoder Referent
@@ -318,19 +370,35 @@ referentDecoder =
             \n ->
                 case n of
                     0 ->
-                        map Ref referenceDecoder
+                        Debug.log "referent.0" <|
+                            map Ref referenceDecoder
 
                     1 ->
-                        map3 Con referenceDecoder varIntDecoder constructorTypeDecoder
+                        Debug.log "referent.1" <|
+                            map3 Con referenceDecoder varIntDecoder constructorTypeDecoder
 
                     _ ->
-                        fail
+                        Debug.log "referent fail" <|
+                            fail
 
 
-relationDecoder : Decoder a -> Decoder b -> Decoder (Relation a b)
-relationDecoder _ _ =
-    Debug.log "relation" <|
-        fail
+relationDecoder :
+    Equality a
+    -> Hashing a
+    -> Equality b
+    -> Hashing b
+    -> Decoder a
+    -> Decoder b
+    -> Decoder (Relation a b)
+relationDecoder equalityA hashingA equalityB hashingB decoderA decoderB =
+    map
+        (relationFromList
+            equalityA
+            hashingA
+            equalityB
+            hashingB
+        )
+        (listDecoder (map2 Tuple.pair decoderA decoderB))
 
 
 seqOpDecoder : Decoder SeqOp
@@ -340,22 +408,25 @@ seqOpDecoder =
             \n ->
                 case n of
                     0 ->
-                        succeed Cons
+                        Debug.log "seqOp.0" <|
+                            succeed Cons
 
                     1 ->
-                        succeed Snoc
+                        Debug.log "seqOp.1" <|
+                            succeed Snoc
 
                     2 ->
-                        succeed Concat
+                        Debug.log "seqOp.2" <|
+                            succeed Concat
 
                     _ ->
-                        Debug.todo "unknown seqOp"
+                        Debug.log "seqOp fail" <|
+                            fail
 
 
 symbolDecoder : Decoder Symbol
 symbolDecoder =
-    Debug.log "symbol" <|
-        fail
+    Debug.todo "symbolDecoder"
 
 
 termEditDecoder : Decoder TermEdit
@@ -365,30 +436,33 @@ termEditDecoder =
             \n ->
                 case n of
                     1 ->
-                        map2
-                            TermEditReplace
-                            referenceDecoder
-                            (tagged <|
-                                \m ->
-                                    case m of
-                                        1 ->
-                                            succeed Same
+                        Debug.log "termEdit.1" <|
+                            map2
+                                TermEditReplace
+                                referenceDecoder
+                                (tagged <|
+                                    \m ->
+                                        case m of
+                                            1 ->
+                                                succeed Same
 
-                                        2 ->
-                                            succeed Subtype
+                                            2 ->
+                                                succeed Subtype
 
-                                        3 ->
-                                            succeed Different
+                                            3 ->
+                                                succeed Different
 
-                                        _ ->
-                                            fail
-                            )
+                                            _ ->
+                                                fail
+                                )
 
                     2 ->
-                        succeed TermEditDeprecate
+                        Debug.log "termEdit.2" <|
+                            succeed TermEditDeprecate
 
                     _ ->
-                        fail
+                        Debug.log "termEdit fail" <|
+                            fail
 
 
 textDecoder : Decoder String
@@ -401,8 +475,7 @@ textDecoder =
 
 typeDecoder : Decoder Type
 typeDecoder =
-    Debug.log "type" <|
-        fail
+    Debug.todo "typeDecoder"
 
 
 typeEditDecoder : Decoder TypeEdit
@@ -412,13 +485,16 @@ typeEditDecoder =
             \n ->
                 case n of
                     1 ->
-                        map TypeEditReplace referenceDecoder
+                        Debug.log "typeEdit.1" <|
+                            map TypeEditReplace referenceDecoder
 
                     2 ->
-                        succeed TypeEditDeprecate
+                        Debug.log "typeEdit.2" <|
+                            succeed TypeEditDeprecate
 
                     _ ->
-                        fail
+                        Debug.log "typeEdit fail" <|
+                            fail
 
 
 {-| TODO This is busted for ints that can't fit into JS nums, the actual type
@@ -432,18 +508,25 @@ varIntDecoder =
             |> andThen
                 (\n ->
                     if Bitwise.and n 128 == 128 then
-                        succeed n
+                        case Debug.log ("found byte 8th bit is set: " ++ Debug.toString n ++ ", returning it") () of
+                            () ->
+                                varIntDecoder
+                                    |> andThen
+                                        (\m ->
+                                            let
+                                                xxx =
+                                                    Bitwise.or
+                                                        (Bitwise.shiftLeftBy 7 m)
+                                                        (Bitwise.and n 127)
+                                            in
+                                            Debug.log ("succeeding varInt with " ++ Debug.toString xxx)
+                                                (succeed xxx)
+                                        )
 
                     else
-                        varIntDecoder
-                            |> andThen
-                                (\m ->
-                                    succeed
-                                        (Bitwise.or
-                                            (Bitwise.shiftLeftBy 7 m)
-                                            (Bitwise.and n 127)
-                                        )
-                                )
+                        case Debug.log ("found byte without 8th bit set: " ++ Debug.toString n ++ ", I'm done!") () of
+                            () ->
+                                succeed n
                 )
         )
 
@@ -459,7 +542,7 @@ varIntDecoder =
 replicate : Int -> Decoder a -> Decoder (List a)
 replicate n decoder =
     if n == 0 then
-        succeed []
+        Debug.log "replicate: succeed []" (succeed [])
 
     else
         map2 (::) decoder (replicate (n - 1) decoder)

@@ -1,5 +1,7 @@
 module Unison.Codebase.TypeEdit exposing (..)
 
+import Typeclasses.Classes.Equality exposing (Equality)
+import Typeclasses.Classes.Hashing exposing (Hashing)
 import Unison.Reference exposing (Reference)
 
 
@@ -8,3 +10,13 @@ import Unison.Reference exposing (Reference)
 type TypeEdit
     = TypeEditReplace Reference
     | TypeEditDeprecate
+
+
+typeEditEquality : Equality TypeEdit
+typeEditEquality =
+    Debug.todo "typeEditEquality"
+
+
+typeEditHashing : Hashing TypeEdit
+typeEditHashing =
+    Debug.todo "typeEditHashing"

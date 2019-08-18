@@ -1,6 +1,6 @@
 module Unison.Codebase.Causal exposing (..)
 
-import HashingContainers.HashSet exposing (HashSet)
+import HashingContainers.HashSet as HashSet exposing (HashSet)
 import Unison.Codebase.Branch exposing (..)
 import Unison.Hash exposing (Hash32)
 
@@ -26,3 +26,20 @@ rawCausalHead causal =
 
         RawMerge branch _ ->
             branch
+
+
+{-| Immediate previous hashes in the causal chain.
+-}
+rawCausalPrevs :
+    RawCausal
+    -> List Hash32
+rawCausalPrevs causal =
+    case causal of
+        RawOne _ ->
+            []
+
+        RawCons _ hash ->
+            [ hash ]
+
+        RawMerge _ hashes ->
+            HashSet.toList hashes

@@ -10,6 +10,7 @@ import Ucb.Main.Message exposing (Message(..))
 import Ucb.Main.Model exposing (..)
 import Ucb.Main.View exposing (view)
 import Ucb.Unison.Codebase.Path exposing (..)
+import Unison.Codebase.Causal exposing (..)
 import Unison.Hash exposing (..)
 
 
@@ -31,6 +32,8 @@ init _ =
             { head = Nothing
             , codebase =
                 { branches =
+                    HashDict.empty hash32Equality hash32Hashing
+                , next =
                     HashDict.empty hash32Equality hash32Hashing
                 }
             , ui =
@@ -89,6 +92,11 @@ update message model =
                                     hash
                                     response.body
                                     model.codebase.branches
+                            , next =
+                                List.foldl
+                                    (\x -> HashDict.insert x hash)
+                                    model.codebase.next
+                                    (rawCausalPrevs response.body)
                             }
                       }
                     , Cmd.none

@@ -19,6 +19,11 @@ type alias Model =
     -- The codebase
     , codebase :
         { branches : HashDict Hash32 RawCausal
+
+        -- Mapping from branch to future branch. Don't think the codebase
+        -- provides this, we just discover and cache it lazily as you move
+        -- backwards in time.
+        , next : HashDict Hash32 Hash32
         }
 
     -- UI state
@@ -30,7 +35,7 @@ type alias Model =
     -- The errors we've seen.
     , errors : List Error
 
-    -- GitHub rate limit (??)
+    -- GitHub rate limit
     , rateLimit : Maybe String
     }
 

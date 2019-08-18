@@ -138,7 +138,9 @@ viewRawCausal branches visible hash causal =
         viewPrevBranch : Hash32 -> Element Message
         viewPrevBranch hash_ =
             el
-                [ onClick (User_GetBranch { hash = hash_, focus = True }) ]
+                [ onClick (User_GetBranch { hash = hash_, focus = True })
+                , pointer
+                ]
                 (text hash_)
     in
     el [ padding 10 ]

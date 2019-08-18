@@ -34,6 +34,7 @@ view2 model =
                         Maybe.map
                             (viewRawCausal
                                 model.codebase.branches
+                                model.codebase.next
                                 model.ui.branches
                                 head
                             )
@@ -65,10 +66,11 @@ viewError error =
 
 viewRawBranch :
     HashDict Hash32 RawCausal
+    -> HashDict Hash32 Hash32
     -> HashDict Hash32 Bool
     -> RawBranch
     -> Element Message
-viewRawBranch branches visible branch =
+viewRawBranch branches nexts visible branch =
     let
         terms : List NameSegment
         terms =
@@ -112,7 +114,12 @@ viewRawBranch branches visible branch =
                                 (\causal ->
                                     case HashDict.get hash visible of
                                         Just True ->
-                                            viewRawCausal branches visible hash causal
+                                            viewRawCausal
+                                                branches
+                                                nexts
+                                                visible
+                                                hash
+                                                causal
 
                                         _ ->
                                             none
@@ -129,56 +136,61 @@ viewRawBranch branches visible branch =
 
 viewRawCausal :
     HashDict Hash32 RawCausal
+    -> HashDict Hash32 Hash32
     -> HashDict Hash32 Bool
     -> Hash32
     -> RawCausal
     -> Element Message
-viewRawCausal branches visible hash causal =
+viewRawCausal branches nexts visible hash causal =
     let
-        viewPrevBranch : Hash32 -> Element Message
-        viewPrevBranch hash_ =
+        viewHash : Hash32 -> Element Message
+        viewHash hash_ =
             el
                 [ onClick (User_GetBranch { hash = hash_, focus = True })
                 , pointer
                 ]
                 (text hash_)
+
+        viewPrev : List Hash32 -> Element Message
+        viewPrev hashes =
+            row
+                [ spacing 10 ]
+                (text "Prev" :: List.map viewHash hashes)
+
+        viewNext : Element Message
+        viewNext =
+            case HashDict.get hash nexts of
+                Nothing ->
+                    none
+
+                Just hash_ ->
+                    row [ spacing 10 ]
+                        [ text "Next"
+                        , viewHash hash_
+                        ]
     in
     el [ padding 10 ]
-        (column
-            []
-            [ text hash
-            , case causal of
-                RawOne branch ->
-                    viewRawBranch branches visible branch
+        (case causal of
+            RawOne branch ->
+                column
+                    [ spacing 5 ]
+                    [ column [] [ text hash, viewNext ]
+                    , viewRawBranch branches nexts visible branch
+                    ]
 
-                RawCons branch hash_ ->
-                    column
-                        [ spacing 5 ]
-                        [ row
-                            [ spacing 10 ]
-                            [ text "Prev"
-                            , viewPrevBranch hash_
-                            ]
-                        , viewRawBranch
-                            branches
-                            visible
-                            branch
-                        ]
+            RawCons branch hash_ ->
+                column
+                    [ spacing 5 ]
+                    [ column [] [ text hash, viewPrev [ hash_ ], viewNext ]
+                    , viewRawBranch branches nexts visible branch
+                    ]
 
-                RawMerge branch hashes ->
-                    column
-                        [ spacing 5 ]
-                        [ row
-                            [ spacing 10 ]
-                            [ text "Prev"
-                            , row [] (List.map viewPrevBranch (HashSet.toList hashes))
-                            ]
-                        , viewRawBranch
-                            branches
-                            visible
-                            branch
-                        ]
-            ]
+            RawMerge branch hashes ->
+                column
+                    [ spacing 5 ]
+                    [ column [] [ text hash, viewPrev (HashSet.toList hashes), viewNext ]
+                    , viewRawBranch branches nexts visible branch
+                    ]
         )
 
 

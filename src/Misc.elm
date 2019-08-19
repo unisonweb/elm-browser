@@ -51,13 +51,23 @@ hashSetSize =
 {-| TODO upstream this
 -}
 hashSetUnion :
+    HashSet a
+    -> HashSet a
+    -> HashSet a
+hashSetUnion =
+    HashSet.foldl HashSet.insert
+
+
+{-| TODO upstream this
+TODO check to see if it is left- or right- biased, compare to haskell one
+-}
+hashSetUnions :
     Equality a
     -> Hashing a
+    -> List (HashSet a)
     -> HashSet a
-    -> HashSet a
-    -> HashSet a
-hashSetUnion equality hashing =
-    HashSet.foldl HashSet.insert
+hashSetUnions equality hashing =
+    List.foldl hashSetUnion (HashSet.empty equality hashing)
 
 
 {-| This is "error"...

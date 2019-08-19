@@ -452,8 +452,9 @@ termDecoder2 env fvs =
                     termVarDecoder env fvs
 
                 1 ->
-                    termTermDecoder (termDecoder2 env fvs)
-                        |> andThen (Debug.todo "")
+                    map
+                        (termTerm symbolEquality symbolHashing)
+                        (termFDecoder (termDecoder2 env fvs))
 
                 2 ->
                     symbolDecoder
@@ -507,10 +508,10 @@ termVarDecoder env fvs =
                     fail
 
 
-termTermDecoder :
+termFDecoder :
     Decoder (Term Symbol)
-    -> Decoder (TermTerm Symbol)
-termTermDecoder tmDecoder =
+    -> Decoder (TermF Symbol)
+termFDecoder tmDecoder =
     tagged <|
         \n ->
             case n of

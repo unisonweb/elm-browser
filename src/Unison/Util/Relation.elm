@@ -27,7 +27,7 @@ relationFromList equalityA hashingA equalityB hashingB elements =
         hashDictFromListWith
             equalityA
             hashingA
-            (hashSetUnion equalityB hashingB)
+            hashSetUnion
             (List.map
                 (\( x, y ) -> ( x, hashSetSingleton equalityB hashingB y ))
                 elements
@@ -36,7 +36,7 @@ relationFromList equalityA hashingA equalityB hashingB elements =
         hashDictFromListWith
             equalityB
             hashingB
-            (hashSetUnion equalityA hashingA)
+            hashSetUnion
             (List.map
                 (\( x, y ) -> ( y, hashSetSingleton equalityA hashingA x ))
                 elements

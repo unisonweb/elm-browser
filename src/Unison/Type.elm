@@ -1,16 +1,26 @@
 module Unison.Type exposing (..)
 
 import HashingContainers.HashSet exposing (HashSet)
+import Unison.ABT exposing (..)
 import Unison.Kind exposing (Kind)
-import Unison.Parser exposing (Ann)
 import Unison.Reference exposing (Reference)
-import Unison.Symbol exposing (Symbol)
 
 
 {-| Haskell type: Unison.Type.Type
 -}
-type alias Type =
-    { freeVars : HashSet Symbol
-    , annotation : Ann
-    , out : () -- TODO whoops this seems hard, come back later...
-    }
+type alias Type var ann =
+    AbtTerm var ann (TypeTerm var ann)
+
+
+type TypeTerm var ann
+    = TypeVar var
+    | TypeCycle (Type var ann)
+    | TypeAbs var (Type var ann)
+    | TypeRef Reference
+    | TypeArrow (Type var ann) (Type var ann)
+    | TypeAnn (Type var ann) Kind
+    | TypeApp (Type var ann) (Type var ann)
+    | TypeEffect (Type var ann) (Type var ann)
+    | TypeEffects (List (Type var ann))
+    | TypeForall (Type var ann)
+    | TypeIntroOuter (Type var ann)

@@ -28,7 +28,7 @@ type alias Hash32 =
 
 hash32Equality : Equality Hash32
 hash32Equality =
-    Equality.eq (==)
+    Equality.string
 
 
 hash32Hashing : Hashing Hash32

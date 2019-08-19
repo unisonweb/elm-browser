@@ -1,8 +1,8 @@
 module Unison.Pattern exposing (..)
 
 
-type Pattern
-    = Undefined1
+type Pattern ann
+    = Undefined1 ann
 
 
 type SeqOp

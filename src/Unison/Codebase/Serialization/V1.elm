@@ -19,6 +19,7 @@ import Unison.Codebase.TypeEdit exposing (..)
 import Unison.ConstructorType exposing (..)
 import Unison.Hash exposing (..)
 import Unison.Kind exposing (..)
+import Unison.Parser exposing (Ann)
 import Unison.Pattern exposing (..)
 import Unison.Reference exposing (..)
 import Unison.Referent exposing (..)
@@ -237,7 +238,7 @@ patchDecoder =
         )
 
 
-patternDecoder : Decoder Pattern
+patternDecoder : Decoder (Pattern Ann)
 patternDecoder =
     Debug.todo "patternDecoder"
 
@@ -410,7 +411,7 @@ textDecoder =
         |> andThen string
 
 
-typeDecoder : Decoder Type
+typeDecoder : Decoder (Type Symbol Ann)
 typeDecoder =
     Debug.todo "typeDecoder"
 

@@ -7,21 +7,21 @@ import Word64 exposing (Word64)
 
 {-| Haskell type: Unison.Pattern.Pattern
 -}
-type Pattern ann
-    = UnboundP ann
-    | VarP ann
-    | BooleanP ann Bool
-    | IntP ann Int64
-    | NatP ann Word64
-    | FloatP ann Float
-    | TextP ann String
-    | CharP ann Char
-    | ConstructorP ann Reference Int (List (Pattern ann))
-    | AsP ann (Pattern ann)
-    | EffectPureP ann (Pattern ann)
-    | EffectBindP ann Reference Int (List (Pattern ann)) (Pattern ann)
-    | SequenceLiteralP ann (List (Pattern ann))
-    | SequenceOpP ann (Pattern ann) SeqOp (Pattern ann)
+type Pattern
+    = UnboundP
+    | VarP
+    | BooleanP Bool
+    | IntP Int64
+    | NatP Word64
+    | FloatP Float
+    | TextP String
+    | CharP Char
+    | ConstructorP Reference Int (List Pattern)
+    | AsP Pattern
+    | EffectPureP Pattern
+    | EffectBindP Reference Int (List Pattern) Pattern
+    | SequenceLiteralP (List Pattern)
+    | SequenceOpP Pattern SeqOp Pattern
 
 
 {-| Haskell type: Unison.Pattern.SeqOp

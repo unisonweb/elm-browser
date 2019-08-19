@@ -5,13 +5,13 @@ import Basics
 
 {-| Haskell type: Unison.Blank.Blank
 -}
-type Blank a
+type Blank
     = Blank
-    | Recorded (Recorded a)
+    | Recorded Recorded
 
 
 {-| Haskell type: Unison.Blank.Recorded
 -}
-type Recorded a
-    = Placeholder a String
-    | Resolve a String
+type Recorded
+    = Placeholder String
+    | Resolve String

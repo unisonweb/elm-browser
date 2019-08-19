@@ -60,6 +60,13 @@ hashSetUnion equality hashing =
     HashSet.foldl HashSet.insert
 
 
+{-| This is "error"...
+-}
+impossible : String -> a
+impossible s =
+    impossible s
+
+
 pairHashing :
     Hashing a
     -> Hashing b
@@ -87,3 +94,17 @@ initialSalt
 tumble : Int -> Int -> Int
 tumble thing salt =
     Bitwise.xor (salt * 16777619) thing
+
+
+unsafeIndex : Int -> List a -> a
+unsafeIndex n xs =
+    case xs of
+        [] ->
+            impossible "unsafeIndex: empty list"
+
+        y :: ys ->
+            if n == 0 then
+                y
+
+            else
+                unsafeIndex (n - 1) ys

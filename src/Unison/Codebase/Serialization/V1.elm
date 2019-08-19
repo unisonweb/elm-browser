@@ -1,14 +1,16 @@
 module Unison.Codebase.Serialization.V1 exposing (..)
 
+import Array
 import Bitwise
 import Bytes exposing (..)
 import Bytes.Decode exposing (..)
 import HashingContainers.HashDict as HashDict exposing (HashDict)
 import HashingContainers.HashSet as HashSet exposing (HashSet)
 import Int64 exposing (..)
-import Misc exposing (pairHashing)
+import Misc exposing (pairHashing, unsafeIndex)
 import Typeclasses.Classes.Equality as Equality exposing (Equality)
 import Typeclasses.Classes.Hashing exposing (Hashing)
+import Unison.ABT exposing (..)
 import Unison.Codebase.Branch as Branch exposing (RawBranch)
 import Unison.Codebase.Causal exposing (..)
 import Unison.Codebase.Metadata exposing (..)
@@ -27,6 +29,7 @@ import Unison.Term exposing (..)
 import Unison.Type exposing (..)
 import Unison.Util.Relation exposing (..)
 import Unison.Util.Star3 exposing (..)
+import Unison.Var exposing (..)
 import Word64 exposing (..)
 
 
@@ -424,7 +427,163 @@ seqOpDecoder =
 
 symbolDecoder : Decoder Symbol
 symbolDecoder =
-    Debug.todo "symbolDecoder"
+    map2
+        Symbol
+        -- Fixme, is varint
+        (map SmallWord64 varIntDecoder)
+        (map User textDecoder)
+
+
+termDecoder : Decoder (Term Symbol)
+termDecoder =
+    listDecoder symbolDecoder
+        |> andThen (termDecoder2 [])
+
+
+termDecoder2 :
+    List Symbol
+    -> List Symbol
+    -> Decoder (Term Symbol)
+termDecoder2 env fvs =
+    tagged <|
+        \n ->
+            case n of
+                0 ->
+                    termVarDecoder env fvs
+
+                1 ->
+                    termTermDecoder (termDecoder2 env fvs)
+                        |> andThen (Debug.todo "")
+
+                2 ->
+                    symbolDecoder
+                        |> andThen
+                            (\var ->
+                                termDecoder2 (var :: env) fvs
+                                    |> andThen
+                                        (\body ->
+                                            succeed (termAbs var body)
+                                        )
+                            )
+
+                3 ->
+                    map
+                        termCycle
+                        (termDecoder2 env fvs)
+
+                _ ->
+                    fail
+
+
+termVarDecoder :
+    List Symbol
+    -> List Symbol
+    -> Decoder (Term Symbol)
+termVarDecoder env fvs =
+    tagged <|
+        \m ->
+            case m of
+                0 ->
+                    map
+                        (\i ->
+                            termVar
+                                symbolEquality
+                                symbolHashing
+                                (unsafeIndex i env)
+                        )
+                        varIntDecoder
+
+                1 ->
+                    map
+                        (\i ->
+                            termVar
+                                symbolEquality
+                                symbolHashing
+                                (unsafeIndex i fvs)
+                        )
+                        varIntDecoder
+
+                _ ->
+                    fail
+
+
+termTermDecoder :
+    Decoder (Term Symbol)
+    -> Decoder (TermTerm Symbol)
+termTermDecoder tmDecoder =
+    tagged <|
+        \n ->
+            case n of
+                0 ->
+                    map TermInt intDecoder
+
+                1 ->
+                    map TermNat natDecoder
+
+                2 ->
+                    map TermFloat floatDecoder
+
+                3 ->
+                    map TermBoolean booleanDecoder
+
+                4 ->
+                    map TermText textDecoder
+
+                5 ->
+                    map TermRef referenceDecoder
+
+                6 ->
+                    map2 TermConstructor referenceDecoder varIntDecoder
+
+                7 ->
+                    map2 TermRequest referenceDecoder varIntDecoder
+
+                8 ->
+                    map2 TermHandle tmDecoder tmDecoder
+
+                9 ->
+                    map2 TermApp tmDecoder tmDecoder
+
+                10 ->
+                    map2 TermAnn tmDecoder typeDecoder
+
+                11 ->
+                    map (Array.fromList >> TermSequence) (listDecoder tmDecoder)
+
+                12 ->
+                    map3 TermIf tmDecoder tmDecoder tmDecoder
+
+                13 ->
+                    map2 TermAnd tmDecoder tmDecoder
+
+                14 ->
+                    map2 TermOr tmDecoder tmDecoder
+
+                15 ->
+                    map TermLam tmDecoder
+
+                16 ->
+                    map2 (TermLetRec False) (listDecoder tmDecoder) tmDecoder
+
+                17 ->
+                    map2 (TermLet False) tmDecoder tmDecoder
+
+                18 ->
+                    map2 TermMatch
+                        tmDecoder
+                        (listDecoder
+                            (map3 MatchCase
+                                patternDecoder
+                                (maybeDecoder tmDecoder)
+                                tmDecoder
+                            )
+                        )
+
+                19 ->
+                    map TermChar charDecoder
+
+                _ ->
+                    fail
 
 
 termEditDecoder : Decoder TermEdit

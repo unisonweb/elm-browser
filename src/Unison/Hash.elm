@@ -10,6 +10,7 @@ module Unison.Hash exposing
 import Bitwise exposing (and, or, shiftLeftBy, shiftRightZfBy)
 import Bytes exposing (Bytes)
 import Bytes.Decode as Decode exposing (Decoder, Step(..))
+import Misc exposing (impossible)
 import Typeclasses.Classes.Equality as Equality exposing (Equality)
 import Typeclasses.Classes.Hashing as Hashing exposing (Hashing)
 
@@ -44,15 +45,10 @@ encodeHash :
 encodeHash bytes =
     case Decode.decode (decoder (Bytes.width bytes)) bytes of
         Nothing ->
-            impossible ()
+            impossible "encodeHash: decoder failed?"
 
         Just string ->
             string
-
-
-impossible : () -> String
-impossible _ =
-    impossible ()
 
 
 decoder :

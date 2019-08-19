@@ -2,6 +2,8 @@ module Unison.Term exposing (..)
 
 import Array exposing (Array)
 import Int64 exposing (Int64)
+import Typeclasses.Classes.Equality exposing (Equality)
+import Typeclasses.Classes.Hashing exposing (Hashing)
 import Unison.ABT exposing (..)
 import Unison.Blank exposing (Blank)
 import Unison.Pattern exposing (Pattern)
@@ -21,7 +23,7 @@ type TermTerm var
     | TermCycle (Term var)
     | TermAbs var (Term var)
     | TermInt Int64
-    | TermWord Word64
+    | TermNat Word64
     | TermFloat Float
     | TermBoolean Bool
     | TermText String
@@ -47,3 +49,27 @@ type TermTerm var
 -}
 type MatchCase a
     = MatchCase Pattern (Maybe a) a
+
+
+termVar :
+    Equality var
+    -> Hashing var
+    -> var
+    -> Term var
+termVar varEquality varHashing =
+    abtVar varEquality varHashing TermVar
+
+
+termAbs :
+    var
+    -> Term var
+    -> Term var
+termAbs =
+    abtAbs TermAbs
+
+
+termCycle :
+    Term var
+    -> Term var
+termCycle =
+    abtCycle TermCycle

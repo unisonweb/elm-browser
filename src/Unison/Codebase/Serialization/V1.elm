@@ -627,7 +627,111 @@ textDecoder =
 
 typeDecoder : Decoder (Type Symbol)
 typeDecoder =
-    Debug.todo "typeDecoder"
+    listDecoder symbolDecoder
+        |> andThen (typeDecoder2 [])
+
+
+typeDecoder2 :
+    List Symbol
+    -> List Symbol
+    -> Decoder (Type Symbol)
+typeDecoder2 env fvs =
+    tagged <|
+        \n ->
+            case n of
+                0 ->
+                    typeVarDecoder env fvs
+
+                1 ->
+                    map
+                        (typeTerm symbolEquality symbolHashing)
+                        (typeFDecoder (typeDecoder2 env fvs))
+
+                2 ->
+                    symbolDecoder
+                        |> andThen
+                            (\var ->
+                                typeDecoder2 (var :: env) fvs
+                                    |> andThen
+                                        (\body ->
+                                            succeed (typeAbs var body)
+                                        )
+                            )
+
+                3 ->
+                    map
+                        typeCycle
+                        (typeDecoder2 env fvs)
+
+                _ ->
+                    fail
+
+
+typeVarDecoder :
+    List Symbol
+    -> List Symbol
+    -> Decoder (Type Symbol)
+typeVarDecoder env fvs =
+    tagged <|
+        \m ->
+            case m of
+                0 ->
+                    map
+                        (\i ->
+                            typeVar
+                                symbolEquality
+                                symbolHashing
+                                (unsafeIndex i env)
+                        )
+                        varIntDecoder
+
+                1 ->
+                    map
+                        (\i ->
+                            typeVar
+                                symbolEquality
+                                symbolHashing
+                                (unsafeIndex i fvs)
+                        )
+                        varIntDecoder
+
+                _ ->
+                    fail
+
+
+typeFDecoder :
+    Decoder (Type Symbol)
+    -> Decoder (TypeF Symbol)
+typeFDecoder tyDecoder =
+    tagged <|
+        \n ->
+            case n of
+                0 ->
+                    map TypeRef referenceDecoder
+
+                1 ->
+                    map2 TypeArrow tyDecoder tyDecoder
+
+                2 ->
+                    map2 TypeAnn tyDecoder kindDecoder
+
+                3 ->
+                    map2 TypeApp tyDecoder tyDecoder
+
+                4 ->
+                    map2 TypeEffect tyDecoder tyDecoder
+
+                5 ->
+                    map TypeEffects (listDecoder tyDecoder)
+
+                6 ->
+                    map TypeForall tyDecoder
+
+                7 ->
+                    map TypeIntroOuter tyDecoder
+
+                _ ->
+                    fail
 
 
 typeEditDecoder : Decoder TypeEdit

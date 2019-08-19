@@ -5,6 +5,7 @@ module Main exposing (..)
 import Browser
 import Dict
 import HashingContainers.HashDict as HashDict
+import HashingContainers.HashSet as HashSet
 import Task
 import Ucb.Main.Message exposing (Message(..))
 import Ucb.Main.Model exposing (..)
@@ -31,19 +32,17 @@ init _ =
         initialModel =
             { head = Nothing
             , codebase =
-                { branches =
-                    HashDict.empty hash32Equality hash32Hashing
-                , next =
-                    HashDict.empty hash32Equality hash32Hashing
+                { branches = HashDict.empty hash32Equality hash32Hashing
+                , successors = HashDict.empty hash32Equality hash32Hashing
                 }
             , ui =
-                { branches =
-                    HashDict.empty hash32Equality hash32Hashing
+                { branches = HashDict.empty hash32Equality hash32Hashing
                 }
             , errors = []
             , rateLimit = Nothing
             }
 
+        -- First command: fetch _head path!
         initialCommand : Cmd Message
         initialCommand =
             httpGetHeadHash owner repo
@@ -60,6 +59,7 @@ subscriptions _ =
 update : Message -> Model -> ( Model, Cmd Message )
 update message model =
     case message of
+        -- Got the head hash. Next step: get the actual (decoded) bytes.
         Http_GetHeadHash result ->
             case result of
                 Err err ->
@@ -77,6 +77,12 @@ update message model =
                         |> Task.attempt Http_GetRawCausal
                     )
 
+        -- We received a RawCausal from the sky. This happens once initially
+        -- (_head branch), and then every time the user requests one to be
+        -- fetched via the UI.
+        --
+        -- What do we do with all these branches? Just store them forever in
+        -- a map.
         Http_GetRawCausal result ->
             case result of
                 Err err ->
@@ -87,16 +93,19 @@ update message model =
                 Ok ( hash, response ) ->
                     ( { model
                         | codebase =
+                            -- Store branch
                             { branches =
                                 HashDict.insert
                                     hash
                                     response.body
                                     model.codebase.branches
-                            , next =
-                                List.foldl
-                                    (\x -> HashDict.insert x hash)
-                                    model.codebase.next
-                                    (rawCausalPrevs response.body)
+
+                            -- And the predecessor->this-branch mappings
+                            , successors =
+                                insertSuccessors
+                                    hash
+                                    (rawCausalPredecessors response.body)
+                                    model.codebase.successors
                             }
                       }
                     , Cmd.none

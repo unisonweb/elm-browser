@@ -35,7 +35,7 @@ view2 model =
                         Maybe.map
                             (viewRawCausal
                                 model.codebase.branches
-                                model.codebase.next
+                                model.codebase.successors
                                 model.ui.branches
                                 head
                             )
@@ -67,11 +67,11 @@ viewError error =
 
 viewRawBranch :
     HashDict Hash32 RawCausal
-    -> HashDict Hash32 Hash32
+    -> HashDict Hash32 (HashSet Hash32)
     -> HashDict Hash32 Bool
     -> RawBranch
     -> Element Message
-viewRawBranch branches nexts visible branch =
+viewRawBranch branches successors visible branch =
     let
         terms : List NameSegment
         terms =
@@ -122,7 +122,7 @@ viewRawBranch branches nexts visible branch =
                                         Just True ->
                                             viewRawCausal
                                                 branches
-                                                nexts
+                                                successors
                                                 visible
                                                 hash
                                                 causal
@@ -142,12 +142,12 @@ viewRawBranch branches nexts visible branch =
 
 viewRawCausal :
     HashDict Hash32 RawCausal
-    -> HashDict Hash32 Hash32
+    -> HashDict Hash32 (HashSet Hash32)
     -> HashDict Hash32 Bool
     -> Hash32
     -> RawCausal
     -> Element Message
-viewRawCausal branches nexts visible hash causal =
+viewRawCausal branches successors visible hash causal =
     let
         viewHash : Hash32 -> Element Message
         viewHash hash_ =
@@ -163,39 +163,38 @@ viewRawCausal branches nexts visible hash causal =
                 [ spacing 10 ]
                 (text "Prev" :: List.map viewHash hashes)
 
-        viewNext : Element Message
-        viewNext =
-            case HashDict.get hash nexts of
+        viewSuccessors : Element Message
+        viewSuccessors =
+            case HashDict.get hash successors of
                 Nothing ->
                     none
 
-                Just hash_ ->
-                    row [ spacing 10 ]
-                        [ text "Next"
-                        , viewHash hash_
-                        ]
+                Just hashes ->
+                    row
+                        [ spacing 10 ]
+                        (text "Next" :: List.map viewHash (HashSet.toList hashes))
     in
     el [ padding 10 ]
         (case causal of
             RawOne branch ->
                 column
                     [ spacing 5 ]
-                    [ column [] [ viewHash hash, viewNext ]
-                    , viewRawBranch branches nexts visible branch
+                    [ column [] [ viewHash hash, viewSuccessors ]
+                    , viewRawBranch branches successors visible branch
                     ]
 
             RawCons branch hash_ ->
                 column
                     [ spacing 5 ]
-                    [ column [] [ viewHash hash, viewPrev [ hash_ ], viewNext ]
-                    , viewRawBranch branches nexts visible branch
+                    [ column [] [ viewHash hash, viewPrev [ hash_ ], viewSuccessors ]
+                    , viewRawBranch branches successors visible branch
                     ]
 
             RawMerge branch hashes ->
                 column
                     [ spacing 5 ]
-                    [ column [] [ viewHash hash, viewPrev (HashSet.toList hashes), viewNext ]
-                    , viewRawBranch branches nexts visible branch
+                    [ column [] [ viewHash hash, viewPrev (HashSet.toList hashes), viewSuccessors ]
+                    , viewRawBranch branches successors visible branch
                     ]
         )
 

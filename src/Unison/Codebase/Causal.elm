@@ -28,12 +28,12 @@ rawCausalHead causal =
             branch
 
 
-{-| Immediate previous hashes in the causal chain.
+{-| Predecessors in the causal chain.
 -}
-rawCausalPrevs :
+rawCausalPredecessors :
     RawCausal
     -> List Hash32
-rawCausalPrevs causal =
+rawCausalPredecessors causal =
     case causal of
         RawOne _ ->
             []

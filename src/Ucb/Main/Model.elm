@@ -1,10 +1,12 @@
 module Ucb.Main.Model exposing (..)
 
 import HashingContainers.HashDict as HashDict exposing (HashDict)
+import HashingContainers.HashSet as HashSet exposing (HashSet)
+import Misc exposing (hashSetSingleton)
 import Ucb.Unison.Codebase.Path exposing (..)
 import Ucb.Util.Http as Http
 import Unison.Codebase.Causal exposing (..)
-import Unison.Hash exposing (Hash32)
+import Unison.Hash exposing (..)
 
 
 type Error
@@ -20,10 +22,10 @@ type alias Model =
     , codebase :
         { branches : HashDict Hash32 RawCausal
 
-        -- Mapping from branch to future branch. Don't think the codebase
+        -- Mapping from branch to its successor(s). Don't think the codebase
         -- provides this, we just discover and cache it lazily as you move
         -- backwards in time.
-        , next : HashDict Hash32 Hash32
+        , successors : HashDict Hash32 (HashSet Hash32)
         }
 
     -- UI state
@@ -50,3 +52,34 @@ accumulateError err model =
     { model
         | errors = err :: model.errors
     }
+
+
+{-| Given a branch and its predecessors, insert the branch as a successor of
+each of its predecessors.
+-}
+insertSuccessors :
+    Hash32
+    -> List Hash32
+    -> HashDict Hash32 (HashSet Hash32)
+    -> HashDict Hash32 (HashSet Hash32)
+insertSuccessors hash preds successors =
+    List.foldl
+        (\pred ->
+            HashDict.update
+                pred
+                (\existingSuccessors ->
+                    case existingSuccessors of
+                        Nothing ->
+                            Just
+                                (hashSetSingleton
+                                    hash32Equality
+                                    hash32Hashing
+                                    hash
+                                )
+
+                        Just existingSuccessors_ ->
+                            Just (HashSet.insert hash existingSuccessors_)
+                )
+        )
+        successors
+        preds

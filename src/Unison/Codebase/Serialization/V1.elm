@@ -239,7 +239,62 @@ patchDecoder =
 
 patternDecoder : Decoder Pattern
 patternDecoder =
-    Debug.todo "patternDecoder"
+    tagged <|
+        \n ->
+            case n of
+                0 ->
+                    succeed UnboundP
+
+                1 ->
+                    succeed VarP
+
+                2 ->
+                    map BooleanP booleanDecoder
+
+                3 ->
+                    map IntP intDecoder
+
+                4 ->
+                    map NatP natDecoder
+
+                5 ->
+                    map FloatP floatDecoder
+
+                6 ->
+                    map3
+                        ConstructorP
+                        referenceDecoder
+                        varIntDecoder
+                        (listDecoder patternDecoder)
+
+                7 ->
+                    map AsP patternDecoder
+
+                8 ->
+                    map EffectPureP patternDecoder
+
+                9 ->
+                    map4
+                        EffectBindP
+                        referenceDecoder
+                        varIntDecoder
+                        (listDecoder patternDecoder)
+                        patternDecoder
+
+                10 ->
+                    map SequenceLiteralP (listDecoder patternDecoder)
+
+                11 ->
+                    map3 SequenceOpP patternDecoder seqOpDecoder patternDecoder
+
+                12 ->
+                    map TextP textDecoder
+
+                13 ->
+                    map CharP charDecoder
+
+                _ ->
+                    fail
 
 
 rawBranchDecoder : Decoder RawBranch

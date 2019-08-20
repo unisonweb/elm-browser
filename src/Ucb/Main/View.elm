@@ -16,29 +16,15 @@ import Unison.Codebase.NameSegment exposing (..)
 import Unison.Hash exposing (..)
 import Unison.Reference exposing (..)
 import Unison.Referent exposing (..)
+import Unison.Symbol exposing (..)
+import Unison.Type exposing (..)
 import Unison.Util.Relation exposing (..)
-
-
-{-| The bits of the model that are relevant to the view.
--}
-type alias ViewModel =
-    { branches : HashDict Hash32 RawCausal
-    , successors : HashDict Hash32 (HashSet Hash32)
-    }
 
 
 view : Model -> Html Message
 view model =
-    let
-        viewModel : ViewModel
-        viewModel =
-            { branches = model.codebase.branches
-            , successors = model.codebase.successors
-            }
-    in
     layout
         []
-        -- TODO pass in viewModel instead
         (view2 model)
 
 
@@ -51,13 +37,7 @@ view2 model =
                 |> Maybe.andThen
                     (\head ->
                         Maybe.map
-                            (viewRawCausal
-                                model.codebase.branches
-                                model.codebase.parents
-                                model.codebase.successors
-                                model.ui.branches
-                                head
-                            )
+                            (viewRawCausal model head)
                             (HashDict.get head model.codebase.branches)
                     )
             , if List.isEmpty model.errors then
@@ -80,14 +60,11 @@ view2 model =
 {-| View a child branch.
 -}
 viewBranchChild :
-    HashDict Hash32 RawCausal
-    -> HashDict Hash32 (HashSet Hash32)
-    -> HashDict Hash32 (HashSet Hash32)
-    -> HashDict Hash32 Bool
+    Model
     -> NameSegment
     -> Hash32
     -> Element Message
-viewBranchChild branches parents successors visible name hash =
+viewBranchChild model name hash =
     column
         []
         [ el
@@ -111,20 +88,14 @@ viewBranchChild branches parents successors visible name hash =
             ]
             (viewMaybe
                 (\causal ->
-                    case HashDict.get hash visible of
+                    case HashDict.get hash model.ui.branches of
                         Just True ->
-                            viewRawCausal
-                                branches
-                                parents
-                                successors
-                                visible
-                                hash
-                                causal
+                            viewRawCausal model hash causal
 
                         _ ->
                             none
                 )
-                (HashDict.get hash branches)
+                (HashDict.get hash model.codebase.branches)
             )
         ]
 
@@ -211,13 +182,10 @@ viewShortReferent referent =
 {-| View a raw branch.
 -}
 viewRawBranch :
-    HashDict Hash32 RawCausal
-    -> HashDict Hash32 (HashSet Hash32)
-    -> HashDict Hash32 (HashSet Hash32)
-    -> HashDict Hash32 Bool
+    Model
     -> RawBranch
     -> Element Message
-viewRawBranch branches parents successors visible branch =
+viewRawBranch model branch =
     let
         edits : List NameSegment
         edits =
@@ -248,15 +216,7 @@ viewRawBranch branches parents successors visible branch =
         , column
             []
             (List.map
-                (\( name, hash ) ->
-                    viewBranchChild
-                        branches
-                        parents
-                        successors
-                        visible
-                        name
-                        hash
-                )
+                (\( name, hash ) -> viewBranchChild model name hash)
                 (branch.children
                     |> HashDict.toList
                     |> List.sortBy Tuple.first
@@ -267,14 +227,11 @@ viewRawBranch branches parents successors visible branch =
 
 
 viewRawCausal :
-    HashDict Hash32 RawCausal
-    -> HashDict Hash32 (HashSet Hash32)
-    -> HashDict Hash32 (HashSet Hash32)
-    -> HashDict Hash32 Bool
+    Model
     -> Hash32
     -> RawCausal
     -> Element Message
-viewRawCausal branches parents successors visible hash causal =
+viewRawCausal model hash causal =
     let
         viewHash : Hash32 -> Element Message
         viewHash hash_ =
@@ -286,7 +243,7 @@ viewRawCausal branches parents successors visible hash causal =
 
         viewParents : Element Message
         viewParents =
-            case HashDict.get hash parents of
+            case HashDict.get hash model.codebase.parents of
                 Nothing ->
                     none
 
@@ -303,7 +260,7 @@ viewRawCausal branches parents successors visible hash causal =
 
         viewSuccessors : Element Message
         viewSuccessors =
-            case HashDict.get hash successors of
+            case HashDict.get hash model.codebase.successors of
                 Nothing ->
                     none
 
@@ -322,12 +279,7 @@ viewRawCausal branches parents successors visible hash causal =
                         , viewParents
                         , viewSuccessors
                         ]
-                    , viewRawBranch
-                        branches
-                        parents
-                        successors
-                        visible
-                        branch
+                    , viewRawBranch model branch
                     ]
 
             RawCons branch hash_ ->
@@ -339,12 +291,7 @@ viewRawCausal branches parents successors visible hash causal =
                         , viewPredecessors [ hash_ ]
                         , viewSuccessors
                         ]
-                    , viewRawBranch
-                        branches
-                        parents
-                        successors
-                        visible
-                        branch
+                    , viewRawBranch model branch
                     ]
 
             RawMerge branch hashes ->
@@ -356,12 +303,7 @@ viewRawCausal branches parents successors visible hash causal =
                         , viewPredecessors (HashSet.toList hashes)
                         , viewSuccessors
                         ]
-                    , viewRawBranch
-                        branches
-                        parents
-                        successors
-                        visible
-                        branch
+                    , viewRawBranch model branch
                     ]
         )
 

@@ -53,6 +53,6 @@ idToPath { hash, pos, size } =
                     ++ String.fromChar '.'
                     ++ String.fromInt (pos + 1)
                     ++ String.fromChar 'c'
-                    ++ String.fromInt (size + 1)
+                    ++ String.fromInt size
            )
         ++ "/compiled.ub"

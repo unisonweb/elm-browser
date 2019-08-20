@@ -53,6 +53,7 @@ view2 model =
                         Maybe.map
                             (viewRawCausal
                                 model.codebase.branches
+                                model.codebase.parents
                                 model.codebase.successors
                                 model.ui.branches
                                 head
@@ -81,11 +82,12 @@ view2 model =
 viewBranchChild :
     HashDict Hash32 RawCausal
     -> HashDict Hash32 (HashSet Hash32)
+    -> HashDict Hash32 (HashSet Hash32)
     -> HashDict Hash32 Bool
     -> NameSegment
     -> Hash32
     -> Element Message
-viewBranchChild branches successors visible name hash =
+viewBranchChild branches parents successors visible name hash =
     column
         []
         [ el
@@ -113,6 +115,7 @@ viewBranchChild branches successors visible name hash =
                         Just True ->
                             viewRawCausal
                                 branches
+                                parents
                                 successors
                                 visible
                                 hash
@@ -210,10 +213,11 @@ viewShortReferent referent =
 viewRawBranch :
     HashDict Hash32 RawCausal
     -> HashDict Hash32 (HashSet Hash32)
+    -> HashDict Hash32 (HashSet Hash32)
     -> HashDict Hash32 Bool
     -> RawBranch
     -> Element Message
-viewRawBranch branches successors visible branch =
+viewRawBranch branches parents successors visible branch =
     let
         edits : List NameSegment
         edits =
@@ -245,7 +249,13 @@ viewRawBranch branches successors visible branch =
             []
             (List.map
                 (\( name, hash ) ->
-                    viewBranchChild branches successors visible name hash
+                    viewBranchChild
+                        branches
+                        parents
+                        successors
+                        visible
+                        name
+                        hash
                 )
                 (branch.children
                     |> HashDict.toList
@@ -259,11 +269,12 @@ viewRawBranch branches successors visible branch =
 viewRawCausal :
     HashDict Hash32 RawCausal
     -> HashDict Hash32 (HashSet Hash32)
+    -> HashDict Hash32 (HashSet Hash32)
     -> HashDict Hash32 Bool
     -> Hash32
     -> RawCausal
     -> Element Message
-viewRawCausal branches successors visible hash causal =
+viewRawCausal branches parents successors visible hash causal =
     let
         viewHash : Hash32 -> Element Message
         viewHash hash_ =
@@ -272,6 +283,17 @@ viewRawCausal branches successors visible hash causal =
                 , pointer
                 ]
                 (text hash_)
+
+        viewParents : Element Message
+        viewParents =
+            case HashDict.get hash parents of
+                Nothing ->
+                    none
+
+                Just hashes ->
+                    row
+                        [ spacing 10 ]
+                        (text "Parents" :: List.map viewHash (HashSet.toList hashes))
 
         viewPredecessors : List Hash32 -> Element Message
         viewPredecessors hashes =
@@ -297,9 +319,15 @@ viewRawCausal branches successors visible hash causal =
                     [ spacing 5 ]
                     [ column []
                         [ viewHash hash
+                        , viewParents
                         , viewSuccessors
                         ]
-                    , viewRawBranch branches successors visible branch
+                    , viewRawBranch
+                        branches
+                        parents
+                        successors
+                        visible
+                        branch
                     ]
 
             RawCons branch hash_ ->
@@ -307,10 +335,16 @@ viewRawCausal branches successors visible hash causal =
                     [ spacing 5 ]
                     [ column []
                         [ viewHash hash
+                        , viewParents
                         , viewPredecessors [ hash_ ]
                         , viewSuccessors
                         ]
-                    , viewRawBranch branches successors visible branch
+                    , viewRawBranch
+                        branches
+                        parents
+                        successors
+                        visible
+                        branch
                     ]
 
             RawMerge branch hashes ->
@@ -318,10 +352,16 @@ viewRawCausal branches successors visible hash causal =
                     [ spacing 5 ]
                     [ column []
                         [ viewHash hash
+                        , viewParents
                         , viewPredecessors (HashSet.toList hashes)
                         , viewSuccessors
                         ]
-                    , viewRawBranch branches successors visible branch
+                    , viewRawBranch
+                        branches
+                        parents
+                        successors
+                        visible
+                        branch
                     ]
         )
 

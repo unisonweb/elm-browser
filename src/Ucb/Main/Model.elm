@@ -25,25 +25,32 @@ type alias Model =
 
     -- The codebase
     , codebase :
-        { branches : HashDict Hash32 RawCausal
+        { -- This data we've fetched directly from the codebase
+          branches : HashDict Hash32 RawCausal
+        , types : HashDict Id (Type Symbol)
 
-        -- Mapping from branch to its successor(s). Don't think the codebase
-        -- provides this, we just discover and cache it lazily as you move
+        -- Mapping from branch to its parent(s). The codebase doesn't provide
+        -- this, we just discover and cache it lazily as you move down into
+        -- children.
+        , parents : HashDict Hash32 (HashSet Hash32)
+
+        -- Mapping from branch to its successor(s). The codebase doesn't
+        -- provide this, we just discover and cache it lazily as you move
         -- backwards in time.
         , successors : HashDict Hash32 (HashSet Hash32)
-        , types : HashDict Id (Type Symbol)
         }
 
-    -- UI state
+    -- UI state, not pulled (nor derived) from the codebase
     , ui :
         -- Visible?
         { branches : HashDict Hash32 Bool
         }
 
-    -- The errors we've seen.
+    -- The errors we've seen. Just slappin' them in the model to put into the
+    -- HTML when something is going wrong.
     , errors : List Error
 
-    -- GitHub rate limit
+    -- GitHub rate limit (again just for debugging purposes)
     , rateLimit : Maybe String
     }
 
@@ -60,6 +67,37 @@ accumulateError err model =
     }
 
 
+{-| Given a branch and its children, insert the branch as a parent of each of
+its children.
+-}
+insertParents :
+    Hash32
+    -> List Hash32
+    -> HashDict Hash32 (HashSet Hash32)
+    -> HashDict Hash32 (HashSet Hash32)
+insertParents parent children parentsCache =
+    List.foldl
+        (\child ->
+            HashDict.update
+                child
+                (\existingParents ->
+                    case existingParents of
+                        Nothing ->
+                            Just
+                                (hashSetSingleton
+                                    hash32Equality
+                                    hash32Hashing
+                                    parent
+                                )
+
+                        Just existingParents_ ->
+                            Just (HashSet.insert parent existingParents_)
+                )
+        )
+        parentsCache
+        children
+
+
 {-| Given a branch and its predecessors, insert the branch as a successor of
 each of its predecessors.
 -}
@@ -68,11 +106,11 @@ insertSuccessors :
     -> List Hash32
     -> HashDict Hash32 (HashSet Hash32)
     -> HashDict Hash32 (HashSet Hash32)
-insertSuccessors hash preds successors =
+insertSuccessors successor predecessors successorsCache =
     List.foldl
-        (\pred ->
+        (\predecessor ->
             HashDict.update
-                pred
+                predecessor
                 (\existingSuccessors ->
                     case existingSuccessors of
                         Nothing ->
@@ -80,12 +118,12 @@ insertSuccessors hash preds successors =
                                 (hashSetSingleton
                                     hash32Equality
                                     hash32Hashing
-                                    hash
+                                    successor
                                 )
 
                         Just existingSuccessors_ ->
-                            Just (HashSet.insert hash existingSuccessors_)
+                            Just (HashSet.insert successor existingSuccessors_)
                 )
         )
-        successors
-        preds
+        successorsCache
+        predecessors

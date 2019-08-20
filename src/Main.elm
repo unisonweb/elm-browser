@@ -38,8 +38,9 @@ init _ =
             { head = Nothing
             , codebase =
                 { branches = HashDict.empty hash32Equality hash32Hashing
-                , successors = HashDict.empty hash32Equality hash32Hashing
                 , types = HashDict.empty idEquality idHashing
+                , parents = HashDict.empty hash32Equality hash32Hashing
+                , successors = HashDict.empty hash32Equality hash32Hashing
                 }
             , ui =
                 { branches = HashDict.empty hash32Equality hash32Hashing
@@ -130,7 +131,19 @@ updateHttpGetRawCausal result model =
                             response.body
                             model.codebase.branches
 
-                    -- And the predecessor->this-branch mappings
+                    -- Add the child->this mappings
+                    , parents =
+                        insertParents
+                            hash
+                            (response.body
+                                |> rawCausalHead
+                                |> .children
+                                |> HashDict.toList
+                                |> List.map Tuple.second
+                            )
+                            model.codebase.parents
+
+                    -- And the predecessor->this mappings
                     , successors =
                         insertSuccessors
                             hash

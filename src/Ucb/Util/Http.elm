@@ -192,6 +192,7 @@ bytesParser decoder response =
                             , headers = metadata.headers
                             , body = body
                             }
+                            -- Unfortunate we can't give a decod error ;(
                             ""
 
                 Just contents ->

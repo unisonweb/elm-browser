@@ -1,6 +1,8 @@
 module Unison.Reference exposing
     ( Id
     , Reference(..)
+    , idEquality
+    , idHashing
     , referenceEquality
     , referenceHashing
     )
@@ -17,15 +19,6 @@ import Unison.Hash exposing (..)
 type Reference
     = Builtin String
     | Derived Id
-
-
-{-| Haskell type: Unison.Reference.Id
--}
-type alias Id =
-    { hash : Hash32
-    , pos : Int
-    , size : Int
-    }
 
 
 referenceEquality : Equality Reference
@@ -58,4 +51,31 @@ referenceHashing =
                     1
                         |> tumble (hashHash32 id.hash)
                         |> tumble id.pos
+        )
+
+
+{-| Haskell type: Unison.Reference.Id
+-}
+type alias Id =
+    { hash : Hash32
+    , pos : Int
+    , size : Int
+    }
+
+
+idEquality : Equality Id
+idEquality =
+    Equality.eq
+        (\id1 id2 ->
+            hash32Equality.eq id1.hash id2.hash
+                && id1.pos
+                == id2.pos
+        )
+
+
+idHashing : Hashing Id
+idHashing =
+    Hashing.hash
+        (\{ hash, pos } ->
+            hash32Hashing.hashWithSalt pos hash
         )

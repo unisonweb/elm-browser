@@ -19,10 +19,26 @@ import Unison.Referent exposing (..)
 import Unison.Util.Relation exposing (..)
 
 
+{-| The bits of the model that are relevant to the view.
+-}
+type alias ViewModel =
+    { branches : HashDict Hash32 RawCausal
+    , successors : HashDict Hash32 (HashSet Hash32)
+    }
+
+
 view : Model -> Html Message
 view model =
+    let
+        viewModel : ViewModel
+        viewModel =
+            { branches = model.codebase.branches
+            , successors = model.codebase.successors
+            }
+    in
     layout
         []
+        -- TODO pass in viewModel instead
         (view2 model)
 
 
@@ -133,7 +149,10 @@ viewBranchType :
     -> Element Message
 viewBranchType reference nameSegment =
     row
-        [ spacing 5 ]
+        [ onClick (User_GetType reference)
+        , pointer
+        , spacing 5
+        ]
         [ el [ bold ] (text "type")
         , text nameSegment
         , viewShortReference reference
@@ -167,8 +186,8 @@ viewShortReference :
     -> Element message
 viewShortReference reference =
     case reference of
-        Builtin string ->
-            text ("Builtin#" ++ string)
+        Builtin _ ->
+            none
 
         Derived id ->
             viewShortId id

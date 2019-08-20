@@ -1,9 +1,9 @@
-module Ucb.GitHub exposing
+module GitHub exposing
     ( Dirent
     , File
     , RepoContents(..)
-    , httpGetFile
-    , httpGetRepoContents
+    , getFile
+    , getRepoContents
     )
 
 import Array exposing (Array)
@@ -17,14 +17,15 @@ import Ucb.Util.Http as Http
 
 {-| TODO(mitchell) docs
 -}
-httpGetFile :
-    String
-    -> String
-    -> String
-    -> String
-    -> Bytes.Decode.Decoder a
+getFile :
+    { owner : String
+    , repo : String
+    , ref : String
+    , path : String
+    , decoder : Bytes.Decode.Decoder a
+    }
     -> Task (Http.Error Bytes) (Http.Response a)
-httpGetFile owner repo ref path decoder =
+getFile { owner, repo, ref, path, decoder } =
     Http.getBytes
         { decoder = decoder
         , headers = []
@@ -39,12 +40,12 @@ httpGetFile owner repo ref path decoder =
     relative path.
 
 -}
-httpGetRepoContents :
+getRepoContents :
     String
     -> String
     -> String
     -> Task (Http.Error String) (Http.Response RepoContents)
-httpGetRepoContents owner repo path =
+getRepoContents owner repo path =
     Http.getJson
         { decoder = repoContentsDecoder
         , headers = []

@@ -3,8 +3,7 @@ module Ucb.Main.Model exposing (..)
 import HashingContainers.HashDict as HashDict exposing (HashDict)
 import HashingContainers.HashSet as HashSet exposing (HashSet)
 import Misc exposing (hashSetSingleton)
-import Ucb.Unison.Codebase.Path exposing (..)
-import Ucb.Unison.Codebase.Type exposing (..)
+import Ucb.Unison.Codebase.API exposing (..)
 import Ucb.Util.Http as Http
 import Unison.Codebase.Causal exposing (..)
 import Unison.Hash exposing (..)
@@ -20,13 +19,16 @@ type Error
 
 
 type alias Model =
-    -- The current head
-    { head : Maybe Hash32
+    { -- APIs that can be swapped out or mocked.
+      api :
+        { unison : UnisonCodebaseAPI
+        }
 
     -- The codebase
     , codebase :
         { -- This data we've fetched directly from the codebase
-          branches : HashDict Hash32 RawCausal
+          head : Maybe Hash32
+        , branches : HashDict Hash32 RawCausal
         , types : HashDict Id (Type Symbol)
 
         -- Mapping from branch to its parent(s). The codebase doesn't provide

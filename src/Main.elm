@@ -10,8 +10,8 @@ import Task
 import Ucb.Main.Message exposing (Message(..))
 import Ucb.Main.Model exposing (..)
 import Ucb.Main.View exposing (view)
-import Ucb.Unison.Codebase.Path exposing (..)
-import Ucb.Unison.Codebase.Type exposing (..)
+import Ucb.Unison.Codebase.API exposing (..)
+import Ucb.Unison.Codebase.API.GitHub exposing (..)
 import Ucb.Util.Http as Http
 import Unison.Codebase.Causal exposing (..)
 import Unison.Hash exposing (..)
@@ -33,11 +33,14 @@ main =
 init : () -> ( Model, Cmd Message )
 init _ =
     let
-        initialModel : Model
-        initialModel =
-            { head = Nothing
+        model : Model
+        model =
+            { api =
+                { unison = makeGitHubUnisonCodebaseAPI "unisonweb" "unisonbase"
+                }
             , codebase =
-                { branches = HashDict.empty hash32Equality hash32Hashing
+                { head = Nothing
+                , branches = HashDict.empty hash32Equality hash32Hashing
                 , types = HashDict.empty idEquality idHashing
                 , parents = HashDict.empty hash32Equality hash32Hashing
                 , successors = HashDict.empty hash32Equality hash32Hashing
@@ -52,10 +55,10 @@ init _ =
         -- First command: fetch _head path!
         initialCommand : Cmd Message
         initialCommand =
-            httpGetHeadHash owner repo
+            model.api.unison.getHeadHash
                 |> Task.attempt Http_GetHeadHash
     in
-    ( initialModel, initialCommand )
+    ( model, initialCommand )
 
 
 subscriptions : Model -> Sub Message
@@ -97,11 +100,17 @@ updateHttpGetHeadHash result model =
 
         Ok response ->
             ( { model
-                | head = Just response.body
+                | codebase =
+                    { head = Just response.body
+                    , branches = model.codebase.branches
+                    , types = model.codebase.types
+                    , parents = model.codebase.parents
+                    , successors = model.codebase.successors
+                    }
                 , rateLimit =
                     Dict.get "x-ratelimit-remaining" response.headers
               }
-            , httpGetRawCausal owner repo response.body
+            , model.api.unison.getRawCausal response.body
                 |> Task.attempt Http_GetRawCausal
             )
 
@@ -124,8 +133,11 @@ updateHttpGetRawCausal result model =
         Ok ( hash, response ) ->
             ( { model
                 | codebase =
+                    { -- Head doesn't change
+                      head = model.codebase.head
+
                     -- Store branch
-                    { branches =
+                    , branches =
                         HashDict.insert
                             hash
                             response.body
@@ -151,8 +163,7 @@ updateHttpGetRawCausal result model =
                             model.codebase.successors
 
                     -- Types don't change
-                    , types =
-                        model.codebase.types
+                    , types = model.codebase.types
                     }
               }
             , Cmd.none
@@ -186,14 +197,24 @@ updateUserGetBranch { hash, focus } model =
         command =
             case HashDict.get hash model.codebase.branches of
                 Nothing ->
-                    httpGetRawCausal owner repo hash
+                    model.api.unison.getRawCausal hash
                         |> Task.attempt Http_GetRawCausal
 
                 Just _ ->
                     Cmd.none
     in
     if focus then
-        ( { model | head = Just hash }, command )
+        ( { model
+            | codebase =
+                { head = Just hash
+                , branches = model.codebase.branches
+                , types = model.codebase.types
+                , parents = model.codebase.parents
+                , successors = model.codebase.successors
+                }
+          }
+        , command
+        )
 
     else
         ( { model
@@ -231,24 +252,10 @@ updateUserGetType reference model =
                 command =
                     case HashDict.get id model.codebase.types of
                         Nothing ->
-                            httpGetType owner repo id
+                            model.api.unison.getType id
                                 |> Task.attempt Http_GetType
 
                         Just _ ->
                             Cmd.none
             in
             ( model, command )
-
-
-{-| Hard-coded test repo, not permanent.
--}
-owner : String
-owner =
-    "unisonweb"
-
-
-{-| Hard-coded test repo, not permanent.
--}
-repo : String
-repo =
-    "unisonbase"

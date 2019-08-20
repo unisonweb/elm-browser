@@ -33,7 +33,7 @@ view2 model =
     column
         []
         (List.filterMap identity
-            [ model.head
+            [ model.codebase.head
                 |> Maybe.andThen
                     (\head ->
                         Maybe.map

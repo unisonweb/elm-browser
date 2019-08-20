@@ -1,7 +1,6 @@
 module Ucb.Main.Message exposing (..)
 
-import Ucb.Unison.Codebase.Path exposing (..)
-import Ucb.Unison.Codebase.Type exposing (..)
+import Ucb.Unison.Codebase.API exposing (..)
 import Ucb.Util.Http as Http
 import Unison.Codebase.Causal exposing (..)
 import Unison.Hash exposing (..)

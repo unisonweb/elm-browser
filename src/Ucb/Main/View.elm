@@ -114,8 +114,8 @@ viewBranchTerm referent nameSegment pairList =
         , text nameSegment
         , viewShortReferent referent
         , case pairList of
-            Just pairList2 ->
-                row [ spacing 5 ] (text "Links" :: List.map (viewShortReference << Tuple.second) (HashSet.toList pairList2))
+            Just links ->
+                row [ spacing 5 ] (text "Links" :: List.map (viewShortReference << Tuple.second) (HashSet.toList links))
 
             Nothing ->
                 none
@@ -127,8 +127,9 @@ viewBranchTerm referent nameSegment pairList =
 viewBranchType :
     Reference
     -> NameSegment
+    -> Maybe (HashSet ( Reference, Reference ))
     -> Element Message
-viewBranchType reference nameSegment =
+viewBranchType reference nameSegment pairList =
     row
         [ onClick (User_GetType reference)
         , pointer
@@ -137,18 +138,13 @@ viewBranchType reference nameSegment =
         [ el [ bold ] (text "type")
         , text nameSegment
         , viewShortReference reference
+        , case pairList of
+            Just links ->
+                row [ spacing 5 ] (text "Links" :: List.map (viewShortReference << Tuple.second) (HashSet.toList links))
+
+            Nothing ->
+                none
         ]
-
-
-
-{-
-   viewBranchMetadata :
-       Referent
-       -> NameSegment
-       -> String
-   viewBranchMetadata reference nameSegment =
-       "Links: "
--}
 
 
 viewError :
@@ -214,8 +210,11 @@ viewRawBranch model branch =
         [ column
             []
             (List.map
-                -- TODO metadata
-                (\( ref, name ) -> viewBranchType ref name)
+                (\( ref, name ) ->
+                    row []
+                        [ viewBranchType ref name (HashDict.get ref branch.types.d3.domain)
+                        ]
+                )
                 (branch.types.d1
                     |> relationToList
                     |> List.sortBy Tuple.second
@@ -229,7 +228,6 @@ viewRawBranch model branch =
                         [ viewBranchTerm ref name (HashDict.get ref branch.terms.d3.domain)
                         ]
                 )
-                -- TODO metadata
                 (branch.terms.d1
                     |> relationToList
                     |> List.sortBy Tuple.second

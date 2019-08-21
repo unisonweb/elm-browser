@@ -36,7 +36,7 @@ init _ =
         model : Model
         model =
             { api =
-                { unison = makeGitHubUnisonCodebaseAPI "unisonweb" "unisonbase"
+                { unison = makeGitHubUnisonCodebaseAPI "exw" "testcode-elm-browser-unison"
                 }
             , codebase =
                 { head = Nothing

@@ -105,13 +105,20 @@ viewBranchChild model name hash =
 viewBranchTerm :
     Referent
     -> NameSegment
+    -> Maybe (HashSet ( Reference, Reference ))
     -> Element Message
-viewBranchTerm referent nameSegment =
+viewBranchTerm referent nameSegment pairList =
     row
         [ spacing 5 ]
         [ el [ bold ] (text "term")
         , text nameSegment
         , viewShortReferent referent
+        , case pairList of
+            Just pairList2 ->
+                row [ spacing 5 ] (text "Links" :: List.map (viewShortReference << Tuple.second) (HashSet.toList pairList2))
+
+            Nothing ->
+                none
         ]
 
 
@@ -131,6 +138,17 @@ viewBranchType reference nameSegment =
         , text nameSegment
         , viewShortReference reference
         ]
+
+
+
+{-
+   viewBranchMetadata :
+       Referent
+       -> NameSegment
+       -> String
+   viewBranchMetadata reference nameSegment =
+       "Links: "
+-}
 
 
 viewError :
@@ -206,7 +224,11 @@ viewRawBranch model branch =
         , column
             []
             (List.map
-                (\( ref, name ) -> viewBranchTerm ref name)
+                (\( ref, name ) ->
+                    row []
+                        [ viewBranchTerm ref name (HashDict.get ref branch.terms.d3.domain)
+                        ]
+                )
                 -- TODO metadata
                 (branch.terms.d1
                     |> relationToList

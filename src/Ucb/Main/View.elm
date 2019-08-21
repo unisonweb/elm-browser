@@ -276,9 +276,7 @@ viewRawBranch model branch =
         , column
             []
             (List.map
-                (\( name, hash ) ->
-                    row [] [ viewBranchChild model name hash, text "hello" ]
-                )
+                (\( name, hash ) -> viewBranchChild model name hash)
                 (branch.children
                     |> HashDict.toList
                     |> List.sortBy Tuple.first

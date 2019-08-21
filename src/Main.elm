@@ -14,10 +14,10 @@ import Ucb.Unison.Codebase.API exposing (..)
 import Ucb.Unison.Codebase.API.GitHub exposing (..)
 import Ucb.Util.Http as Http
 import Unison.Codebase.Causal exposing (..)
+import Unison.Declaration exposing (..)
 import Unison.Hash exposing (..)
 import Unison.Reference exposing (..)
 import Unison.Symbol exposing (..)
-import Unison.Type exposing (..)
 
 
 main : Program () Model Message
@@ -171,7 +171,7 @@ updateHttpGetRawCausal result model =
 
 
 updateHttpGetType :
-    Result GetTypeError ( Id, Http.Response (Type Symbol) )
+    Result GetTypeError ( Id, Http.Response (Declaration Symbol) )
     -> Model
     -> ( Model, Cmd message )
 updateHttpGetType result model =

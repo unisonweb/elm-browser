@@ -107,18 +107,13 @@ viewBranchTerm :
     -> NameSegment
     -> Maybe (HashSet ( Reference, Reference ))
     -> Element Message
-viewBranchTerm referent nameSegment pairList =
+viewBranchTerm referent nameSegment links =
     row
         [ spacing 5 ]
         [ el [ bold ] (text "term")
         , text nameSegment
         , viewShortReferent referent
-        , case pairList of
-            Just links ->
-                row [ spacing 5 ] (text "Links" :: List.map (viewShortReference << Tuple.second) (HashSet.toList links))
-
-            Nothing ->
-                none
+        , viewLinks links
         ]
 
 
@@ -129,7 +124,7 @@ viewBranchType :
     -> NameSegment
     -> Maybe (HashSet ( Reference, Reference ))
     -> Element Message
-viewBranchType reference nameSegment pairList =
+viewBranchType reference nameSegment links =
     row
         [ onClick (User_GetType reference)
         , pointer
@@ -138,12 +133,7 @@ viewBranchType reference nameSegment pairList =
         [ el [ bold ] (text "type")
         , text nameSegment
         , viewShortReference reference
-        , case pairList of
-            Just links ->
-                row [ spacing 5 ] (text "Links" :: List.map (viewShortReference << Tuple.second) (HashSet.toList links))
-
-            Nothing ->
-                none
+        , viewLinks links
         ]
 
 
@@ -152,6 +142,23 @@ viewError :
     -> Element message
 viewError error =
     text (Debug.toString error)
+
+
+viewLinks :
+    Maybe (HashSet ( Reference, Reference ))
+    -> Element message
+viewLinks maybeLinks =
+    case maybeLinks of
+        Nothing ->
+            none
+
+        Just links ->
+            row [ spacing 5 ]
+                (text "links"
+                    :: List.map
+                        (Tuple.second >> viewShortReference)
+                        (HashSet.toList links)
+                )
 
 
 viewShortId : Id -> Element message
@@ -211,9 +218,10 @@ viewRawBranch model branch =
             []
             (List.map
                 (\( ref, name ) ->
-                    row []
-                        [ viewBranchType ref name (HashDict.get ref branch.types.d3.domain)
-                        ]
+                    viewBranchType
+                        ref
+                        name
+                        (HashDict.get ref branch.types.d3.domain)
                 )
                 (branch.types.d1
                     |> relationToList
@@ -224,9 +232,10 @@ viewRawBranch model branch =
             []
             (List.map
                 (\( ref, name ) ->
-                    row []
-                        [ viewBranchTerm ref name (HashDict.get ref branch.terms.d3.domain)
-                        ]
+                    viewBranchTerm
+                        ref
+                        name
+                        (HashDict.get ref branch.terms.d3.domain)
                 )
                 (branch.terms.d1
                     |> relationToList

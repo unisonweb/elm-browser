@@ -9,10 +9,10 @@ import Ucb.Util.Http as Http
 import Ucb.Util.Task as Task
 import Unison.Codebase.Causal exposing (..)
 import Unison.Codebase.Serialization.V1 as V1
+import Unison.Declaration exposing (..)
 import Unison.Hash exposing (Hash32)
 import Unison.Reference exposing (Id)
 import Unison.Symbol exposing (Symbol)
-import Unison.Type exposing (Type)
 
 
 makeGitHubUnisonCodebaseAPI :
@@ -99,14 +99,14 @@ getType :
     String
     -> String
     -> Id
-    -> Task GetTypeError ( Id, Http.Response (Type Symbol) )
+    -> Task GetTypeError ( Id, Http.Response (Declaration Symbol) )
 getType owner repo id =
     GitHub.getFile
         { owner = owner
         , repo = repo
         , ref = "master" -- TODO probably want to get default branch somehow?
         , path = ".unison/v1/types/" ++ idToPath id
-        , decoder = V1.typeDecoder
+        , decoder = V1.declarationDecoder
         }
         |> Task.mapError GetTypeError_Http
         |> Task.map (\response -> ( id, response ))

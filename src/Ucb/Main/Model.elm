@@ -6,10 +6,10 @@ import Misc exposing (hashSetSingleton)
 import Ucb.Unison.Codebase.API exposing (..)
 import Ucb.Util.Http as Http
 import Unison.Codebase.Causal exposing (..)
+import Unison.Declaration exposing (..)
 import Unison.Hash exposing (..)
 import Unison.Reference exposing (..)
 import Unison.Symbol exposing (..)
-import Unison.Type exposing (..)
 
 
 type Error
@@ -29,7 +29,7 @@ type alias Model =
         { -- This data we've fetched directly from the codebase
           head : Maybe Hash32
         , branches : HashDict Hash32 RawCausal
-        , types : HashDict Id (Type Symbol)
+        , types : HashDict Id (Declaration Symbol)
 
         -- Mapping from branch to its parent(s). The codebase doesn't provide
         -- this, we just discover and cache it lazily as you move down into

@@ -4,10 +4,10 @@ import Bytes exposing (Bytes)
 import Task exposing (Task)
 import Ucb.Util.Http as Http
 import Unison.Codebase.Causal exposing (..)
+import Unison.Declaration exposing (..)
 import Unison.Hash exposing (Hash32)
 import Unison.Reference exposing (..)
 import Unison.Symbol exposing (..)
-import Unison.Type exposing (..)
 
 
 {-| An abstract interfact to the Unison codebase served over HTTP.
@@ -27,7 +27,7 @@ type alias UnisonCodebaseAPI =
       -- .unison/v1/paths/\_head/<namespace-hash>
       getHeadHash : Task GetHeadHashError (Http.Response Hash32)
     , getRawCausal : Hash32 -> Task GetRawCausalError ( Hash32, Http.Response RawCausal )
-    , getType : Id -> Task GetTypeError ( Id, Http.Response (Type Symbol) )
+    , getType : Id -> Task GetTypeError ( Id, Http.Response (Declaration Symbol) )
     }
 
 

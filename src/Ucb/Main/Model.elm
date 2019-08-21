@@ -29,7 +29,7 @@ type alias Model =
         { -- This data we've fetched directly from the codebase
           head : Maybe Hash32
         , branches : HashDict Hash32 RawCausal
-        , types : HashDict Id (Declaration Symbol)
+        , types : HashDict Reference (Declaration Symbol)
 
         -- Mapping from branch to its parent(s). The codebase doesn't provide
         -- this, we just discover and cache it lazily as you move down into
@@ -46,6 +46,7 @@ type alias Model =
     , ui :
         -- Visible?
         { branches : HashDict Hash32 Bool
+        , types : HashDict Reference Bool
         }
 
     -- The errors we've seen. Just slappin' them in the model to put into the
@@ -54,18 +55,6 @@ type alias Model =
 
     -- GitHub rate limit (again just for debugging purposes)
     , rateLimit : Maybe String
-    }
-
-
-{-| Accumulate an error in the model.
--}
-accumulateError :
-    Error
-    -> Model
-    -> Model
-accumulateError err model =
-    { model
-        | errors = err :: model.errors
     }
 
 

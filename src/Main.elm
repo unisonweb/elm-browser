@@ -4,7 +4,7 @@ module Main exposing (..)
 
 import Browser
 import Dict
-import HashingContainers.HashDict as HashDict
+import HashingContainers.HashDict as HashDict exposing (HashDict)
 import HashingContainers.HashSet as HashSet
 import Task
 import Ucb.Main.Message exposing (Message(..))
@@ -41,12 +41,13 @@ init _ =
             , codebase =
                 { head = Nothing
                 , branches = HashDict.empty hash32Equality hash32Hashing
-                , types = HashDict.empty idEquality idHashing
+                , types = HashDict.empty referenceEquality referenceHashing
                 , parents = HashDict.empty hash32Equality hash32Hashing
                 , successors = HashDict.empty hash32Equality hash32Hashing
                 }
             , ui =
                 { branches = HashDict.empty hash32Equality hash32Hashing
+                , types = HashDict.empty referenceEquality referenceHashing
                 }
             , errors = []
             , rateLimit = Nothing
@@ -94,7 +95,7 @@ updateHttpGetHeadHash :
 updateHttpGetHeadHash result model =
     case result of
         Err err ->
-            ( accumulateError (Err_GetHeadHash err) model
+            ( { model | errors = Err_GetHeadHash err :: model.errors }
             , Cmd.none
             )
 
@@ -126,7 +127,7 @@ updateHttpGetRawCausal :
 updateHttpGetRawCausal result model =
     case result of
         Err err ->
-            ( accumulateError (Err_GetRawCausal err) model
+            ( { model | errors = Err_GetRawCausal err :: model.errors }
             , Cmd.none
             )
 
@@ -162,7 +163,7 @@ updateHttpGetRawCausal result model =
                             (rawCausalPredecessors response.body)
                             model.codebase.successors
 
-                    -- Types don't change
+                    -- unchanged
                     , types = model.codebase.types
                     }
               }
@@ -177,12 +178,28 @@ updateHttpGetType :
 updateHttpGetType result model =
     case result of
         Err err ->
-            ( accumulateError (Err_GetType err) model
+            ( { model | errors = Err_GetType err :: model.errors }
             , Cmd.none
             )
 
         Ok ( id, response ) ->
-            ( model, Cmd.none )
+            ( { model
+                | codebase =
+                    { types =
+                        HashDict.insert
+                            (Derived id)
+                            response.body
+                            model.codebase.types
+
+                    -- unchanged
+                    , head = model.codebase.head
+                    , branches = model.codebase.branches
+                    , parents = model.codebase.parents
+                    , successors = model.codebase.successors
+                    }
+              }
+            , Cmd.none
+            )
 
 
 {-| Fetch the branch if we haven't already, and possibly focus it.
@@ -217,18 +234,28 @@ updateUserGetBranch { hash, focus } model =
         )
 
     else
+        let
+            newBranches : HashDict Hash32 Bool
+            newBranches =
+                HashDict.update
+                    hash
+                    (\maybeVisible ->
+                        case maybeVisible of
+                            Nothing ->
+                                Just True
+
+                            Just visible ->
+                                Just (not visible)
+                    )
+                    model.ui.branches
+        in
         ( { model
             | ui =
-                case HashDict.get hash model.ui.branches of
-                    Nothing ->
-                        { branches =
-                            HashDict.insert hash True model.ui.branches
-                        }
+                { branches = newBranches
 
-                    Just show ->
-                        { branches =
-                            HashDict.insert hash (not show) model.ui.branches
-                        }
+                -- unchanged
+                , types = model.ui.types
+                }
           }
         , command
         )
@@ -242,7 +269,6 @@ updateUserGetType :
     -> ( Model, Cmd Message )
 updateUserGetType reference model =
     case reference of
-        -- Nothing to do for builtins? If so, TODO don't even send this message.
         Builtin _ ->
             ( model, Cmd.none )
 
@@ -250,12 +276,35 @@ updateUserGetType reference model =
             let
                 command : Cmd Message
                 command =
-                    case HashDict.get id model.codebase.types of
+                    case HashDict.get reference model.codebase.types of
                         Nothing ->
                             model.api.unison.getType id
                                 |> Task.attempt Http_GetType
 
                         Just _ ->
                             Cmd.none
+
+                newTypes : HashDict Reference Bool
+                newTypes =
+                    HashDict.update
+                        reference
+                        (\maybeVisible ->
+                            case maybeVisible of
+                                Nothing ->
+                                    Just True
+
+                                Just visible ->
+                                    Just (not visible)
+                        )
+                        model.ui.types
             in
-            ( model, command )
+            ( { model
+                | ui =
+                    { types = newTypes
+
+                    -- unchanged
+                    , branches = model.ui.branches
+                    }
+              }
+            , command
+            )

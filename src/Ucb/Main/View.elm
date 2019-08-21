@@ -13,6 +13,7 @@ import Ucb.Main.Model exposing (..)
 import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)
 import Unison.Codebase.NameSegment exposing (..)
+import Unison.Declaration exposing (..)
 import Unison.Hash exposing (..)
 import Unison.Reference exposing (..)
 import Unison.Referent exposing (..)
@@ -120,21 +121,50 @@ viewBranchTerm referent nameSegment links =
 {-| View a type in a branch.
 -}
 viewBranchType :
-    Reference
+    Model
+    -> Reference
     -> NameSegment
     -> Maybe (HashSet ( Reference, Reference ))
     -> Element Message
-viewBranchType reference nameSegment links =
-    row
-        [ onClick (User_GetType reference)
-        , pointer
-        , spacing 5
+viewBranchType model reference nameSegment links =
+    column
+        []
+        [ row
+            [ onClick (User_GetType reference)
+            , pointer
+            , spacing 5
+            ]
+            [ el [ bold ] (text "type")
+            , text nameSegment
+            , viewShortReference reference
+            , viewLinks links
+            ]
+        , viewMaybe
+            (\declaration ->
+                case HashDict.get reference model.ui.types of
+                    Just True ->
+                        el
+                            [ paddingEach
+                                { bottom = 5
+                                , left = 10
+                                , right = 0
+                                , top = 5
+                                }
+                            ]
+                            (viewDeclaration declaration)
+
+                    _ ->
+                        none
+            )
+            (HashDict.get reference model.codebase.types)
         ]
-        [ el [ bold ] (text "type")
-        , text nameSegment
-        , viewShortReference reference
-        , viewLinks links
-        ]
+
+
+viewDeclaration :
+    Declaration Symbol
+    -> Element message
+viewDeclaration =
+    Debug.toString >> text
 
 
 viewError :
@@ -219,6 +249,7 @@ viewRawBranch model branch =
             (List.map
                 (\( ref, name ) ->
                     viewBranchType
+                        model
                         ref
                         name
                         (HashDict.get ref branch.types.d3.domain)

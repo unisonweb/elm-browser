@@ -1,6 +1,8 @@
 module Misc exposing (..)
 
 import Bitwise
+import Bytes exposing (Bytes)
+import Bytes.Encode
 import HashingContainers.HashDict as HashDict exposing (HashDict)
 import HashingContainers.HashSet as HashSet exposing (HashSet)
 import Typeclasses.Classes.Equality as Equality exposing (Equality)
@@ -68,6 +70,11 @@ hashSetUnions :
     -> HashSet a
 hashSetUnions equality hashing =
     List.foldl hashSetUnion (HashSet.empty equality hashing)
+
+
+emptyBytes : Bytes
+emptyBytes =
+    Bytes.Encode.encode (Bytes.Encode.sequence [])
 
 
 {-| This is "error"...

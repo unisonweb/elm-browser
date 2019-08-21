@@ -19,6 +19,7 @@ import Unison.Codebase.Patch exposing (..)
 import Unison.Codebase.TermEdit exposing (..)
 import Unison.Codebase.TypeEdit exposing (..)
 import Unison.ConstructorType exposing (..)
+import Unison.Declaration exposing (..)
 import Unison.Hash exposing (..)
 import Unison.Kind exposing (..)
 import Unison.Pattern exposing (..)
@@ -104,6 +105,30 @@ constructorTypeDecoder =
 
                 1 ->
                     succeed Effect
+
+                _ ->
+                    fail
+
+
+dataDeclarationDecoder : Decoder (DataDeclaration Symbol)
+dataDeclarationDecoder =
+    map3
+        DataDeclaration
+        modifierDecoder
+        (listDecoder symbolDecoder)
+        (listDecoder (map2 Tuple.pair symbolDecoder typeDecoder))
+
+
+declarationDecoder : Decoder (Declaration Symbol)
+declarationDecoder =
+    tagged <|
+        \n ->
+            case n of
+                0 ->
+                    map DataDecl dataDeclarationDecoder
+
+                1 ->
+                    map EffectDecl dataDeclarationDecoder
 
                 _ ->
                     fail
@@ -200,6 +225,21 @@ maybeDecoder decoder =
 
                 1 ->
                     map Just decoder
+
+                _ ->
+                    fail
+
+
+modifierDecoder : Decoder Modifier
+modifierDecoder =
+    tagged <|
+        \n ->
+            case n of
+                0 ->
+                    succeed Structural
+
+                1 ->
+                    map Unique textDecoder
 
                 _ ->
                     fail

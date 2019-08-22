@@ -18,6 +18,7 @@ import Unison.Hash exposing (..)
 import Unison.Reference exposing (..)
 import Unison.Referent exposing (..)
 import Unison.Symbol exposing (..)
+import Unison.Term exposing (..)
 import Unison.Type exposing (..)
 import Unison.Util.Relation exposing (..)
 
@@ -104,17 +105,42 @@ viewBranchChild model name hash =
 {-| View a term in a branch.
 -}
 viewBranchTerm :
-    Referent
+    Model
+    -> Referent
     -> NameSegment
     -> Maybe (HashSet ( Reference, Reference ))
     -> Element Message
-viewBranchTerm referent nameSegment links =
-    row
-        [ spacing 5 ]
-        [ el [ bold ] (text "term")
-        , text nameSegment
-        , viewShortReferent referent
-        , viewLinks links
+viewBranchTerm model referent nameSegment links =
+    column
+        []
+        [ row
+            [ onClick (User_GetTerm referent)
+            , pointer
+            , spacing 5
+            ]
+            [ el [ bold ] (text "term")
+            , text nameSegment
+            , viewShortReferent referent
+            , viewLinks links
+            ]
+        , viewMaybe
+            (\term ->
+                case HashDict.get referent model.ui.terms of
+                    Just True ->
+                        el
+                            [ paddingEach
+                                { bottom = 5
+                                , left = 10
+                                , right = 0
+                                , top = 5
+                                }
+                            ]
+                            (viewTerm term)
+
+                    _ ->
+                        none
+            )
+            (HashDict.get referent model.codebase.terms)
         ]
 
 
@@ -264,6 +290,7 @@ viewRawBranch model branch =
             (List.map
                 (\( ref, name ) ->
                     viewBranchTerm
+                        model
                         ref
                         name
                         (HashDict.get ref branch.terms.d3.domain)
@@ -373,6 +400,13 @@ viewShortHash :
     -> Element message
 viewShortHash hash =
     el [ color (rgb 0.5 0.5 0.5) ] (text (String.left 7 hash))
+
+
+viewTerm :
+    Term Symbol
+    -> Element message
+viewTerm =
+    Debug.toString >> text
 
 
 viewMaybe :

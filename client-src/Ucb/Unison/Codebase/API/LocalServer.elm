@@ -13,12 +13,14 @@ import Unison.Declaration exposing (..)
 import Unison.Hash exposing (Hash32)
 import Unison.Reference exposing (..)
 import Unison.Symbol exposing (Symbol)
+import Unison.Term exposing (Term)
 
 
 makeLocalServerUnisonCodebaseAPI : UnisonCodebaseAPI
 makeLocalServerUnisonCodebaseAPI =
     { getHeadHash = getHeadHash
     , getRawCausal = getRawCausal
+    , getTerm = getTerm
     , getType = getType
     }
 
@@ -46,6 +48,20 @@ getRawCausal hash =
         }
         |> Task.mapError GetRawCausalError_Http
         |> Task.map (\response -> ( hash, response ))
+
+
+getTerm :
+    Id
+    -> Task GetTermError ( Id, Http.Response (Term Symbol) )
+getTerm id =
+    Http.getBytes
+        { decoder = V1.termDecoder
+        , headers = []
+        , timeout = Nothing
+        , url = "term/" ++ idToString id ++ "/term"
+        }
+        |> Task.mapError GetTermError_Http
+        |> Task.map (\response -> ( id, response ))
 
 
 getType :

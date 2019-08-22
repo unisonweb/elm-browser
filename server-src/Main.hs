@@ -75,6 +75,14 @@ app request respond =
           [(hContentType, "application/json")]
           (LazyByteString.Char8.pack (show head)))
 
+    GET ["term", term, "term"] ->
+      respond
+        (responseFile
+          status200
+          [(hContentType, "application/octet-stream")]
+          (".unison/v1/terms/#" <> Text.unpack term <> "/compiled.ub")
+          Nothing)
+
     _ ->
       respond (responseLBS status404 [] "")
 

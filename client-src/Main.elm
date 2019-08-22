@@ -18,7 +18,9 @@ import Unison.Codebase.Causal exposing (..)
 import Unison.Declaration exposing (..)
 import Unison.Hash exposing (..)
 import Unison.Reference exposing (..)
+import Unison.Referent exposing (..)
 import Unison.Symbol exposing (..)
+import Unison.Term exposing (..)
 
 
 main : Program () Model Message
@@ -44,12 +46,14 @@ init _ =
             , codebase =
                 { head = Nothing
                 , branches = HashDict.empty hash32Equality hash32Hashing
+                , terms = HashDict.empty referentEquality referentHashing
                 , types = HashDict.empty referenceEquality referenceHashing
                 , parents = HashDict.empty hash32Equality hash32Hashing
                 , successors = HashDict.empty hash32Equality hash32Hashing
                 }
             , ui =
                 { branches = HashDict.empty hash32Equality hash32Hashing
+                , terms = HashDict.empty referentEquality referentHashing
                 , types = HashDict.empty referenceEquality referenceHashing
                 }
             , errors = []
@@ -79,6 +83,9 @@ update message model =
         Http_GetRawCausal result ->
             updateHttpGetRawCausal result model
 
+        Http_GetTerm result ->
+            updateHttpGetTerm result model
+
         Http_GetType result ->
             updateHttpGetType result model
 
@@ -87,6 +94,9 @@ update message model =
 
         User_GetType reference ->
             updateUserGetType reference model
+
+        User_GetTerm referent ->
+            updateUserGetTerm referent model
 
 
 {-| Got the head hash. Next step: get the actual (decoded) bytes.
@@ -106,7 +116,10 @@ updateHttpGetHeadHash result model =
             ( { model
                 | codebase =
                     { head = Just response.body
+
+                    -- unchanged
                     , branches = model.codebase.branches
+                    , terms = model.codebase.terms
                     , types = model.codebase.types
                     , parents = model.codebase.parents
                     , successors = model.codebase.successors
@@ -167,7 +180,41 @@ updateHttpGetRawCausal result model =
                             model.codebase.successors
 
                     -- unchanged
+                    , terms = model.codebase.terms
                     , types = model.codebase.types
+                    }
+              }
+            , Cmd.none
+            )
+
+
+updateHttpGetTerm :
+    Result GetTermError ( Id, Http.Response (Term Symbol) )
+    -> Model
+    -> ( Model, Cmd message )
+updateHttpGetTerm result model =
+    case result of
+        Err err ->
+            ( { model | errors = Err_GetTerm err :: model.errors }
+            , Cmd.none
+            )
+
+        Ok ( id, response ) ->
+            ( { model
+                | codebase =
+                    { terms =
+                        HashDict.insert
+                            -- TODO this is wrong if we fetch Con ids. Do we?
+                            (Ref (Derived id))
+                            response.body
+                            model.codebase.terms
+
+                    -- unchanged
+                    , head = model.codebase.head
+                    , branches = model.codebase.branches
+                    , types = model.codebase.types
+                    , parents = model.codebase.parents
+                    , successors = model.codebase.successors
                     }
               }
             , Cmd.none
@@ -197,6 +244,7 @@ updateHttpGetType result model =
                     -- unchanged
                     , head = model.codebase.head
                     , branches = model.codebase.branches
+                    , terms = model.codebase.terms
                     , parents = model.codebase.parents
                     , successors = model.codebase.successors
                     }
@@ -227,7 +275,10 @@ updateUserGetBranch { hash, focus } model =
         ( { model
             | codebase =
                 { head = Just hash
+
+                -- unchanged
                 , branches = model.codebase.branches
+                , terms = model.codebase.terms
                 , types = model.codebase.types
                 , parents = model.codebase.parents
                 , successors = model.codebase.successors
@@ -257,11 +308,69 @@ updateUserGetBranch { hash, focus } model =
                 { branches = newBranches
 
                 -- unchanged
+                , terms = model.ui.terms
                 , types = model.ui.types
                 }
           }
         , command
         )
+
+
+{-| Fetch the term if we haven't already
+-}
+updateUserGetTerm :
+    Referent
+    -> Model
+    -> ( Model, Cmd Message )
+updateUserGetTerm referent model =
+    case referent of
+        Ref reference ->
+            case reference of
+                Builtin _ ->
+                    ( model, Cmd.none )
+
+                Derived id ->
+                    let
+                        command : Cmd Message
+                        command =
+                            case HashDict.get referent model.codebase.terms of
+                                Nothing ->
+                                    model.api.unison.getTerm id
+                                        |> Task.attempt Http_GetTerm
+
+                                Just _ ->
+                                    Cmd.none
+
+                        newTerms : HashDict Referent Bool
+                        newTerms =
+                            HashDict.update
+                                referent
+                                (\maybeVisible ->
+                                    case maybeVisible of
+                                        Nothing ->
+                                            Just True
+
+                                        Just visible ->
+                                            Just (not visible)
+                                )
+                                model.ui.terms
+                    in
+                    ( { model
+                        | ui =
+                            { terms = newTerms
+
+                            -- unchanged
+                            , branches = model.ui.branches
+                            , types = model.ui.types
+                            }
+                      }
+                    , command
+                    )
+
+        -- TODO is this right? if not, then when it's fixed, fix bug in
+        -- updateHttpGetTerm (assumes we fetched a Ref)
+        Con _ _ _ ->
+            ( model, Cmd.none )
 
 
 {-| Fetch the type if we haven't already
@@ -307,6 +416,7 @@ updateUserGetType reference model =
 
                     -- unchanged
                     , branches = model.ui.branches
+                    , terms = model.ui.terms
                     }
               }
             , command

@@ -9,12 +9,15 @@ import Unison.Codebase.Causal exposing (..)
 import Unison.Declaration exposing (..)
 import Unison.Hash exposing (..)
 import Unison.Reference exposing (..)
+import Unison.Referent exposing (..)
 import Unison.Symbol exposing (..)
+import Unison.Term exposing (..)
 
 
 type Error
     = Err_GetHeadHash GetHeadHashError
     | Err_GetRawCausal GetRawCausalError
+    | Err_GetTerm GetTermError
     | Err_GetType GetTypeError
 
 
@@ -29,6 +32,7 @@ type alias Model =
         { -- This data we've fetched directly from the codebase
           head : Maybe Hash32
         , branches : HashDict Hash32 RawCausal
+        , terms : HashDict Referent (Term Symbol)
         , types : HashDict Reference (Declaration Symbol)
 
         -- Mapping from branch to its parent(s). The codebase doesn't provide
@@ -46,6 +50,7 @@ type alias Model =
     , ui :
         -- Visible?
         { branches : HashDict Hash32 Bool
+        , terms : HashDict Referent Bool
         , types : HashDict Reference Bool
         }
 

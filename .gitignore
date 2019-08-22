@@ -1,2 +1,4 @@
+.ghc.environment.*
+dist-newstyle/
 elm-stuff/
 index.html

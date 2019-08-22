@@ -11,7 +11,7 @@ import Unison.Codebase.Causal exposing (..)
 import Unison.Codebase.Serialization.V1 as V1
 import Unison.Declaration exposing (..)
 import Unison.Hash exposing (Hash32)
-import Unison.Reference exposing (Id)
+import Unison.Reference exposing (..)
 import Unison.Symbol exposing (Symbol)
 
 
@@ -105,29 +105,8 @@ getType owner repo id =
         { owner = owner
         , repo = repo
         , ref = "master" -- TODO probably want to get default branch somehow?
-        , path = ".unison/v1/types/" ++ idToPath id
+        , path = ".unison/v1/types/%23" ++ idToString id ++ "/compiled.ub"
         , decoder = V1.declarationDecoder
         }
         |> Task.mapError GetTypeError_Http
         |> Task.map (\response -> ( id, response ))
-
-
-{-| Get the path in the types/ folder where a type is stored.
--}
-idToPath :
-    Id
-    -> String
-idToPath { hash, pos, size } =
-    -- octothorp
-    "%23"
-        ++ (if size == 1 then
-                hash
-
-            else
-                hash
-                    ++ String.fromChar '.'
-                    ++ String.fromInt (pos + 1)
-                    ++ String.fromChar 'c'
-                    ++ String.fromInt size
-           )
-        ++ "/compiled.ub"

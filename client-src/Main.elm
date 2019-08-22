@@ -12,6 +12,7 @@ import Ucb.Main.Model exposing (..)
 import Ucb.Main.View exposing (view)
 import Ucb.Unison.Codebase.API exposing (..)
 import Ucb.Unison.Codebase.API.GitHub exposing (..)
+import Ucb.Unison.Codebase.API.LocalServer exposing (..)
 import Ucb.Util.Http as Http
 import Unison.Codebase.Causal exposing (..)
 import Unison.Declaration exposing (..)
@@ -36,7 +37,9 @@ init _ =
         model : Model
         model =
             { api =
-                { unison = makeGitHubUnisonCodebaseAPI "exw" "testcode-elm-browser-unison"
+                { unison =
+                    -- makeGitHubUnisonCodebaseAPI "exw" "testcode-elm-browser-unison"
+                    makeLocalServerUnisonCodebaseAPI
                 }
             , codebase =
                 { head = Nothing

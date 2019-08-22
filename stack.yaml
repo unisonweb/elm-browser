@@ -1,0 +1,4 @@
+resolver: lts-14.2
+extra-deps:
+  - http2-2.0.3
+  - warp-3.3.0

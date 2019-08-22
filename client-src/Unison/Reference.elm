@@ -3,8 +3,10 @@ module Unison.Reference exposing
     , Reference(..)
     , idEquality
     , idHashing
+    , idToString
     , referenceEquality
     , referenceHashing
+    , referenceToString
     )
 
 import Bytes.Encode
@@ -54,6 +56,18 @@ referenceHashing =
         )
 
 
+referenceToString :
+    Reference
+    -> String
+referenceToString reference =
+    case reference of
+        Builtin s ->
+            Debug.todo "referenceToString: Builtin"
+
+        Derived id ->
+            idToString id
+
+
 {-| Haskell type: Unison.Reference.Id
 -}
 type alias Id =
@@ -79,3 +93,18 @@ idHashing =
         (\{ hash, pos } ->
             hash32Hashing.hashWithSalt pos hash
         )
+
+
+idToString :
+    Id
+    -> String
+idToString { hash, pos, size } =
+    if size == 1 then
+        hash
+
+    else
+        hash
+            ++ String.fromChar '.'
+            ++ String.fromInt (pos + 1)
+            ++ String.fromChar 'c'
+            ++ String.fromInt size

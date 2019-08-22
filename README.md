@@ -1,6 +1,33 @@
-* To build, run `elm make src/Main.elm` (requires `elm 0.19`).
+# Unison Codebase Explorer
 
-* To view, open the generated `index.html` in a web browser.
+The Unison Codebase Explorer is an Elm application and companion Haskell server
+for exploring your Unison codebase. It is very alpha-quality software, but you
+can still use it in anger. Pull requests welcome and appreciated :)
+
+## Building
+
+To build, you need `elm` 0.19+ and `cabal-install` 2.4+ (`stack` support would
+be simple to add).
+
+* Generate the `index.html` JavaScript blob.
+
+    elm make client-src/Main.elm
+
+* If you are using `cabal`, make sure you've configured it to install
+  executables somewhere on your `$PATH`. Open `~/.cabal/config` and uncomment
+  the `symlink-bindir` line to be something like:
+
+    symlink-bindir = /home/mitchell/.local/bin
+
+* Build and install the Haskell server, which copies the `index.html` to make it
+  available at runtime.
+
+    cabal v2-install . --overwrite-policy=always
+
+That's it! Now you have a `unison-browser` executable that you can run in any
+directory with a `.unison` folder.
+
+## Code guide
 
 Module guide:
 

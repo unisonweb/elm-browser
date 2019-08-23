@@ -125,10 +125,10 @@ declarationDecoder =
         \n ->
             case n of
                 0 ->
-                    map DataDecl dataDeclarationDecoder
+                    map EffectDecl dataDeclarationDecoder
 
                 1 ->
-                    map EffectDecl dataDeclarationDecoder
+                    map DataDecl dataDeclarationDecoder
 
                 _ ->
                     fail

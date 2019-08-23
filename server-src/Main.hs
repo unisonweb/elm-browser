@@ -83,6 +83,14 @@ app request respond =
           (".unison/v1/terms/#" <> Text.unpack term <> "/compiled.ub")
           Nothing)
 
+    GET ["term", term, "type"] ->
+      respond
+        (responseFile
+          status200
+          [(hContentType, "application/octet-stream")]
+          (".unison/v1/terms/#" <> Text.unpack term <> "/type.ub")
+          Nothing)
+
     _ ->
       respond (responseLBS status404 [] "")
 

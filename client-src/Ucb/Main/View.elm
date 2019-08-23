@@ -13,6 +13,7 @@ import Ucb.Main.Model exposing (..)
 import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)
 import Unison.Codebase.NameSegment exposing (..)
+import Unison.ConstructorType exposing (..)
 import Unison.Declaration exposing (..)
 import Unison.Hash exposing (..)
 import Unison.Reference exposing (..)
@@ -21,6 +22,7 @@ import Unison.Symbol exposing (..)
 import Unison.Term exposing (..)
 import Unison.Type exposing (..)
 import Unison.Util.Relation exposing (..)
+import Unison.Var exposing (..)
 
 
 view : Model -> Html Message
@@ -186,11 +188,59 @@ viewBranchType model reference nameSegment links =
         ]
 
 
+viewDataDeclaration :
+    ConstructorType
+    -> DataDeclaration Symbol
+    -> Element message
+viewDataDeclaration constructorType declaration =
+    column
+        []
+        [ case constructorType of
+            Data ->
+                case declaration.modifier of
+                    Structural ->
+                        text "structural type"
+
+                    Unique _ ->
+                        text "unique type"
+
+            Effect ->
+                text "effect"
+        , case declaration.bound of
+            [] ->
+                none
+
+            bound ->
+                row
+                    [ spacing 5 ]
+                    (text "bound" :: List.map viewSymbol declaration.bound)
+        , case declaration.constructors of
+            [] ->
+                none
+
+            constructors ->
+                row
+                    [ spacing 5 ]
+                    (text "constructors"
+                        :: List.map
+                            (\( name, type_ ) ->
+                                row [ spacing 2 ] [ viewSymbol name ]
+                            )
+                            declaration.constructors
+                    )
+        ]
+
+
 viewDeclaration :
     Declaration Symbol
     -> Element message
-viewDeclaration =
-    Debug.toString >> text
+viewDeclaration declaration =
+    case declaration of
+        DataDecl dataDeclaration ->
+            viewDataDeclaration Data dataDeclaration
+
+        EffectDecl dataDeclaration ->
+            viewDataDeclaration Effect dataDeclaration
 
 
 viewError :
@@ -400,6 +450,21 @@ viewShortHash :
     -> Element message
 viewShortHash hash =
     el [ color (rgb 0.5 0.5 0.5) ] (text (String.left 7 hash))
+
+
+viewSymbol :
+    Symbol
+    -> Element message
+viewSymbol symbol =
+    case symbol of
+        Symbol n var ->
+            case var of
+                User string ->
+                    -- TODO what's n?
+                    text string
+
+                _ ->
+                    none
 
 
 viewTerm :

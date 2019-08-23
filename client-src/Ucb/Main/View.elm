@@ -126,7 +126,7 @@ viewBranchTerm model referent nameSegment links =
             , viewLinks links
             ]
         , viewMaybe
-            (\term ->
+            (\( term, type_ ) ->
                 case HashDict.get referent model.ui.terms of
                     Just True ->
                         el
@@ -137,7 +137,7 @@ viewBranchTerm model referent nameSegment links =
                                 , top = 5
                                 }
                             ]
-                            (viewTerm term)
+                            (viewTerm term type_)
 
                     _ ->
                         none
@@ -469,9 +469,14 @@ viewSymbol symbol =
 
 viewTerm :
     Term Symbol
+    -> Type Symbol
     -> Element message
-viewTerm =
-    Debug.toString >> text
+viewTerm term type_ =
+    column
+        []
+        [ text ("type = " ++ Debug.toString type_)
+        , text ("term = " ++ Debug.toString term)
+        ]
 
 
 viewMaybe :

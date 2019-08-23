@@ -21,6 +21,7 @@ import Unison.Reference exposing (..)
 import Unison.Referent exposing (..)
 import Unison.Symbol exposing (..)
 import Unison.Term exposing (..)
+import Unison.Type exposing (..)
 
 
 main : Program () Model Message
@@ -189,7 +190,7 @@ updateHttpGetRawCausal result model =
 
 
 updateHttpGetTerm :
-    Result GetTermError ( Id, Http.Response (Term Symbol) )
+    Result GetTermError ( Id, Http.Response ( Term Symbol, Type Symbol ) )
     -> Model
     -> ( Model, Cmd message )
 updateHttpGetTerm result model =
@@ -204,7 +205,6 @@ updateHttpGetTerm result model =
                 | codebase =
                     { terms =
                         HashDict.insert
-                            -- TODO this is wrong if we fetch Con ids. Do we?
                             (Ref (Derived id))
                             response.body
                             model.codebase.terms
@@ -367,8 +367,6 @@ updateUserGetTerm referent model =
                     , command
                     )
 
-        -- TODO is this right? if not, then when it's fixed, fix bug in
-        -- updateHttpGetTerm (assumes we fetched a Ref)
         Con _ _ _ ->
             ( model, Cmd.none )
 

@@ -14,6 +14,7 @@ import Unison.Hash exposing (Hash32)
 import Unison.Reference exposing (..)
 import Unison.Symbol exposing (Symbol)
 import Unison.Term exposing (Term)
+import Unison.Type exposing (..)
 
 
 makeLocalServerUnisonCodebaseAPI : UnisonCodebaseAPI
@@ -52,7 +53,7 @@ getRawCausal hash =
 
 getTerm :
     Id
-    -> Task GetTermError ( Id, Http.Response (Term Symbol) )
+    -> Task GetTermError ( Id, Http.Response ( Term Symbol, Type Symbol ) )
 getTerm id =
     Http.getBytes
         { decoder = V1.termDecoder
@@ -61,7 +62,32 @@ getTerm id =
         , url = "term/" ++ idToString id ++ "/term"
         }
         |> Task.mapError GetTermError_Http
-        |> Task.map (\response -> ( id, response ))
+        |> Task.andThen (getTerm2 id)
+
+
+getTerm2 :
+    Id
+    -> Http.Response (Term Symbol)
+    -> Task GetTermError ( Id, Http.Response ( Term Symbol, Type Symbol ) )
+getTerm2 id response =
+    Http.getBytes
+        { decoder = V1.typeDecoder
+        , headers = []
+        , timeout = Nothing
+        , url = "term/" ++ idToString id ++ "/type"
+        }
+        |> Task.mapError GetTermError_Http
+        |> Task.map
+            (\response2 ->
+                ( id
+                , { url = response2.url
+                  , statusCode = response2.statusCode
+                  , statusText = response2.statusText
+                  , headers = response2.headers
+                  , body = ( response.body, response2.body )
+                  }
+                )
+            )
 
 
 getType :

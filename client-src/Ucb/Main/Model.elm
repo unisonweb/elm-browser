@@ -12,6 +12,7 @@ import Unison.Reference exposing (..)
 import Unison.Referent exposing (..)
 import Unison.Symbol exposing (..)
 import Unison.Term exposing (..)
+import Unison.Type exposing (..)
 
 
 type Error
@@ -32,7 +33,7 @@ type alias Model =
         { -- This data we've fetched directly from the codebase
           head : Maybe Hash32
         , branches : HashDict Hash32 RawCausal
-        , terms : HashDict Referent (Term Symbol)
+        , terms : HashDict Referent ( Term Symbol, Type Symbol )
         , types : HashDict Reference (Declaration Symbol)
 
         -- Mapping from branch to its parent(s). The codebase doesn't provide

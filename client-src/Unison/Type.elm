@@ -6,7 +6,7 @@ import Typeclasses.Classes.Equality exposing (Equality)
 import Typeclasses.Classes.Hashing exposing (Hashing)
 import Unison.ABT exposing (..)
 import Unison.Kind exposing (Kind)
-import Unison.Reference exposing (Reference)
+import Unison.Reference exposing (..)
 
 
 {-| Haskell type: Unison.Type.Type
@@ -98,3 +98,47 @@ typeTerm varEquality varHashing ty =
     { freeVars = typeFFreeVars varEquality varHashing ty
     , out = TypeTm ty
     }
+
+
+{-| Return a set of references inside a type.
+-}
+typeReferences :
+    Type var
+    -> HashSet Reference
+typeReferences { out } =
+    case out of
+        TypeVar _ ->
+            HashSet.empty referenceEquality referenceHashing
+
+        TypeCycle ty2 ->
+            typeReferences ty2
+
+        TypeAbs _ ty2 ->
+            typeReferences ty2
+
+        TypeTm (TypeRef ref) ->
+            hashSetSingleton referenceEquality referenceHashing ref
+
+        TypeTm (TypeArrow ty1 ty2) ->
+            hashSetUnion (typeReferences ty1) (typeReferences ty2)
+
+        TypeTm (TypeAnn ty2 _) ->
+            typeReferences ty2
+
+        TypeTm (TypeApp ty1 ty2) ->
+            hashSetUnion (typeReferences ty1) (typeReferences ty2)
+
+        TypeTm (TypeEffect ty1 ty2) ->
+            hashSetUnion (typeReferences ty1) (typeReferences ty2)
+
+        TypeTm (TypeEffects tys) ->
+            hashSetUnions
+                referenceEquality
+                referenceHashing
+                (List.map typeReferences tys)
+
+        TypeTm (TypeForall ty) ->
+            typeReferences ty
+
+        TypeTm (TypeIntroOuter ty) ->
+            typeReferences ty

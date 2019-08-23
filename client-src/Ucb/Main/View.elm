@@ -23,6 +23,7 @@ import Unison.Term exposing (..)
 import Unison.Type exposing (..)
 import Unison.Util.Relation exposing (..)
 import Unison.Var exposing (..)
+import Word64 exposing (..)
 
 
 view : Model -> Html Message
@@ -459,9 +460,21 @@ viewSymbol symbol =
     case symbol of
         Symbol n var ->
             case var of
-                User string ->
-                    -- TODO what's n?
-                    text string
+                User name ->
+                    let
+                        m : Int
+                        m =
+                            unsafeWord64ToWord53 n
+                    in
+                    text
+                        (name
+                            ++ (if m == 0 then
+                                    ""
+
+                                else
+                                    String.fromInt m
+                               )
+                        )
 
                 _ ->
                     none
@@ -474,9 +487,81 @@ viewTerm :
 viewTerm term type_ =
     column
         []
-        [ text ("type = " ++ Debug.toString type_)
+        [ viewType type_
         , text ("term = " ++ Debug.toString term)
         ]
+
+
+viewType :
+    Type Symbol
+    -> Element message
+viewType { freeVars, out } =
+    case out of
+        TypeVar var ->
+            viewSymbol var
+
+        TypeAbs var ty ->
+            row
+                [ spacing 2 ]
+                [ viewSymbol var
+                , text "."
+                , viewType ty
+                ]
+
+        TypeTm (TypeRef ref) ->
+            viewShortReference ref
+
+        TypeTm (TypeArrow ty1 ty2) ->
+            row
+                [ spacing 2 ]
+                [ text "("
+                , viewType ty1
+                , text "->"
+                , viewType ty2
+                , text ")"
+                ]
+
+        TypeTm (TypeApp ty1 ty2) ->
+            row
+                [ spacing 2 ]
+                [ text "("
+                , viewType ty1
+                , viewType ty2
+                , text ")"
+                ]
+
+        TypeTm (TypeEffect ty1 ty2) ->
+            row
+                [ spacing 2 ]
+                [ text "("
+                , viewType ty1
+                , viewType ty2
+                , text ")"
+                ]
+
+        TypeTm (TypeEffects tys) ->
+            row
+                [ spacing 2 ]
+                [ text "{"
+                , row [] (List.map viewType tys)
+                , text ")"
+                ]
+
+        TypeTm (TypeForall ty) ->
+            row
+                [ spacing 2 ]
+                [ text "∀"
+                , viewType ty
+                ]
+
+        TypeTm (TypeIntroOuter ty) ->
+            viewType ty
+
+        TypeCycle _ ->
+            text "TypeCycle"
+
+        TypeTm (TypeAnn _ _) ->
+            text "TypeAnn"
 
 
 viewMaybe :

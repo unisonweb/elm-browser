@@ -1,5 +1,6 @@
 module Word64 exposing (..)
 
+import Bitwise
 import Misc exposing (tumble)
 import Typeclasses.Classes.Equality as Equality exposing (Equality)
 import Typeclasses.Classes.Hashing as Hashing exposing (Hashing)
@@ -36,3 +37,15 @@ intsToWord64 x y =
 
     else
         BigWord64 x y
+
+
+{-| Unsafely convert a Word64 to a 53-bit JavaScript number.
+-}
+unsafeWord64ToWord53 : Word64 -> Int
+unsafeWord64ToWord53 word =
+    case word of
+        SmallWord64 n ->
+            n
+
+        BigWord64 n m ->
+            Bitwise.or (Bitwise.shiftLeftBy 32 n) m

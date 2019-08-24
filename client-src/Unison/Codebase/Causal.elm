@@ -1,7 +1,6 @@
 module Unison.Codebase.Causal exposing (..)
 
 import HashingContainers.HashSet as HashSet exposing (HashSet)
-import Unison.Codebase.Branch exposing (..)
 import Unison.Hash exposing (Hash32)
 
 

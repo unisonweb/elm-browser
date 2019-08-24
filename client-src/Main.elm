@@ -58,7 +58,6 @@ init _ =
                 , types = HashDict.empty referenceEquality referenceHashing
                 }
             , errors = []
-            , rateLimit = Nothing
             }
 
         -- First command: fetch _head path!
@@ -147,8 +146,6 @@ updateHttpGetHeadHash2 response model =
             , parents = model.codebase.parents
             , successors = model.codebase.successors
             }
-        , rateLimit =
-            Dict.get "x-ratelimit-remaining" response.headers
       }
     , getBranch
         model.api.unison

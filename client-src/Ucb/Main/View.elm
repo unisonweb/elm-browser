@@ -35,9 +35,6 @@ view2 model =
                             :: List.map viewError (List.reverse model.errors)
                         )
                     )
-            , Maybe.map
-                (\limit -> text ("GitHub rate limit: " ++ limit))
-                model.rateLimit
             ]
         )
 

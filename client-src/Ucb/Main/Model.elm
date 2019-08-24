@@ -1,5 +1,6 @@
 module Ucb.Main.Model exposing (..)
 
+import Bytes exposing (Bytes)
 import HashingContainers.HashDict as HashDict exposing (HashDict)
 import HashingContainers.HashSet as HashSet exposing (HashSet)
 import Misc exposing (hashSetSingleton)
@@ -16,10 +17,11 @@ import Unison.Type exposing (..)
 
 
 type Error
-    = Err_GetHeadHash GetHeadHashError
-    | Err_GetRawCausal GetRawCausalError
-    | Err_GetTerm GetTermError
-    | Err_GetType GetTypeError
+    = Err_GetHeadHash (Http.Error String)
+    | Err_GetRawCausal (Http.Error Bytes)
+    | Err_GetTerm (Http.Error Bytes)
+    | Err_GetTermType (Http.Error Bytes)
+    | Err_GetType (Http.Error Bytes)
 
 
 type alias Model =
@@ -33,7 +35,8 @@ type alias Model =
         { -- This data we've fetched directly from the codebase
           head : Maybe Hash32
         , branches : HashDict Hash32 RawCausal
-        , terms : HashDict Referent ( Term Symbol, Type Symbol )
+        , terms : HashDict Referent (Term Symbol)
+        , termTypes : HashDict Referent (Type Symbol)
         , types : HashDict Reference (Declaration Symbol)
 
         -- Mapping from branch to its parent(s). The codebase doesn't provide

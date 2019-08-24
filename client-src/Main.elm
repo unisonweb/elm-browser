@@ -1,8 +1,7 @@
 module Main exposing (..)
 
--- Unison.* imports are unused, but there temporarily so 'elm make' typechecks
-
 import Browser
+import Bytes exposing (Bytes)
 import Dict
 import HashingContainers.HashDict as HashDict exposing (HashDict)
 import HashingContainers.HashSet as HashSet
@@ -48,6 +47,7 @@ init _ =
                 { head = Nothing
                 , branches = HashDict.empty hash32Equality hash32Hashing
                 , terms = HashDict.empty referentEquality referentHashing
+                , termTypes = HashDict.empty referentEquality referentHashing
                 , types = HashDict.empty referenceEquality referenceHashing
                 , parents = HashDict.empty hash32Equality hash32Hashing
                 , successors = HashDict.empty hash32Equality hash32Hashing
@@ -87,6 +87,9 @@ update message model =
         Http_GetTerm result ->
             updateHttpGetTerm result model
 
+        Http_GetTermType result ->
+            updateHttpGetTermType result model
+
         Http_GetType result ->
             updateHttpGetType result model
 
@@ -103,7 +106,7 @@ update message model =
 {-| Got the head hash. Next step: get the actual (decoded) bytes.
 -}
 updateHttpGetHeadHash :
-    Result GetHeadHashError (Http.Response Hash32)
+    Result (Http.Error String) (Http.Response Hash32)
     -> Model
     -> ( Model, Cmd Message )
 updateHttpGetHeadHash result model =
@@ -121,6 +124,7 @@ updateHttpGetHeadHash result model =
                     -- unchanged
                     , branches = model.codebase.branches
                     , terms = model.codebase.terms
+                    , termTypes = model.codebase.termTypes
                     , types = model.codebase.types
                     , parents = model.codebase.parents
                     , successors = model.codebase.successors
@@ -138,7 +142,7 @@ branch), and then every time the user requests one to be fetched via the UI.
 What do we do with all these branches? Just store them forever in a map.
 -}
 updateHttpGetRawCausal :
-    Result GetRawCausalError ( Hash32, Http.Response RawCausal )
+    Result (Http.Error Bytes) ( Hash32, Http.Response RawCausal )
     -> Model
     -> ( Model, Cmd message )
 updateHttpGetRawCausal result model =
@@ -182,6 +186,7 @@ updateHttpGetRawCausal result model =
 
                     -- unchanged
                     , terms = model.codebase.terms
+                    , termTypes = model.codebase.termTypes
                     , types = model.codebase.types
                     }
               }
@@ -190,9 +195,9 @@ updateHttpGetRawCausal result model =
 
 
 updateHttpGetTerm :
-    Result GetTermError ( Id, Http.Response ( Term Symbol, Type Symbol ) )
+    Result (Http.Error Bytes) ( Id, Http.Response (Term Symbol) )
     -> Model
-    -> ( Model, Cmd message )
+    -> ( Model, Cmd Message )
 updateHttpGetTerm result model =
     case result of
         Err err ->
@@ -201,6 +206,17 @@ updateHttpGetTerm result model =
             )
 
         Ok ( id, response ) ->
+            let
+                command : Cmd Message
+                command =
+                    case HashDict.get (Ref (Derived id)) model.codebase.termTypes of
+                        Nothing ->
+                            model.api.unison.getTermType id
+                                |> Task.attempt Http_GetTermType
+
+                        Just _ ->
+                            Cmd.none
+            in
             ( { model
                 | codebase =
                     { terms =
@@ -212,6 +228,40 @@ updateHttpGetTerm result model =
                     -- unchanged
                     , head = model.codebase.head
                     , branches = model.codebase.branches
+                    , termTypes = model.codebase.termTypes
+                    , types = model.codebase.types
+                    , parents = model.codebase.parents
+                    , successors = model.codebase.successors
+                    }
+              }
+            , command
+            )
+
+
+updateHttpGetTermType :
+    Result (Http.Error Bytes) ( Id, Http.Response (Type Symbol) )
+    -> Model
+    -> ( Model, Cmd message )
+updateHttpGetTermType result model =
+    case result of
+        Err err ->
+            ( { model | errors = Err_GetTermType err :: model.errors }
+            , Cmd.none
+            )
+
+        Ok ( id, response ) ->
+            ( { model
+                | codebase =
+                    { termTypes =
+                        HashDict.insert
+                            (Ref (Derived id))
+                            response.body
+                            model.codebase.termTypes
+
+                    -- unchanged
+                    , head = model.codebase.head
+                    , branches = model.codebase.branches
+                    , terms = model.codebase.terms
                     , types = model.codebase.types
                     , parents = model.codebase.parents
                     , successors = model.codebase.successors
@@ -222,7 +272,7 @@ updateHttpGetTerm result model =
 
 
 updateHttpGetType :
-    Result GetTypeError ( Id, Http.Response (Declaration Symbol) )
+    Result (Http.Error Bytes) ( Id, Http.Response (Declaration Symbol) )
     -> Model
     -> ( Model, Cmd message )
 updateHttpGetType result model =
@@ -245,6 +295,7 @@ updateHttpGetType result model =
                     , head = model.codebase.head
                     , branches = model.codebase.branches
                     , terms = model.codebase.terms
+                    , termTypes = model.codebase.termTypes
                     , parents = model.codebase.parents
                     , successors = model.codebase.successors
                     }
@@ -279,6 +330,7 @@ updateUserGetBranch { hash, focus } model =
                 -- unchanged
                 , branches = model.codebase.branches
                 , terms = model.codebase.terms
+                , termTypes = model.codebase.termTypes
                 , types = model.codebase.types
                 , parents = model.codebase.parents
                 , successors = model.codebase.successors

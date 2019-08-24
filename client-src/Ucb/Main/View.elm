@@ -121,13 +121,20 @@ viewBranchTerm model referent nameSegment links =
             , pointer
             , spacing 5
             ]
-            [ el [ bold ] (text "term")
+            [ el [ bold ]
+                (case referent of
+                    Ref _ ->
+                        text "term"
+
+                    Con _ _ _ ->
+                        text "constructor"
+                )
             , text nameSegment
-            , viewShortReferent referent
+            , viewShortReferent False referent
             , viewLinks links
             ]
         , viewMaybe
-            (\( term, type_ ) ->
+            (\term ->
                 case HashDict.get referent model.ui.terms of
                     Just True ->
                         el
@@ -138,7 +145,14 @@ viewBranchTerm model referent nameSegment links =
                                 , top = 5
                                 }
                             ]
-                            (viewTerm term type_)
+                            (column
+                                []
+                                [ viewMaybe
+                                    viewType
+                                    (HashDict.get referent model.codebase.termTypes)
+                                , viewTerm term
+                                ]
+                            )
 
                     _ ->
                         none
@@ -165,7 +179,7 @@ viewBranchType model reference nameSegment links =
             ]
             [ el [ bold ] (text "type")
             , text nameSegment
-            , viewShortReference reference
+            , viewShortReference False reference
             , viewLinks links
             ]
         , viewMaybe
@@ -206,7 +220,7 @@ viewDataDeclaration constructorType declaration =
                         text "unique type"
 
             Effect ->
-                text "effect"
+                text "ability"
         , case declaration.bound of
             [] ->
                 none
@@ -263,7 +277,7 @@ viewLinks maybeLinks =
             row [ spacing 5 ]
                 (text "links"
                     :: List.map
-                        (Tuple.second >> viewShortReference)
+                        (Tuple.second >> viewShortReference True)
                         (HashSet.toList links)
                 )
 
@@ -284,27 +298,33 @@ viewShortId { hash, pos, size } =
 
 
 viewShortReference :
-    Reference
+    Bool
+    -> Reference
     -> Element message
-viewShortReference reference =
+viewShortReference showBuiltin reference =
     case reference of
-        Builtin _ ->
-            none
+        Builtin name ->
+            if showBuiltin then
+                text name
+
+            else
+                none
 
         Derived id ->
             viewShortId id
 
 
 viewShortReferent :
-    Referent
+    Bool
+    -> Referent
     -> Element message
-viewShortReferent referent =
+viewShortReferent showBuiltin referent =
     case referent of
         Ref reference ->
-            viewShortReference reference
+            viewShortReference showBuiltin reference
 
         Con reference _ _ ->
-            viewShortReference reference
+            viewShortReference showBuiltin reference
 
 
 {-| View a raw branch.
@@ -482,20 +502,74 @@ viewSymbol symbol =
 
 viewTerm :
     Term Symbol
-    -> Type Symbol
     -> Element message
-viewTerm term type_ =
-    column
-        []
-        [ viewType type_
-        , text ("term = " ++ Debug.toString term)
-        ]
+viewTerm =
+    Debug.toString >> text
+
+
+
+{-
+   case out of
+       TermVar var ->
+           viewSymbol var
+
+       TermAbs var tm ->
+           row
+               [ spacing 2 ]
+               [ viewSymbol var
+               , text "->"
+               , viewTerm tm
+               ]
+
+       TermTm (TermInt n) ->
+           text "TermInt"
+
+       TermTm (TermNat n) ->
+           text (String.fromInt (unsafeWord64ToWord53 n))
+
+       TermTm (TermFloat n) ->
+           text (String.fromFloat n)
+
+       TermTm (TermBoolean b) ->
+           text
+               (if b then
+                   "true"
+
+                else
+                   "false"
+               )
+
+       TermTm (TermText s) ->
+           -- TODO escape
+           text ("\"" ++ s ++ "\"")
+
+       TermTm (TermChar c) ->
+           text ("'" ++ String.fromChar c ++ "'")
+
+       -- | TermBlank Blank
+       -- | TermRef Reference
+       -- | TermConstructor Reference Int
+       -- | TermRequest Reference Int
+       -- | TermHandle (Term var) (Term var)
+       -- | TermApp (Term var) (Term var)
+       -- | TermAnn (Term var) (Type var)
+       -- | TermSequence (Array (Term var))
+       -- | TermIf (Term var) (Term var) (Term var)
+       -- | TermAnd (Term var) (Term var)
+       -- | TermOr (Term var) (Term var)
+       -- | TermLam (Term var)
+       -- | TermLetRec Bool (List (Term var)) (Term var)
+       -- | TermLet Bool (Term var) (Term var)
+       -- | TermMatch (Term var) (List (MatchCase (Term var)))
+       TermCycle _ ->
+           text "TermCycle"
+-}
 
 
 viewType :
     Type Symbol
     -> Element message
-viewType { freeVars, out } =
+viewType { out } =
     case out of
         TypeVar var ->
             viewSymbol var
@@ -509,7 +583,7 @@ viewType { freeVars, out } =
                 ]
 
         TypeTm (TypeRef ref) ->
-            viewShortReference ref
+            viewShortReference True ref
 
         TypeTm (TypeArrow ty1 ty2) ->
             row

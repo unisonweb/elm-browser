@@ -3,6 +3,7 @@ module Ucb.Unison.Codebase.API.GitHub exposing (makeGitHubUnisonCodebaseAPI)
 import Array exposing (Array)
 import Bytes exposing (Bytes)
 import GitHub
+import Misc exposing (impossible)
 import Task exposing (Task)
 import Ucb.Unison.Codebase.API exposing (..)
 import Ucb.Util.Http as Http
@@ -23,6 +24,7 @@ makeGitHubUnisonCodebaseAPI owner repo =
     { getHeadHash = getHeadHash owner repo
     , getRawCausal = getRawCausal owner repo
     , getTerm = Debug.todo "GitHub getTerm"
+    , getTermType = Debug.todo "GitHub getTermType"
     , getType = getType owner repo
     }
 
@@ -30,38 +32,27 @@ makeGitHubUnisonCodebaseAPI owner repo =
 getHeadHash :
     String
     -> String
-    -> Task GetHeadHashError (Http.Response String)
+    -> Task (Http.Error String) (Http.Response String)
 getHeadHash owner repo =
     GitHub.getRepoContents owner repo ".unison/v1/paths/_head"
-        |> Task.mapError GetHeadHashError_Http
-        |> Task.andThen getHeadHash2
-
-
-getHeadHash2 :
-    Http.Response GitHub.RepoContents
-    -> Task GetHeadHashError (Http.Response Hash32)
-getHeadHash2 response =
-    case parseHeadHash response.body of
-        Err err ->
-            Task.fail err
-
-        Ok hash ->
-            Task.succeed
+        |> Task.map
+            (\response ->
                 { url = response.url
                 , statusCode = response.statusCode
                 , statusText = response.statusText
                 , headers = response.headers
-                , body = hash
+                , body = parseHeadHash response.body
                 }
+            )
 
 
 parseHeadHash :
     GitHub.RepoContents
-    -> Result GetHeadHashError Hash32
+    -> Hash32
 parseHeadHash contents =
     case contents of
         GitHub.FileContents _ ->
-            Debug.todo ""
+            impossible "_head was a file?"
 
         GitHub.DirectoryContents dirents ->
             parseHeadHash2 dirents
@@ -69,21 +60,21 @@ parseHeadHash contents =
 
 parseHeadHash2 :
     Array GitHub.Dirent
-    -> Result GetHeadHashError String
+    -> String
 parseHeadHash2 dirents =
     case ( Array.get 0 dirents, Array.length dirents > 1 ) of
         ( Just dirent, False ) ->
-            Ok dirent.name
+            dirent.name
 
         _ ->
-            Err (GetHeadHashError_Other "expected only one path")
+            impossible "_head didn't contain one file?"
 
 
 getRawCausal :
     String
     -> String
     -> Hash32
-    -> Task GetRawCausalError ( Hash32, Http.Response RawCausal )
+    -> Task (Http.Error Bytes) ( Hash32, Http.Response RawCausal )
 getRawCausal owner repo hash =
     GitHub.getFile
         { owner = owner
@@ -92,7 +83,6 @@ getRawCausal owner repo hash =
         , path = ".unison/v1/paths/" ++ hash ++ ".ub"
         , decoder = V1.rawCausalDecoder
         }
-        |> Task.mapError GetRawCausalError_Http
         |> Task.map (\response -> ( hash, response ))
 
 
@@ -100,7 +90,7 @@ getType :
     String
     -> String
     -> Id
-    -> Task GetTypeError ( Id, Http.Response (Declaration Symbol) )
+    -> Task (Http.Error Bytes) ( Id, Http.Response (Declaration Symbol) )
 getType owner repo id =
     GitHub.getFile
         { owner = owner
@@ -109,5 +99,4 @@ getType owner repo id =
         , path = ".unison/v1/types/%23" ++ idToString id ++ "/compiled.ub"
         , decoder = V1.declarationDecoder
         }
-        |> Task.mapError GetTypeError_Http
         |> Task.map (\response -> ( id, response ))

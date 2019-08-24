@@ -22,11 +22,12 @@ makeLocalServerUnisonCodebaseAPI =
     { getHeadHash = getHeadHash
     , getRawCausal = getRawCausal
     , getTerm = getTerm
+    , getTermType = getTermType
     , getType = getType
     }
 
 
-getHeadHash : Task GetHeadHashError (Http.Response Hash32)
+getHeadHash : Task (Http.Error String) (Http.Response Hash32)
 getHeadHash =
     Http.getJson
         { decoder = Json.Decode.string
@@ -34,12 +35,11 @@ getHeadHash =
         , timeout = Nothing
         , url = "head"
         }
-        |> Task.mapError GetHeadHashError_Http
 
 
 getRawCausal :
     Hash32
-    -> Task GetRawCausalError ( Hash32, Http.Response RawCausal )
+    -> Task (Http.Error Bytes) ( Hash32, Http.Response RawCausal )
 getRawCausal hash =
     Http.getBytes
         { decoder = V1.rawCausalDecoder
@@ -47,13 +47,12 @@ getRawCausal hash =
         , timeout = Nothing
         , url = "branch/" ++ hash
         }
-        |> Task.mapError GetRawCausalError_Http
         |> Task.map (\response -> ( hash, response ))
 
 
 getTerm :
     Id
-    -> Task GetTermError ( Id, Http.Response ( Term Symbol, Type Symbol ) )
+    -> Task (Http.Error Bytes) ( Id, Http.Response (Term Symbol) )
 getTerm id =
     Http.getBytes
         { decoder = V1.termDecoder
@@ -61,38 +60,25 @@ getTerm id =
         , timeout = Nothing
         , url = "term/" ++ idToString id ++ "/term"
         }
-        |> Task.mapError GetTermError_Http
-        |> Task.andThen (getTerm2 id)
+        |> Task.map (\response -> ( id, response ))
 
 
-getTerm2 :
+getTermType :
     Id
-    -> Http.Response (Term Symbol)
-    -> Task GetTermError ( Id, Http.Response ( Term Symbol, Type Symbol ) )
-getTerm2 id response =
+    -> Task (Http.Error Bytes) ( Id, Http.Response (Type Symbol) )
+getTermType id =
     Http.getBytes
         { decoder = V1.typeDecoder
         , headers = []
         , timeout = Nothing
         , url = "term/" ++ idToString id ++ "/type"
         }
-        |> Task.mapError GetTermError_Http
-        |> Task.map
-            (\response2 ->
-                ( id
-                , { url = response2.url
-                  , statusCode = response2.statusCode
-                  , statusText = response2.statusText
-                  , headers = response2.headers
-                  , body = ( response.body, response2.body )
-                  }
-                )
-            )
+        |> Task.map (\response -> ( id, response ))
 
 
 getType :
     Id
-    -> Task GetTypeError ( Id, Http.Response (Declaration Symbol) )
+    -> Task (Http.Error Bytes) ( Id, Http.Response (Declaration Symbol) )
 getType id =
     Http.getBytes
         { decoder = V1.declarationDecoder
@@ -100,5 +86,4 @@ getType id =
         , timeout = Nothing
         , url = "declaration/" ++ idToString id
         }
-        |> Task.mapError GetTypeError_Http
         |> Task.map (\response -> ( id, response ))

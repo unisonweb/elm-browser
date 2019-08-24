@@ -27,36 +27,9 @@ make reusing code simpler.
 type alias UnisonCodebaseAPI =
     { -- Get the head namespace hash, that is, the name of the file located at
       -- .unison/v1/paths/\_head/<namespace-hash>
-      getHeadHash : Task GetHeadHashError (Http.Response Hash32)
-    , getRawCausal : Hash32 -> Task GetRawCausalError ( Hash32, Http.Response RawCausal )
-    , getTerm : Id -> Task GetTermError ( Id, Http.Response ( Term Symbol, Type Symbol ) )
-    , getType : Id -> Task GetTypeError ( Id, Http.Response (Declaration Symbol) )
+      getHeadHash : Task (Http.Error String) (Http.Response Hash32)
+    , getRawCausal : Hash32 -> Task (Http.Error Bytes) ( Hash32, Http.Response RawCausal )
+    , getTerm : Id -> Task (Http.Error Bytes) ( Id, Http.Response (Term Symbol) )
+    , getTermType : Id -> Task (Http.Error Bytes) ( Id, Http.Response (Type Symbol) )
+    , getType : Id -> Task (Http.Error Bytes) ( Id, Http.Response (Declaration Symbol) )
     }
-
-
-{-| Something went wrong when getting the head hash.
--}
-type GetHeadHashError
-    = GetHeadHashError_Http (Http.Error String)
-    | GetHeadHashError_Other String
-
-
-{-| Something went wrong when getting a raw causal.
--}
-type GetRawCausalError
-    = GetRawCausalError_Http (Http.Error Bytes)
-    | GetRawCausalError_Other String
-
-
-{-| Something went wrong when getting a term.
--}
-type GetTermError
-    = GetTermError_Http (Http.Error Bytes)
-    | GetTermError_Other String
-
-
-{-| Something went wrong when getting a type.
--}
-type GetTypeError
-    = GetTypeError_Http (Http.Error Bytes)
-    | GetTypeError_Other String

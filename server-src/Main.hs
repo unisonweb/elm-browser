@@ -6,11 +6,10 @@
 module Main where
 
 import Control.Monad
-import Data.Function ((&))
 import Data.Text (Text)
 import Network.HTTP.Types hiding (StdMethod(..))
 import Network.Wai
-import Network.Wai.Handler.Warp
+import Network.Wai.Cli
 import Paths_unison_browser (getDataFileName)
 import Prelude hiding (head)
 import System.Directory
@@ -28,13 +27,8 @@ main =
       hPutStrLn stderr ".unison/ not found!"
       exitFailure
 
-    True -> do
-      putStrLn "Running on 127.0.0.1:8080"
-      runSettings
-        (defaultSettings
-          & setHost "127.0.0.1"
-          & setPort 8080)
-        app
+    True ->
+      defWaiMain app
 
 app
   :: Request

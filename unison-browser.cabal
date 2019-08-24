@@ -13,6 +13,7 @@ executable unison-browser
     text ^>= 1.2.3,
     wai ^>= 3.2.2,
     warp ^>= 3.3.0,
+    wai-cli ^>= 0.2.1,
   default-language: Haskell2010
   ghc-options: -Wall -threaded
   main-is: server-src/Main.hs

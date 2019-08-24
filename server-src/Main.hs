@@ -1,10 +1,12 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Main where
 
+import Control.Exception (throwIO)
 import Control.Monad
 import Data.Function ((&))
 import Data.Text (Text)
@@ -14,8 +16,11 @@ import Network.Wai.Handler.Warp
 import Paths_unison_browser (getDataFileName)
 import Prelude hiding (head)
 import System.Directory
+import System.Environment
 import System.Exit
 import System.IO
+import System.IO.Error
+import Text.Read
 
 import qualified Data.ByteString.Lazy.Char8 as LazyByteString.Char8
 import qualified Data.Text as Text
@@ -29,12 +34,37 @@ main =
       exitFailure
 
     True -> do
-      putStrLn "Running on 127.0.0.1:8080"
+      port :: Int <-
+        getArgs >>= \case
+          ["--help"] -> printUsage >> exitSuccess
+          [readMaybe -> Just port] -> pure port
+          [] -> pure 8180
+          _ -> printUsage >> exitFailure
+
+      let
+        handler :: IOError -> IO ()
+        handler err =
+          case (ioeGetLocation err, ioeGetErrorString err) of
+            ("Network.Socket.bind", "resource busy") -> do
+              hPutStrLn stderr ("Failed to bind to 127.0.0.1:" ++ show port)
+              hPutStrLn stderr "(Do you have unison-browser running in another terminal?)"
+              hPutStrLn stderr "Pass a port number on the command line to change the port."
+              exitFailure
+
+            _ ->
+              throwIO err
+
       runSettings
         (defaultSettings
+          & setBeforeMainLoop (putStrLn ("Running on 127.0.0.1:" ++ show port))
           & setHost "127.0.0.1"
-          & setPort 8080)
+          & setPort port)
         app
+        `catchIOError` handler
+
+printUsage :: IO ()
+printUsage = do
+  putStrLn "Usage: unison-browser [PORT]"
 
 app
   :: Request

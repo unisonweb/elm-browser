@@ -4,7 +4,8 @@ import Browser
 import Bytes exposing (Bytes)
 import Dict
 import HashingContainers.HashDict as HashDict exposing (HashDict)
-import HashingContainers.HashSet as HashSet
+import HashingContainers.HashSet as HashSet exposing (HashSet)
+import Misc exposing (..)
 import Task exposing (Task)
 import Ucb.Main.Message exposing (Message(..))
 import Ucb.Main.Model exposing (..)
@@ -44,16 +45,16 @@ init _ =
                 }
             , codebase =
                 { head = Nothing
-                , branches = HashDict.empty hash32Equality hash32Hashing
-                , branches2 = HashDict.empty hash32Equality hash32Hashing
+                , branches = emptyBranchDict
+                , branches2 = emptyBranchDict
                 , terms = HashDict.empty referentEquality referentHashing
                 , termTypes = HashDict.empty referentEquality referentHashing
                 , types = HashDict.empty referenceEquality referenceHashing
-                , parents = HashDict.empty hash32Equality hash32Hashing
-                , successors = HashDict.empty hash32Equality hash32Hashing
+                , parents = emptyBranchDict
+                , successors = emptyBranchDict
                 }
             , ui =
-                { branches = HashDict.empty hash32Equality hash32Hashing
+                { branches = emptyBranchDict
                 , terms = HashDict.empty referentEquality referentHashing
                 , types = HashDict.empty referenceEquality referenceHashing
                 }
@@ -70,16 +71,14 @@ init _ =
     ( model, initialCommand )
 
 
-subscriptions : Model -> Sub Message
-subscriptions _ =
-    Sub.none
-
-
 update : Message -> Model -> ( Model, Cmd Message )
 update message model =
     case message of
         Http_GetHeadHash result ->
             updateHttpGetHeadHash result model
+
+        Http_GetBranch result ->
+            updateHttpGetBranch result model
 
         Http_GetRawCausal result ->
             updateHttpGetRawCausal result model
@@ -101,6 +100,32 @@ update message model =
 
         User_GetTerm referent ->
             updateUserGetTerm referent model
+
+        User_DebugButton ->
+            updateUserDebugButton model
+
+
+{-| Whatever you're debugging. Might be nothing!
+-}
+updateUserDebugButton :
+    Model
+    -> ( Model, Cmd Message )
+updateUserDebugButton model =
+    ( model
+    , case model.codebase.head of
+        Nothing ->
+            Cmd.none
+
+        Just head ->
+            getBranch
+                model.api.unison
+                { branches = emptyBranchDict
+                , parents = emptyBranchDict
+                , successors = emptyBranchDict
+                }
+                head
+                |> Task.attempt Http_GetBranch
+    )
 
 
 {-| Got the head hash. Next step: get the actual (decoded) bytes.
@@ -143,6 +168,65 @@ updateHttpGetHeadHash2 response model =
       }
     , model.api.unison.getRawCausal response.body
         |> Task.attempt Http_GetRawCausal
+    )
+
+
+updateHttpGetBranch :
+    Result (Http.Error Bytes)
+        { branches : HashDict BranchHash Branch
+        , parents : HashDict BranchHash (HashSet BranchHash)
+        , successors : HashDict BranchHash (HashSet BranchHash)
+        }
+    -> Model
+    -> ( Model, Cmd message )
+updateHttpGetBranch result model =
+    case result of
+        Err err ->
+            ( { model | errors = Err_GetBranch err :: model.errors }
+            , Cmd.none
+            )
+
+        Ok result2 ->
+            updateHttpGetBranch2 result2 model
+
+
+updateHttpGetBranch2 :
+    { branches : HashDict BranchHash Branch
+    , parents : HashDict BranchHash (HashSet BranchHash)
+    , successors : HashDict BranchHash (HashSet BranchHash)
+    }
+    -> Model
+    -> ( Model, Cmd message )
+updateHttpGetBranch2 { branches, parents, successors } model =
+    ( { model
+        | codebase =
+            { branches2 =
+                HashDict.foldl
+                    (\( hash, branch ) ->
+                        HashDict.update
+                            hash
+                            (maybe (Just branch) Just)
+                    )
+                    model.codebase.branches2
+                    branches
+            , parents =
+                (branchDictMonoid hashSetSemigroup).semigroup.prepend
+                    parents
+                    model.codebase.parents
+            , successors =
+                (branchDictMonoid hashSetSemigroup).semigroup.prepend
+                    successors
+                    model.codebase.successors
+
+            -- unchanged
+            , head = model.codebase.head
+            , branches = model.codebase.branches
+            , terms = model.codebase.terms
+            , termTypes = model.codebase.termTypes
+            , types = model.codebase.types
+            }
+      }
+    , Cmd.none
     )
 
 
@@ -441,14 +525,7 @@ updateUserGetTerm referent model =
                         newTerms =
                             HashDict.update
                                 referent
-                                (\maybeVisible ->
-                                    case maybeVisible of
-                                        Nothing ->
-                                            Just True
-
-                                        Just visible ->
-                                            Just (not visible)
-                                )
+                                (maybe True not >> Just)
                                 model.ui.terms
                     in
                     ( { model
@@ -515,3 +592,10 @@ updateUserGetType reference model =
               }
             , command
             )
+
+
+subscriptions :
+    Model
+    -> Sub Message
+subscriptions _ =
+    Sub.none

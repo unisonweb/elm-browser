@@ -7,6 +7,13 @@ import HashingContainers.HashDict as HashDict exposing (HashDict)
 import HashingContainers.HashSet as HashSet exposing (HashSet)
 import Typeclasses.Classes.Equality as Equality exposing (Equality)
 import Typeclasses.Classes.Hashing as Hashing exposing (Hashing)
+import Typeclasses.Classes.Monoid as Monoid exposing (Monoid)
+import Typeclasses.Classes.Semigroup exposing (Semigroup)
+
+
+emptyBytes : Bytes
+emptyBytes =
+    Bytes.Encode.encode (Bytes.Encode.sequence [])
 
 
 {-| TODO upstream this
@@ -34,6 +41,40 @@ hashDictFromListWith equality hashing combine =
         (HashDict.empty equality hashing)
 
 
+hashDictMonoid :
+    Equality k
+    -> Hashing k
+    -> Semigroup v
+    -> Monoid (HashDict k v)
+hashDictMonoid keyEquality keyHashing valueSemigroup =
+    Monoid.semigroupAndIdentity
+        { prepend = hashDictUnion valueSemigroup }
+        (HashDict.empty keyEquality keyHashing)
+
+
+hashDictUnion :
+    Semigroup v
+    -> HashDict k v
+    -> HashDict k v
+    -> HashDict k v
+hashDictUnion { prepend } xs ys =
+    HashDict.foldl
+        (\( key, newValue ) ->
+            HashDict.update
+                key
+                (\maybeOldValue ->
+                    case maybeOldValue of
+                        Nothing ->
+                            Just newValue
+
+                        Just oldValue ->
+                            Just (prepend newValue oldValue)
+                )
+        )
+        ys
+        xs
+
+
 hashSetSingleton :
     Equality a
     -> Hashing a
@@ -48,6 +89,21 @@ hashSetSize :
     -> Int
 hashSetSize =
     HashSet.toList >> List.length
+
+
+hashSetMonoid :
+    Equality a
+    -> Hashing a
+    -> Monoid (HashSet a)
+hashSetMonoid valueEquality valueHashing =
+    Monoid.semigroupAndIdentity
+        hashSetSemigroup
+        (HashSet.empty valueEquality valueHashing)
+
+
+hashSetSemigroup : Semigroup (HashSet a)
+hashSetSemigroup =
+    { prepend = hashSetUnion }
 
 
 {-| TODO upstream this
@@ -72,16 +128,21 @@ hashSetUnions equality hashing =
     List.foldl hashSetUnion (HashSet.empty equality hashing)
 
 
-emptyBytes : Bytes
-emptyBytes =
-    Bytes.Encode.encode (Bytes.Encode.sequence [])
-
-
 {-| This is "error"...
 -}
 impossible : String -> a
 impossible s =
     impossible s
+
+
+maybe : b -> (a -> b) -> Maybe a -> b
+maybe n j mx =
+    case mx of
+        Nothing ->
+            n
+
+        Just x ->
+            j x
 
 
 pairHashing :

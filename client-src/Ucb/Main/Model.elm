@@ -19,6 +19,7 @@ import Unison.Type exposing (..)
 
 type Error
     = Err_GetHeadHash (Http.Error String)
+    | Err_GetBranch (Http.Error Bytes)
     | Err_GetRawCausal (Http.Error Bytes)
     | Err_GetTerm (Http.Error Bytes)
     | Err_GetTermType (Http.Error Bytes)
@@ -36,7 +37,7 @@ type alias Model =
         { -- This data we've fetched directly from the codebase
           head : Maybe BranchHash
         , branches : HashDict BranchHash (RawCausal RawBranch)
-        , branches2 : HashDict BranchHash (RawCausal RawBranch) -- TODO replace 'branches' with this
+        , branches2 : HashDict BranchHash Branch -- TODO replace 'branches' with this
         , terms : HashDict Referent (Term Symbol)
         , termTypes : HashDict Referent (Type Symbol)
         , types : HashDict Reference (Declaration Symbol)

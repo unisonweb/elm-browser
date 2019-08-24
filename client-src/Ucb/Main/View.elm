@@ -4,6 +4,7 @@ import Bytes
 import Element exposing (..)
 import Element.Events exposing (..)
 import Element.Font exposing (..)
+import Element.Input exposing (button)
 import HashingContainers.HashDict as HashDict exposing (HashDict)
 import HashingContainers.HashSet as HashSet exposing (HashSet)
 import Html exposing (Html)
@@ -30,7 +31,15 @@ view : Model -> Html Message
 view model =
     layout
         []
-        (view2 model)
+        (column
+            []
+            [ view2 model
+            , button []
+                { onPress = Just User_DebugButton
+                , label = text "Debug Button!"
+                }
+            ]
+        )
 
 
 view2 : Model -> Element Message

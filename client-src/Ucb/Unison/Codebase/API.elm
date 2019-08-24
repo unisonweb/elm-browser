@@ -50,38 +50,25 @@ Postcondition: the map contains an entry for every descendant of the given hash
 -}
 getBranch :
     UnisonCodebaseAPI
-    -> BranchHash
-    -> Task (Http.Error Bytes) Cache
-getBranch api =
-    getBranch2
-        api
-        { branches = HashDict.empty hash32Equality hash32Hashing
-        , parents = HashDict.empty hash32Equality hash32Hashing
-        , successors = HashDict.empty hash32Equality hash32Hashing
-        }
-
-
-getBranch2 :
-    UnisonCodebaseAPI
     -> Cache
     -> BranchHash
     -> Task (Http.Error Bytes) Cache
-getBranch2 api cache hash =
+getBranch api cache hash =
     case HashDict.get hash cache.branches of
         Nothing ->
             api.getRawCausal hash
-                |> Task.andThen (getBranch3 api cache)
+                |> Task.andThen (getBranch2 api cache)
 
         Just branch ->
             Task.succeed cache
 
 
-getBranch3 :
+getBranch2 :
     UnisonCodebaseAPI
     -> Cache
     -> ( BranchHash, Http.Response (RawCausal RawBranch) )
     -> Task (Http.Error Bytes) Cache
-getBranch3 api cache ( hash, { body } ) =
+getBranch2 api cache ( hash, { body } ) =
     let
         children : List BranchHash
         children =
@@ -110,22 +97,22 @@ getBranch3 api cache ( hash, { body } ) =
     -- for every one of our descendants.
     tasks
         children
-        (getBranch2 api)
+        (getBranch api)
         newCache
         -- Finally, add ourselves to the map, by repeatedly
         -- reaching into it to convert our
         -- 'RawCausal RawBranch' into a 'RawCausal Branch0'.
-        |> Task.map (getBranch4 hash body)
+        |> Task.map (getBranch3 hash body)
 
 
 {-| Precondition: the given cache has all the info we need (our descendants).
 -}
-getBranch4 :
+getBranch3 :
     BranchHash
     -> RawCausal RawBranch
     -> Cache
     -> Cache
-getBranch4 hash causal cache =
+getBranch3 hash causal cache =
     { cache
         | branches =
             HashDict.insert

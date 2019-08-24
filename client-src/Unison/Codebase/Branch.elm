@@ -1,9 +1,10 @@
 module Unison.Codebase.Branch exposing (..)
 
-import HashingContainers.HashDict exposing (HashDict)
+import HashingContainers.HashDict as HashDict exposing (HashDict)
 import HashingContainers.HashSet exposing (HashSet)
+import Misc exposing (impossible)
 import Unison.Codebase.Causal exposing (RawCausal)
-import Unison.Codebase.NameSegment exposing (NameSegment)
+import Unison.Codebase.NameSegment exposing (..)
 import Unison.Hash exposing (Hash32)
 import Unison.Reference exposing (..)
 import Unison.Referent exposing (..)
@@ -43,4 +44,33 @@ type alias RawBranch =
     , types : Star Reference NameSegment
     , children : HashDict NameSegment Hash32
     , edits : HashDict NameSegment Hash32
+    }
+
+
+{-| Make a 'Branch0' from a 'RawBranch', given a map of branches.
+Invariant: our descendants are all in the given map.
+-}
+rawBranchToBranch0 :
+    HashDict Hash32 Branch
+    -> RawBranch
+    -> Branch0
+rawBranchToBranch0 branches rawBranch =
+    { terms = rawBranch.terms
+    , types = rawBranch.types
+    , children =
+        HashDict.foldl
+            (\( nameSegment, hash ) ->
+                HashDict.insert
+                    nameSegment
+                    (case HashDict.get hash branches of
+                        Nothing ->
+                            impossible "makeBranch0: Nothing"
+
+                        Just branch ->
+                            branch
+                    )
+            )
+            (HashDict.empty nameSegmentEquality nameSegmentHashing)
+            rawBranch.children
+    , edits = rawBranch.edits
     }

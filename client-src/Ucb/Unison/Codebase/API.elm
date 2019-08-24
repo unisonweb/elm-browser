@@ -126,22 +126,17 @@ getBranch4 :
     -> Cache
     -> Cache
 getBranch4 hash causal cache =
-    let
-        makeBranch0 : RawBranch -> Branch0
-        makeBranch0 branch =
-            { terms = branch.terms
-            , types = branch.types
-            , children = Debug.todo ""
-            , edits = branch.edits
-            }
-    in
     { cache
         | branches =
             HashDict.insert
                 hash
                 (Branch
                     (rawCausalMap
-                        (always (makeBranch0 (rawCausalHead causal)))
+                        (\_ ->
+                            rawBranchToBranch0
+                                cache.branches
+                                (rawCausalHead causal)
+                        )
                         causal
                     )
                 )

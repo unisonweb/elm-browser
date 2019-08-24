@@ -544,7 +544,7 @@ viewType { freeVars, out } =
                 [ spacing 2 ]
                 [ text "{"
                 , row [] (List.map viewType tys)
-                , text ")"
+                , text "}"
                 ]
 
         TypeTm (TypeForall ty) ->

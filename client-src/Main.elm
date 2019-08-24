@@ -110,22 +110,7 @@ updateUserDebugButton :
     Model
     -> ( Model, Cmd Message )
 updateUserDebugButton model =
-    ( model
-    , case model.codebase.head of
-        Nothing ->
-            Cmd.none
-
-        Just head ->
-            getBranch
-                model.api.unison
-                { branches = emptyBranchDict
-                , parents = emptyBranchDict
-                , successors = emptyBranchDict
-                }
-                head
-                |> Task.map (\cache -> ( head, cache ))
-                |> Task.attempt Http_GetBranch
-    )
+    ( model, Cmd.none )
 
 
 {-| Got the head hash. Next step: get the actual (decoded) bytes.

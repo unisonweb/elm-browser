@@ -34,9 +34,9 @@ type alias Model =
     -- The codebase
     , codebase :
         { -- This data we've fetched directly from the codebase
-          head : Maybe Hash32
-        , branches : HashDict Hash32 (RawCausal RawBranch)
-        , branches2 : HashDict Hash32 (RawCausal RawBranch) -- TODO replace 'branches' with this
+          head : Maybe BranchHash
+        , branches : HashDict BranchHash (RawCausal RawBranch)
+        , branches2 : HashDict BranchHash (RawCausal RawBranch) -- TODO replace 'branches' with this
         , terms : HashDict Referent (Term Symbol)
         , termTypes : HashDict Referent (Type Symbol)
         , types : HashDict Reference (Declaration Symbol)
@@ -44,18 +44,18 @@ type alias Model =
         -- Mapping from branch to its parent(s). The codebase doesn't provide
         -- this, we just discover and cache it lazily as you move down into
         -- children.
-        , parents : HashDict Hash32 (HashSet Hash32)
+        , parents : HashDict BranchHash (HashSet BranchHash)
 
         -- Mapping from branch to its successor(s). The codebase doesn't
         -- provide this, we just discover and cache it lazily as you move
         -- backwards in time.
-        , successors : HashDict Hash32 (HashSet Hash32)
+        , successors : HashDict BranchHash (HashSet BranchHash)
         }
 
     -- UI state, not pulled (nor derived) from the codebase
     , ui :
         -- Visible?
-        { branches : HashDict Hash32 Bool
+        { branches : HashDict BranchHash Bool
         , terms : HashDict Referent Bool
         , types : HashDict Reference Bool
         }
@@ -73,10 +73,10 @@ type alias Model =
 its children.
 -}
 insertParents :
-    Hash32
-    -> List Hash32
-    -> HashDict Hash32 (HashSet Hash32)
-    -> HashDict Hash32 (HashSet Hash32)
+    BranchHash
+    -> List BranchHash
+    -> HashDict BranchHash (HashSet BranchHash)
+    -> HashDict BranchHash (HashSet BranchHash)
 insertParents parent children parentsCache =
     List.foldl
         (\child ->
@@ -104,10 +104,10 @@ insertParents parent children parentsCache =
 each of its predecessors.
 -}
 insertSuccessors :
-    Hash32
-    -> List Hash32
-    -> HashDict Hash32 (HashSet Hash32)
-    -> HashDict Hash32 (HashSet Hash32)
+    BranchHash
+    -> List BranchHash
+    -> HashDict BranchHash (HashSet BranchHash)
+    -> HashDict BranchHash (HashSet BranchHash)
 insertSuccessors successor predecessors successorsCache =
     List.foldl
         (\predecessor ->

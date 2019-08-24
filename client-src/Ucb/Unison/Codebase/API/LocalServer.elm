@@ -11,7 +11,6 @@ import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)
 import Unison.Codebase.Serialization.V1 as V1
 import Unison.Declaration exposing (..)
-import Unison.Hash exposing (Hash32)
 import Unison.Reference exposing (..)
 import Unison.Symbol exposing (Symbol)
 import Unison.Term exposing (Term)
@@ -28,7 +27,7 @@ makeLocalServerUnisonCodebaseAPI =
     }
 
 
-getHeadHash : Task (Http.Error String) (Http.Response Hash32)
+getHeadHash : Task (Http.Error String) (Http.Response BranchHash)
 getHeadHash =
     Http.getJson
         { decoder = Json.Decode.string
@@ -39,8 +38,8 @@ getHeadHash =
 
 
 getRawCausal :
-    Hash32
-    -> Task (Http.Error Bytes) ( Hash32, Http.Response (RawCausal RawBranch) )
+    BranchHash
+    -> Task (Http.Error Bytes) ( BranchHash, Http.Response (RawCausal RawBranch) )
 getRawCausal hash =
     Http.getBytes
         { decoder = V1.rawCausalDecoder

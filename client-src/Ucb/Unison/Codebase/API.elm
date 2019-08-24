@@ -24,8 +24,8 @@ import Unison.Type exposing (..)
 type alias UnisonCodebaseAPI =
     { -- Get the head namespace hash, that is, the name of the file located at
       -- .unison/v1/paths/\_head/<namespace-hash>
-      getHeadHash : Task (Http.Error String) (Http.Response Hash32)
-    , getRawCausal : Hash32 -> Task (Http.Error Bytes) ( Hash32, Http.Response (RawCausal RawBranch) )
+      getHeadHash : Task (Http.Error String) (Http.Response BranchHash)
+    , getRawCausal : BranchHash -> Task (Http.Error Bytes) ( BranchHash, Http.Response (RawCausal RawBranch) )
     , getTerm : Id -> Task (Http.Error Bytes) ( Id, Http.Response (Term Symbol) )
     , getTermType : Id -> Task (Http.Error Bytes) ( Id, Http.Response (Type Symbol) )
     , getType : Id -> Task (Http.Error Bytes) ( Id, Http.Response (Declaration Symbol) )
@@ -35,9 +35,9 @@ type alias UnisonCodebaseAPI =
 {-| Just to clean up type sigs below.
 -}
 type alias Cache =
-    { branches : HashDict Hash32 Branch
-    , parents : HashDict Hash32 (HashSet Hash32)
-    , successors : HashDict Hash32 (HashSet Hash32)
+    { branches : HashDict BranchHash Branch
+    , parents : HashDict BranchHash (HashSet BranchHash)
+    , successors : HashDict BranchHash (HashSet BranchHash)
     }
 
 
@@ -50,7 +50,7 @@ Postcondition: the map contains an entry for every descendant of the given hash
 -}
 getBranch :
     UnisonCodebaseAPI
-    -> Hash32
+    -> BranchHash
     -> Task (Http.Error Bytes) Cache
 getBranch api =
     getBranch2
@@ -64,7 +64,7 @@ getBranch api =
 getBranch2 :
     UnisonCodebaseAPI
     -> Cache
-    -> Hash32
+    -> BranchHash
     -> Task (Http.Error Bytes) Cache
 getBranch2 api cache hash =
     case HashDict.get hash cache.branches of
@@ -79,11 +79,11 @@ getBranch2 api cache hash =
 getBranch3 :
     UnisonCodebaseAPI
     -> Cache
-    -> ( Hash32, Http.Response (RawCausal RawBranch) )
+    -> ( BranchHash, Http.Response (RawCausal RawBranch) )
     -> Task (Http.Error Bytes) Cache
 getBranch3 api cache ( hash, { body } ) =
     let
-        children : List Hash32
+        children : List BranchHash
         children =
             rawCausalChildren body
 
@@ -121,7 +121,7 @@ getBranch3 api cache ( hash, { body } ) =
 {-| Precondition: the given cache has all the info we need (our descendants).
 -}
 getBranch4 :
-    Hash32
+    BranchHash
     -> RawCausal RawBranch
     -> Cache
     -> Cache
@@ -148,10 +148,10 @@ getBranch4 hash causal cache =
 its children.
 -}
 insertParents :
-    Hash32
-    -> List Hash32
-    -> HashDict Hash32 (HashSet Hash32)
-    -> HashDict Hash32 (HashSet Hash32)
+    BranchHash
+    -> List BranchHash
+    -> HashDict BranchHash (HashSet BranchHash)
+    -> HashDict BranchHash (HashSet BranchHash)
 insertParents parent children parentsCache =
     List.foldl
         (\child ->
@@ -179,10 +179,10 @@ insertParents parent children parentsCache =
 each of its predecessors.
 -}
 insertSuccessors :
-    Hash32
-    -> List Hash32
-    -> HashDict Hash32 (HashSet Hash32)
-    -> HashDict Hash32 (HashSet Hash32)
+    BranchHash
+    -> List BranchHash
+    -> HashDict BranchHash (HashSet BranchHash)
+    -> HashDict BranchHash (HashSet BranchHash)
 insertSuccessors successor predecessors successorsCache =
     List.foldl
         (\predecessor ->

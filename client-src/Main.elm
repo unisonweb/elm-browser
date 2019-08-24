@@ -106,7 +106,7 @@ update message model =
 {-| Got the head hash. Next step: get the actual (decoded) bytes.
 -}
 updateHttpGetHeadHash :
-    Result (Http.Error String) (Http.Response Hash32)
+    Result (Http.Error String) (Http.Response BranchHash)
     -> Model
     -> ( Model, Cmd Message )
 updateHttpGetHeadHash result model =
@@ -121,7 +121,7 @@ updateHttpGetHeadHash result model =
 
 
 updateHttpGetHeadHash2 :
-    Http.Response Hash32
+    Http.Response BranchHash
     -> Model
     -> ( Model, Cmd Message )
 updateHttpGetHeadHash2 response model =
@@ -151,7 +151,7 @@ branch), and then every time the user requests one to be fetched via the UI.
 What do we do with all these branches? Just store them forever in a map.
 -}
 updateHttpGetRawCausal :
-    Result (Http.Error Bytes) ( Hash32, Http.Response (RawCausal RawBranch) )
+    Result (Http.Error Bytes) ( BranchHash, Http.Response (RawCausal RawBranch) )
     -> Model
     -> ( Model, Cmd message )
 updateHttpGetRawCausal result model =
@@ -166,7 +166,7 @@ updateHttpGetRawCausal result model =
 
 
 updateHttpGetRawCausal2 :
-    ( Hash32, Http.Response (RawCausal RawBranch) )
+    ( BranchHash, Http.Response (RawCausal RawBranch) )
     -> Model
     -> ( Model, Cmd message )
 updateHttpGetRawCausal2 ( hash, response ) model =
@@ -350,7 +350,7 @@ updateHttpGetType2 ( id, response ) model =
 {-| Fetch the branch if we haven't already, and possibly focus it.
 -}
 updateUserGetBranch :
-    { hash : Hash32, focus : Bool }
+    { hash : BranchHash, focus : Bool }
     -> Model
     -> ( Model, Cmd Message )
 updateUserGetBranch { hash, focus } model =
@@ -385,7 +385,7 @@ updateUserGetBranch { hash, focus } model =
 
     else
         let
-            newBranches : HashDict Hash32 Bool
+            newBranches : HashDict BranchHash Bool
             newBranches =
                 HashDict.update
                     hash

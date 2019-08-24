@@ -42,16 +42,20 @@ type alias Branch0 =
 type alias RawBranch =
     { terms : Star Referent NameSegment
     , types : Star Reference NameSegment
-    , children : HashDict NameSegment Hash32
-    , edits : HashDict NameSegment Hash32
+    , children : HashDict NameSegment BranchHash
+    , edits : HashDict NameSegment BranchHash
     }
+
+
+type alias BranchHash =
+    Hash32
 
 
 {-| Make a 'Branch0' from a 'RawBranch', given a map of branches.
 Invariant: our descendants are all in the given map.
 -}
 rawBranchToBranch0 :
-    HashDict Hash32 Branch
+    HashDict BranchHash Branch
     -> RawBranch
     -> Branch0
 rawBranchToBranch0 branches rawBranch =

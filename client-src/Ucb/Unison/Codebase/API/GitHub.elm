@@ -12,7 +12,6 @@ import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)
 import Unison.Codebase.Serialization.V1 as V1
 import Unison.Declaration exposing (..)
-import Unison.Hash exposing (Hash32)
 import Unison.Reference exposing (..)
 import Unison.Symbol exposing (Symbol)
 
@@ -49,7 +48,7 @@ getHeadHash owner repo =
 
 parseHeadHash :
     GitHub.RepoContents
-    -> Hash32
+    -> BranchHash
 parseHeadHash contents =
     case contents of
         GitHub.FileContents _ ->
@@ -74,8 +73,8 @@ parseHeadHash2 dirents =
 getRawCausal :
     String
     -> String
-    -> Hash32
-    -> Task (Http.Error Bytes) ( Hash32, Http.Response (RawCausal RawBranch) )
+    -> BranchHash
+    -> Task (Http.Error Bytes) ( BranchHash, Http.Response (RawCausal RawBranch) )
 getRawCausal owner repo hash =
     GitHub.getFile
         { owner = owner

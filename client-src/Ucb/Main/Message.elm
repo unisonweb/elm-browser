@@ -14,11 +14,11 @@ import Unison.Type exposing (..)
 
 
 type Message
-    = User_GetBranch { hash : Hash32, focus : Bool }
+    = User_GetBranch { hash : BranchHash, focus : Bool }
     | User_GetTerm Referent
     | User_GetType Reference
-    | Http_GetHeadHash (Result (Http.Error String) (Http.Response Hash32))
-    | Http_GetRawCausal (Result (Http.Error Bytes) ( Hash32, Http.Response (RawCausal RawBranch) ))
+    | Http_GetHeadHash (Result (Http.Error String) (Http.Response BranchHash))
+    | Http_GetRawCausal (Result (Http.Error Bytes) ( BranchHash, Http.Response (RawCausal RawBranch) ))
     | Http_GetTerm (Result (Http.Error Bytes) ( Id, Http.Response (Term Symbol) ))
     | Http_GetTermType (Result (Http.Error Bytes) ( Id, Http.Response (Type Symbol) ))
     | Http_GetType (Result (Http.Error Bytes) ( Id, Http.Response (Declaration Symbol) ))

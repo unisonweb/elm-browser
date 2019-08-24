@@ -67,7 +67,7 @@ view2 model =
 viewBranchChild :
     Model
     -> NameSegment
-    -> Hash32
+    -> BranchHash
     -> Element Message
 viewBranchChild model name hash =
     column
@@ -386,12 +386,12 @@ viewRawBranch model branch =
 
 viewRawCausal :
     Model
-    -> Hash32
+    -> BranchHash
     -> RawCausal RawBranch
     -> Element Message
 viewRawCausal model hash causal =
     let
-        viewHash : Hash32 -> Element Message
+        viewHash : BranchHash -> Element Message
         viewHash hash_ =
             el
                 [ onClick (User_GetBranch { hash = hash_, focus = True })
@@ -410,7 +410,7 @@ viewRawCausal model hash causal =
                         [ spacing 10 ]
                         (text "Parents" :: List.map viewHash (HashSet.toList hashes))
 
-        viewPredecessors : List Hash32 -> Element Message
+        viewPredecessors : List BranchHash -> Element Message
         viewPredecessors hashes =
             row
                 [ spacing 10 ]

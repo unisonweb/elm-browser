@@ -1,7 +1,9 @@
 module Unison.Codebase.Causal exposing (..)
 
+import HashingContainers.HashDict as HashDict exposing (HashDict)
 import HashingContainers.HashSet as HashSet exposing (HashSet)
-import Unison.Hash exposing (Hash32)
+import Unison.Codebase.NameSegment exposing (..)
+import Unison.Hash exposing (..)
 
 
 {-| Haskell type: Unison.Codebase.Causal.Raw
@@ -25,6 +27,16 @@ rawCausalHead causal =
 
         RawMerge branch _ ->
             branch
+
+
+rawCausalChildren :
+    RawCausal { r | children : HashDict NameSegment a }
+    -> List a
+rawCausalChildren =
+    rawCausalHead
+        >> .children
+        >> HashDict.toList
+        >> List.map Tuple.second
 
 
 {-| Predecessors in the causal chain.

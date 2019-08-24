@@ -36,6 +36,7 @@ type alias Model =
         { -- This data we've fetched directly from the codebase
           head : Maybe Hash32
         , branches : HashDict Hash32 (RawCausal RawBranch)
+        , branches2 : HashDict Hash32 (RawCausal RawBranch) -- TODO replace 'branches' with this
         , terms : HashDict Referent (Term Symbol)
         , termTypes : HashDict Referent (Type Symbol)
         , types : HashDict Reference (Declaration Symbol)

@@ -36,8 +36,7 @@ type alias Model =
     , codebase :
         { -- This data we've fetched directly from the codebase
           head : Maybe BranchHash
-        , branches : HashDict BranchHash (RawCausal RawBranch)
-        , branches2 : HashDict BranchHash Branch -- TODO replace 'branches' with this
+        , branches : HashDict BranchHash Branch
         , terms : HashDict Referent (Term Symbol)
         , termTypes : HashDict Referent (Type Symbol)
         , types : HashDict Reference (Declaration Symbol)

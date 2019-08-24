@@ -46,7 +46,6 @@ init _ =
             , codebase =
                 { head = Nothing
                 , branches = emptyBranchDict
-                , branches2 = emptyBranchDict
                 , terms = HashDict.empty referentEquality referentHashing
                 , termTypes = HashDict.empty referentEquality referentHashing
                 , types = HashDict.empty referenceEquality referenceHashing
@@ -80,9 +79,6 @@ update message model =
         Http_GetBranch result ->
             updateHttpGetBranch result model
 
-        Http_GetRawCausal result ->
-            updateHttpGetRawCausal result model
-
         Http_GetTerm result ->
             updateHttpGetTerm result model
 
@@ -92,14 +88,17 @@ update message model =
         Http_GetType result ->
             updateHttpGetType result model
 
-        User_GetBranch payload ->
-            updateUserGetBranch payload model
+        User_FocusBranch hash ->
+            updateUserFocusBranch hash model
 
         User_GetType reference ->
             updateUserGetType reference model
 
         User_GetTerm referent ->
             updateUserGetTerm referent model
+
+        User_ToggleBranch hash ->
+            updateUserToggleBranch hash model
 
         User_DebugButton ->
             updateUserDebugButton model
@@ -124,6 +123,7 @@ updateUserDebugButton model =
                 , successors = emptyBranchDict
                 }
                 head
+                |> Task.map (\cache -> ( head, cache ))
                 |> Task.attempt Http_GetBranch
     )
 
@@ -156,7 +156,6 @@ updateHttpGetHeadHash2 response model =
 
             -- unchanged
             , branches = model.codebase.branches
-            , branches2 = model.codebase.branches2
             , terms = model.codebase.terms
             , termTypes = model.codebase.termTypes
             , types = model.codebase.types
@@ -166,17 +165,26 @@ updateHttpGetHeadHash2 response model =
         , rateLimit =
             Dict.get "x-ratelimit-remaining" response.headers
       }
-    , model.api.unison.getRawCausal response.body
-        |> Task.attempt Http_GetRawCausal
+    , getBranch
+        model.api.unison
+        { branches = model.codebase.branches
+        , parents = model.codebase.parents
+        , successors = model.codebase.successors
+        }
+        response.body
+        |> Task.map (\cache -> ( response.body, cache ))
+        |> Task.attempt Http_GetBranch
     )
 
 
 updateHttpGetBranch :
     Result (Http.Error Bytes)
-        { branches : HashDict BranchHash Branch
-        , parents : HashDict BranchHash (HashSet BranchHash)
-        , successors : HashDict BranchHash (HashSet BranchHash)
-        }
+        ( BranchHash
+        , { branches : HashDict BranchHash Branch
+          , parents : HashDict BranchHash (HashSet BranchHash)
+          , successors : HashDict BranchHash (HashSet BranchHash)
+          }
+        )
     -> Model
     -> ( Model, Cmd message )
 updateHttpGetBranch result model =
@@ -191,23 +199,28 @@ updateHttpGetBranch result model =
 
 
 updateHttpGetBranch2 :
-    { branches : HashDict BranchHash Branch
-    , parents : HashDict BranchHash (HashSet BranchHash)
-    , successors : HashDict BranchHash (HashSet BranchHash)
-    }
+    ( BranchHash
+    , { branches : HashDict BranchHash Branch
+      , parents : HashDict BranchHash (HashSet BranchHash)
+      , successors : HashDict BranchHash (HashSet BranchHash)
+      }
+    )
     -> Model
     -> ( Model, Cmd message )
-updateHttpGetBranch2 { branches, parents, successors } model =
+updateHttpGetBranch2 ( hash, { branches, parents, successors } ) model =
     ( { model
         | codebase =
-            { branches2 =
+            { -- We assume that because we fetched this branch, we wanted to
+              -- focus it. Kind of race-conditioney.
+              head = Just hash
+            , branches =
                 HashDict.foldl
-                    (\( hash, branch ) ->
+                    (\( hash_, branch ) ->
                         HashDict.update
-                            hash
+                            hash_
                             (maybe (Just branch) Just)
                     )
-                    model.codebase.branches2
+                    model.codebase.branches
                     branches
             , parents =
                 (branchDictMonoid hashSetSemigroup).semigroup.prepend
@@ -217,74 +230,6 @@ updateHttpGetBranch2 { branches, parents, successors } model =
                 (branchDictMonoid hashSetSemigroup).semigroup.prepend
                     successors
                     model.codebase.successors
-
-            -- unchanged
-            , head = model.codebase.head
-            , branches = model.codebase.branches
-            , terms = model.codebase.terms
-            , termTypes = model.codebase.termTypes
-            , types = model.codebase.types
-            }
-      }
-    , Cmd.none
-    )
-
-
-{-| We received a RawCausal from the sky. This happens once initially (\_head
-branch), and then every time the user requests one to be fetched via the UI.
-What do we do with all these branches? Just store them forever in a map.
--}
-updateHttpGetRawCausal :
-    Result (Http.Error Bytes) ( BranchHash, Http.Response (RawCausal RawBranch) )
-    -> Model
-    -> ( Model, Cmd message )
-updateHttpGetRawCausal result model =
-    case result of
-        Err err ->
-            ( { model | errors = Err_GetRawCausal err :: model.errors }
-            , Cmd.none
-            )
-
-        Ok response ->
-            updateHttpGetRawCausal2 response model
-
-
-updateHttpGetRawCausal2 :
-    ( BranchHash, Http.Response (RawCausal RawBranch) )
-    -> Model
-    -> ( Model, Cmd message )
-updateHttpGetRawCausal2 ( hash, response ) model =
-    ( { model
-        | codebase =
-            { -- Store branch
-              branches =
-                HashDict.insert
-                    hash
-                    response.body
-                    model.codebase.branches
-
-            -- Add the child->this mappings
-            , parents =
-                insertParents
-                    hash
-                    (response.body
-                        |> rawCausalHead
-                        |> .children
-                        |> HashDict.toList
-                        |> List.map Tuple.second
-                    )
-                    model.codebase.parents
-
-            -- And the predecessor->this mappings
-            , successors =
-                insertSuccessors
-                    hash
-                    (rawCausalPredecessors response.body)
-                    model.codebase.successors
-
-            -- unchanged
-            , head = model.codebase.head
-            , branches2 = model.codebase.branches2
             , terms = model.codebase.terms
             , termTypes = model.codebase.termTypes
             , types = model.codebase.types
@@ -336,7 +281,6 @@ updateHttpGetTerm2 ( id, response ) model =
             -- unchanged
             , head = model.codebase.head
             , branches = model.codebase.branches
-            , branches2 = model.codebase.branches2
             , termTypes = model.codebase.termTypes
             , types = model.codebase.types
             , parents = model.codebase.parents
@@ -378,7 +322,6 @@ updateHttpGetTermType2 ( id, response ) model =
             -- unchanged
             , head = model.codebase.head
             , branches = model.codebase.branches
-            , branches2 = model.codebase.branches2
             , terms = model.codebase.terms
             , types = model.codebase.types
             , parents = model.codebase.parents
@@ -420,7 +363,6 @@ updateHttpGetType2 ( id, response ) model =
             -- unchanged
             , head = model.codebase.head
             , branches = model.codebase.branches
-            , branches2 = model.codebase.branches2
             , terms = model.codebase.terms
             , termTypes = model.codebase.termTypes
             , parents = model.codebase.parents
@@ -431,69 +373,50 @@ updateHttpGetType2 ( id, response ) model =
     )
 
 
-{-| Fetch the branch if we haven't already, and possibly focus it.
+{-| Focus a branch:
+
+  - We might've already fetched it (e.g. it's the child of a previous root). In
+    this case we have no work to do, we just adjust the UI.
+
+  - Otherwise, it's somewhere in our history. So fetch it and all of its
+    children! When the request comes back, we'll switch focus.
+
 -}
-updateUserGetBranch :
-    { hash : BranchHash, focus : Bool }
+updateUserFocusBranch :
+    BranchHash
     -> Model
     -> ( Model, Cmd Message )
-updateUserGetBranch { hash, focus } model =
-    let
-        command : Cmd Message
-        command =
-            case HashDict.get hash model.codebase.branches of
-                Nothing ->
-                    model.api.unison.getRawCausal hash
-                        |> Task.attempt Http_GetRawCausal
-
-                Just _ ->
-                    Cmd.none
-    in
-    if focus then
-        ( { model
-            | codebase =
-                { head = Just hash
-
-                -- unchanged
-                , branches = model.codebase.branches
-                , branches2 = model.codebase.branches2
-                , terms = model.codebase.terms
-                , termTypes = model.codebase.termTypes
-                , types = model.codebase.types
+updateUserFocusBranch hash model =
+    case HashDict.get hash model.codebase.branches of
+        Nothing ->
+            ( model
+            , getBranch
+                model.api.unison
+                { branches = model.codebase.branches
                 , parents = model.codebase.parents
                 , successors = model.codebase.successors
                 }
-          }
-        , command
-        )
+                hash
+                |> Task.map (\cache -> ( hash, cache ))
+                |> Task.attempt Http_GetBranch
+            )
 
-    else
-        let
-            newBranches : HashDict BranchHash Bool
-            newBranches =
-                HashDict.update
-                    hash
-                    (\maybeVisible ->
-                        case maybeVisible of
-                            Nothing ->
-                                Just True
+        Just _ ->
+            ( { model
+                | codebase =
+                    { head = Just hash
 
-                            Just visible ->
-                                Just (not visible)
-                    )
-                    model.ui.branches
-        in
-        ( { model
-            | ui =
-                { branches = newBranches
-
-                -- unchanged
-                , terms = model.ui.terms
-                , types = model.ui.types
-                }
-          }
-        , command
-        )
+                    -- unchanged
+                    , branches = model.codebase.branches
+                    , terms = model.codebase.terms
+                    , termTypes = model.codebase.termTypes
+                    , types = model.codebase.types
+                    , parents = model.codebase.parents
+                    , successors = model.codebase.successors
+                    }
+              }
+            , Cmd.none
+            )
 
 
 {-| Fetch the term if we haven't already
@@ -592,6 +515,28 @@ updateUserGetType reference model =
               }
             , command
             )
+
+
+updateUserToggleBranch :
+    BranchHash
+    -> Model
+    -> ( Model, Cmd message )
+updateUserToggleBranch hash model =
+    ( { model
+        | ui =
+            { branches =
+                HashDict.update
+                    hash
+                    (maybe True not >> Just)
+                    model.ui.branches
+
+            -- unchanged
+            , terms = model.ui.terms
+            , types = model.ui.types
+            }
+      }
+    , Cmd.none
+    )
 
 
 subscriptions :

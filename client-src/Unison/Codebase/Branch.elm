@@ -32,7 +32,7 @@ type Branch
 type alias Branch0 =
     { terms : Star Referent NameSegment
     , types : Star Reference NameSegment
-    , children : HashDict NameSegment Branch
+    , children : HashDict NameSegment ( BranchHash, Branch )
     , edits : HashDict NameSegment Hash32 -- TODO
 
     -- TODO deepTerms, deepTypes, etc
@@ -82,15 +82,15 @@ rawBranchToBranch0 branches rawBranch =
     , types = rawBranch.types
     , children =
         HashDict.foldl
-            (\( nameSegment, hash ) ->
+            (\( name, hash ) ->
                 HashDict.insert
-                    nameSegment
+                    name
                     (case HashDict.get hash branches of
                         Nothing ->
                             impossible "makeBranch0: Nothing"
 
                         Just branch ->
-                            branch
+                            ( hash, branch )
                     )
             )
             (HashDict.empty nameSegmentEquality nameSegmentHashing)

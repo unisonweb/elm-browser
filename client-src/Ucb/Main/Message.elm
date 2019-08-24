@@ -17,18 +17,20 @@ import Unison.Type exposing (..)
 
 type Message
     = User_DebugButton
-    | User_GetBranch { hash : BranchHash, focus : Bool }
+    | User_FocusBranch BranchHash
     | User_GetTerm Referent
     | User_GetType Reference
+    | User_ToggleBranch BranchHash
     | Http_GetBranch
         (Result (Http.Error Bytes)
-            { branches : HashDict BranchHash Branch
-            , parents : HashDict BranchHash (HashSet BranchHash)
-            , successors : HashDict BranchHash (HashSet BranchHash)
-            }
+            ( BranchHash
+            , { branches : HashDict BranchHash Branch
+              , parents : HashDict BranchHash (HashSet BranchHash)
+              , successors : HashDict BranchHash (HashSet BranchHash)
+              }
+            )
         )
     | Http_GetHeadHash (Result (Http.Error String) (Http.Response BranchHash))
-    | Http_GetRawCausal (Result (Http.Error Bytes) ( BranchHash, Http.Response (RawCausal RawBranch) ))
     | Http_GetTerm (Result (Http.Error Bytes) ( Id, Http.Response (Term Symbol) ))
     | Http_GetTermType (Result (Http.Error Bytes) ( Id, Http.Response (Type Symbol) ))
     | Http_GetType (Result (Http.Error Bytes) ( Id, Http.Response (Declaration Symbol) ))

@@ -149,12 +149,8 @@ updateHttpGetHeadHash2 response model =
       }
     , getBranch
         model.api.unison
-        { branches = model.codebase.branches
-        , parents = model.codebase.parents
-        , successors = model.codebase.successors
-        }
+        model.codebase
         response.body
-        |> Task.map (\cache -> ( response.body, cache ))
         |> Task.attempt Http_GetBranch
     )
 
@@ -374,12 +370,8 @@ updateUserFocusBranch hash model =
             ( model
             , getBranch
                 model.api.unison
-                { branches = model.codebase.branches
-                , parents = model.codebase.parents
-                , successors = model.codebase.successors
-                }
+                model.codebase
                 hash
-                |> Task.map (\cache -> ( hash, cache ))
                 |> Task.attempt Http_GetBranch
             )
 

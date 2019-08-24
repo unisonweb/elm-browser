@@ -32,15 +32,6 @@ type alias UnisonCodebaseAPI =
     }
 
 
-{-| Just to clean up type sigs below.
--}
-type alias Cache =
-    { branches : HashDict BranchHash Branch
-    , parents : HashDict BranchHash (HashSet BranchHash)
-    , successors : HashDict BranchHash (HashSet BranchHash)
-    }
-
-
 {-| Given a branch hash, return a map full of branches keyed by their
 hashes.
 
@@ -50,25 +41,71 @@ Postcondition: the map contains an entry for every descendant of the given hash
 -}
 getBranch :
     UnisonCodebaseAPI
-    -> Cache
+    ->
+        { r
+            | branches : HashDict BranchHash Branch
+            , parents : HashDict BranchHash (HashSet BranchHash)
+            , successors : HashDict BranchHash (HashSet BranchHash)
+        }
     -> BranchHash
-    -> Task (Http.Error Bytes) Cache
+    ->
+        Task (Http.Error Bytes)
+            ( BranchHash
+            , { branches : HashDict BranchHash Branch
+              , parents : HashDict BranchHash (HashSet BranchHash)
+              , successors : HashDict BranchHash (HashSet BranchHash)
+              }
+            )
 getBranch api cache hash =
-    case HashDict.get hash cache.branches of
-        Nothing ->
-            api.getRawCausal hash
-                |> Task.andThen (getBranch2 api cache)
-
-        Just branch ->
-            Task.succeed cache
+    getBranch2 api cache hash
+        |> Task.map (\newCache -> ( hash, newCache ))
 
 
 getBranch2 :
     UnisonCodebaseAPI
-    -> Cache
+    ->
+        { r
+            | branches : HashDict BranchHash Branch
+            , parents : HashDict BranchHash (HashSet BranchHash)
+            , successors : HashDict BranchHash (HashSet BranchHash)
+        }
+    -> BranchHash
+    ->
+        Task (Http.Error Bytes)
+            { branches : HashDict BranchHash Branch
+            , parents : HashDict BranchHash (HashSet BranchHash)
+            , successors : HashDict BranchHash (HashSet BranchHash)
+            }
+getBranch2 api cache hash =
+    case HashDict.get hash cache.branches of
+        Nothing ->
+            api.getRawCausal hash
+                |> Task.andThen (getBranch3 api cache)
+
+        Just branch ->
+            Task.succeed
+                { branches = cache.branches
+                , parents = cache.parents
+                , successors = cache.successors
+                }
+
+
+getBranch3 :
+    UnisonCodebaseAPI
+    ->
+        { r
+            | branches : HashDict BranchHash Branch
+            , parents : HashDict BranchHash (HashSet BranchHash)
+            , successors : HashDict BranchHash (HashSet BranchHash)
+        }
     -> ( BranchHash, Http.Response (RawCausal RawBranch) )
-    -> Task (Http.Error Bytes) Cache
-getBranch2 api cache ( hash, { body } ) =
+    ->
+        Task (Http.Error Bytes)
+            { branches : HashDict BranchHash Branch
+            , parents : HashDict BranchHash (HashSet BranchHash)
+            , successors : HashDict BranchHash (HashSet BranchHash)
+            }
+getBranch3 api cache ( hash, { body } ) =
     let
         children : List BranchHash
         children =
@@ -77,42 +114,52 @@ getBranch2 api cache ( hash, { body } ) =
         -- Might as well update the parents/successors
         -- before making the recursive call, though it is
         -- not necessary to.
-        newCache : Cache
+        newCache :
+            { branches : HashDict BranchHash Branch
+            , parents : HashDict BranchHash (HashSet BranchHash)
+            , successors : HashDict BranchHash (HashSet BranchHash)
+            }
         newCache =
-            { cache
-                | parents =
-                    insertParents
-                        hash
-                        children
-                        cache.parents
-                , successors =
-                    insertSuccessors
-                        hash
-                        (rawCausalPredecessors body)
-                        cache.successors
+            { branches = cache.branches
+            , parents =
+                insertParents
+                    hash
+                    children
+                    cache.parents
+            , successors =
+                insertSuccessors
+                    hash
+                    (rawCausalPredecessors body)
+                    cache.successors
             }
     in
-    -- First, recursively call 'getBranch' on each child.
+    -- First, recursively call 'getBranch2' on each child.
     -- By the type it returns, the map will contain an entry
     -- for every one of our descendants.
     tasks
         children
-        (getBranch api)
+        (getBranch2 api)
         newCache
         -- Finally, add ourselves to the map, by repeatedly
         -- reaching into it to convert our
         -- 'RawCausal RawBranch' into a 'RawCausal Branch0'.
-        |> Task.map (getBranch3 hash body)
+        |> Task.map (getBranch4 hash body)
 
 
 {-| Precondition: the given cache has all the info we need (our descendants).
 -}
-getBranch3 :
+getBranch4 :
     BranchHash
     -> RawCausal RawBranch
-    -> Cache
-    -> Cache
-getBranch3 hash causal cache =
+    ->
+        { r
+            | branches : HashDict BranchHash Branch
+        }
+    ->
+        { r
+            | branches : HashDict BranchHash Branch
+        }
+getBranch4 hash causal cache =
     { cache
         | branches =
             HashDict.insert

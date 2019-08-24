@@ -14,16 +14,6 @@ import Unison.Type exposing (..)
 
 
 {-| An abstract interfact to the Unison codebase served over HTTP.
-
-It would be nice to parameterize this over a type variable or two to allow
-different backends (like GitHub vs. some other file server) to vary a bit.
-However, I suspect that will cause abstraction pain elsewhere due to Elm's lack
-of existential types.
-
-So, I opted for the "lowest common denominator" interface, with some warts
-(like using a simple String to capture "other errors"), but overall it should
-make reusing code simpler.
-
 -}
 type alias UnisonCodebaseAPI =
     { -- Get the head namespace hash, that is, the name of the file located at

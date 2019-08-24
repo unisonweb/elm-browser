@@ -40,9 +40,7 @@ init _ =
         model : Model
         model =
             { api =
-                { unison =
-                    -- makeGitHubUnisonCodebaseAPI "exw" "testcode-elm-browser-unison"
-                    makeLocalServerUnisonCodebaseAPI
+                { unison = makeLocalServerUnisonCodebaseAPI
                 }
             , codebase =
                 { head = Nothing
@@ -118,24 +116,32 @@ updateHttpGetHeadHash result model =
             )
 
         Ok response ->
-            ( { model
-                | codebase =
-                    { head = Just response.body
+            updateHttpGetHeadHash2 response model
 
-                    -- unchanged
-                    , branches = model.codebase.branches
-                    , terms = model.codebase.terms
-                    , termTypes = model.codebase.termTypes
-                    , types = model.codebase.types
-                    , parents = model.codebase.parents
-                    , successors = model.codebase.successors
-                    }
-                , rateLimit =
-                    Dict.get "x-ratelimit-remaining" response.headers
-              }
-            , model.api.unison.getRawCausal response.body
-                |> Task.attempt Http_GetRawCausal
-            )
+
+updateHttpGetHeadHash2 :
+    Http.Response Hash32
+    -> Model
+    -> ( Model, Cmd Message )
+updateHttpGetHeadHash2 response model =
+    ( { model
+        | codebase =
+            { head = Just response.body
+
+            -- unchanged
+            , branches = model.codebase.branches
+            , terms = model.codebase.terms
+            , termTypes = model.codebase.termTypes
+            , types = model.codebase.types
+            , parents = model.codebase.parents
+            , successors = model.codebase.successors
+            }
+        , rateLimit =
+            Dict.get "x-ratelimit-remaining" response.headers
+      }
+    , model.api.unison.getRawCausal response.body
+        |> Task.attempt Http_GetRawCausal
+    )
 
 
 {-| We received a RawCausal from the sky. This happens once initially (\_head
@@ -153,46 +159,54 @@ updateHttpGetRawCausal result model =
             , Cmd.none
             )
 
-        Ok ( hash, response ) ->
-            ( { model
-                | codebase =
-                    { -- Head doesn't change
-                      head = model.codebase.head
+        Ok response ->
+            updateHttpGetRawCausal2 response model
 
-                    -- Store branch
-                    , branches =
-                        HashDict.insert
-                            hash
-                            response.body
-                            model.codebase.branches
 
-                    -- Add the child->this mappings
-                    , parents =
-                        insertParents
-                            hash
-                            (response.body
-                                |> rawCausalHead
-                                |> .children
-                                |> HashDict.toList
-                                |> List.map Tuple.second
-                            )
-                            model.codebase.parents
+updateHttpGetRawCausal2 :
+    ( Hash32, Http.Response (RawCausal RawBranch) )
+    -> Model
+    -> ( Model, Cmd message )
+updateHttpGetRawCausal2 ( hash, response ) model =
+    ( { model
+        | codebase =
+            { -- Head doesn't change
+              head = model.codebase.head
 
-                    -- And the predecessor->this mappings
-                    , successors =
-                        insertSuccessors
-                            hash
-                            (rawCausalPredecessors response.body)
-                            model.codebase.successors
+            -- Store branch
+            , branches =
+                HashDict.insert
+                    hash
+                    response.body
+                    model.codebase.branches
 
-                    -- unchanged
-                    , terms = model.codebase.terms
-                    , termTypes = model.codebase.termTypes
-                    , types = model.codebase.types
-                    }
-              }
-            , Cmd.none
-            )
+            -- Add the child->this mappings
+            , parents =
+                insertParents
+                    hash
+                    (response.body
+                        |> rawCausalHead
+                        |> .children
+                        |> HashDict.toList
+                        |> List.map Tuple.second
+                    )
+                    model.codebase.parents
+
+            -- And the predecessor->this mappings
+            , successors =
+                insertSuccessors
+                    hash
+                    (rawCausalPredecessors response.body)
+                    model.codebase.successors
+
+            -- unchanged
+            , terms = model.codebase.terms
+            , termTypes = model.codebase.termTypes
+            , types = model.codebase.types
+            }
+      }
+    , Cmd.none
+    )
 
 
 updateHttpGetTerm :
@@ -206,37 +220,45 @@ updateHttpGetTerm result model =
             , Cmd.none
             )
 
-        Ok ( id, response ) ->
-            let
-                command : Cmd Message
-                command =
-                    case HashDict.get (Ref (Derived id)) model.codebase.termTypes of
-                        Nothing ->
-                            model.api.unison.getTermType id
-                                |> Task.attempt Http_GetTermType
+        Ok response ->
+            updateHttpGetTerm2 response model
 
-                        Just _ ->
-                            Cmd.none
-            in
-            ( { model
-                | codebase =
-                    { terms =
-                        HashDict.insert
-                            (Ref (Derived id))
-                            response.body
-                            model.codebase.terms
 
-                    -- unchanged
-                    , head = model.codebase.head
-                    , branches = model.codebase.branches
-                    , termTypes = model.codebase.termTypes
-                    , types = model.codebase.types
-                    , parents = model.codebase.parents
-                    , successors = model.codebase.successors
-                    }
-              }
-            , command
-            )
+updateHttpGetTerm2 :
+    ( Id, Http.Response (Term Symbol) )
+    -> Model
+    -> ( Model, Cmd Message )
+updateHttpGetTerm2 ( id, response ) model =
+    let
+        command : Cmd Message
+        command =
+            case HashDict.get (Ref (Derived id)) model.codebase.termTypes of
+                Nothing ->
+                    model.api.unison.getTermType id
+                        |> Task.attempt Http_GetTermType
+
+                Just _ ->
+                    Cmd.none
+    in
+    ( { model
+        | codebase =
+            { terms =
+                HashDict.insert
+                    (Ref (Derived id))
+                    response.body
+                    model.codebase.terms
+
+            -- unchanged
+            , head = model.codebase.head
+            , branches = model.codebase.branches
+            , termTypes = model.codebase.termTypes
+            , types = model.codebase.types
+            , parents = model.codebase.parents
+            , successors = model.codebase.successors
+            }
+      }
+    , command
+    )
 
 
 updateHttpGetTermType :
@@ -250,26 +272,34 @@ updateHttpGetTermType result model =
             , Cmd.none
             )
 
-        Ok ( id, response ) ->
-            ( { model
-                | codebase =
-                    { termTypes =
-                        HashDict.insert
-                            (Ref (Derived id))
-                            response.body
-                            model.codebase.termTypes
+        Ok response ->
+            updateHttpGetTermType2 response model
 
-                    -- unchanged
-                    , head = model.codebase.head
-                    , branches = model.codebase.branches
-                    , terms = model.codebase.terms
-                    , types = model.codebase.types
-                    , parents = model.codebase.parents
-                    , successors = model.codebase.successors
-                    }
-              }
-            , Cmd.none
-            )
+
+updateHttpGetTermType2 :
+    ( Id, Http.Response (Type Symbol) )
+    -> Model
+    -> ( Model, Cmd message )
+updateHttpGetTermType2 ( id, response ) model =
+    ( { model
+        | codebase =
+            { termTypes =
+                HashDict.insert
+                    (Ref (Derived id))
+                    response.body
+                    model.codebase.termTypes
+
+            -- unchanged
+            , head = model.codebase.head
+            , branches = model.codebase.branches
+            , terms = model.codebase.terms
+            , types = model.codebase.types
+            , parents = model.codebase.parents
+            , successors = model.codebase.successors
+            }
+      }
+    , Cmd.none
+    )
 
 
 updateHttpGetType :
@@ -283,26 +313,34 @@ updateHttpGetType result model =
             , Cmd.none
             )
 
-        Ok ( id, response ) ->
-            ( { model
-                | codebase =
-                    { types =
-                        HashDict.insert
-                            (Derived id)
-                            response.body
-                            model.codebase.types
+        Ok response ->
+            updateHttpGetType2 response model
 
-                    -- unchanged
-                    , head = model.codebase.head
-                    , branches = model.codebase.branches
-                    , terms = model.codebase.terms
-                    , termTypes = model.codebase.termTypes
-                    , parents = model.codebase.parents
-                    , successors = model.codebase.successors
-                    }
-              }
-            , Cmd.none
-            )
+
+updateHttpGetType2 :
+    ( Id, Http.Response (Declaration Symbol) )
+    -> Model
+    -> ( Model, Cmd message )
+updateHttpGetType2 ( id, response ) model =
+    ( { model
+        | codebase =
+            { types =
+                HashDict.insert
+                    (Derived id)
+                    response.body
+                    model.codebase.types
+
+            -- unchanged
+            , head = model.codebase.head
+            , branches = model.codebase.branches
+            , terms = model.codebase.terms
+            , termTypes = model.codebase.termTypes
+            , parents = model.codebase.parents
+            , successors = model.codebase.successors
+            }
+      }
+    , Cmd.none
+    )
 
 
 {-| Fetch the branch if we haven't already, and possibly focus it.

@@ -42,3 +42,19 @@ rawCausalPredecessors causal =
 
         RawMerge _ hashes ->
             HashSet.toList hashes
+
+
+rawCausalMap :
+    (a -> b)
+    -> RawCausal a
+    -> RawCausal b
+rawCausalMap f causal =
+    case causal of
+        RawOne x ->
+            RawOne (f x)
+
+        RawCons x y ->
+            RawCons (f x) y
+
+        RawMerge x y ->
+            RawMerge (f x) y

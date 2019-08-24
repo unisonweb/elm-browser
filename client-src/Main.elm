@@ -5,7 +5,7 @@ import Bytes exposing (Bytes)
 import Dict
 import HashingContainers.HashDict as HashDict exposing (HashDict)
 import HashingContainers.HashSet as HashSet
-import Task
+import Task exposing (Task)
 import Ucb.Main.Message exposing (Message(..))
 import Ucb.Main.Model exposing (..)
 import Ucb.Main.View exposing (view)
@@ -510,3 +510,63 @@ updateUserGetType reference model =
               }
             , command
             )
+
+
+
+--------------------------------------------------------------------------------
+-- Experimental Zone
+--------------------------------------------------------------------------------
+
+
+{-| Given a branch hash, return a map full of branches keyed by their
+hashes. Postcondition: the map contains an entry for every descendant of the
+given hash (and the hash itself). That is, it fetches the whole family tree.
+-}
+loadBranch :
+    UnisonCodebaseAPI
+    -> Hash32
+    -> Task (Http.Error Bytes) (HashDict Hash32 Branch)
+loadBranch api =
+    loadBranch_ api (HashDict.empty hash32Equality hash32Hashing)
+
+
+loadBranch_ :
+    UnisonCodebaseAPI
+    -> HashDict Hash32 Branch
+    -> Hash32
+    -> Task (Http.Error Bytes) (HashDict Hash32 Branch)
+loadBranch_ api cache hash =
+    case HashDict.get hash cache of
+        Nothing ->
+            api.getRawCausal hash
+                |> Task.andThen
+                    (\( _, { body } ) ->
+                        tasks
+                            (body
+                                |> rawCausalHead
+                                |> .children
+                                |> HashDict.toList
+                                |> List.map Tuple.second
+                            )
+                            (loadBranch_ api)
+                            cache
+                    )
+
+        Just branch ->
+            Task.succeed cache
+
+
+{-| Run a task with every 'a' in the given list, statefully modifying an 's'.
+-}
+tasks :
+    List a
+    -> (s -> a -> Task error s)
+    -> (s -> Task error s)
+tasks xs f s0 =
+    case xs of
+        [] ->
+            Task.succeed s0
+
+        y :: ys ->
+            f s0 y
+                |> Task.andThen (tasks ys f)

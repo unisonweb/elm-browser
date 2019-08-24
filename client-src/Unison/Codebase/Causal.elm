@@ -7,15 +7,15 @@ import Unison.Hash exposing (Hash32)
 
 {-| Haskell type: Unison.Codebase.Causal.Raw
 -}
-type RawCausal
-    = RawOne RawBranch
-    | RawCons RawBranch Hash32
-    | RawMerge RawBranch (HashSet Hash32)
+type RawCausal branch
+    = RawOne branch
+    | RawCons branch Hash32
+    | RawMerge branch (HashSet Hash32)
 
 
 rawCausalHead :
-    RawCausal
-    -> RawBranch
+    RawCausal branch
+    -> branch
 rawCausalHead causal =
     case causal of
         RawOne branch ->
@@ -31,7 +31,7 @@ rawCausalHead causal =
 {-| Predecessors in the causal chain.
 -}
 rawCausalPredecessors :
-    RawCausal
+    RawCausal branch
     -> List Hash32
 rawCausalPredecessors causal =
     case causal of

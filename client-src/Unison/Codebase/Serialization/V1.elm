@@ -374,7 +374,7 @@ rawBranchDecoder =
         )
 
 
-rawCausalDecoder : Decoder RawCausal
+rawCausalDecoder : Decoder (RawCausal RawBranch)
 rawCausalDecoder =
     tagged <|
         \n ->

@@ -7,6 +7,7 @@ import Task exposing (Task)
 import Ucb.Unison.Codebase.API exposing (..)
 import Ucb.Util.Http as Http
 import Ucb.Util.Task as Task
+import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)
 import Unison.Codebase.Serialization.V1 as V1
 import Unison.Declaration exposing (..)
@@ -39,7 +40,7 @@ getHeadHash =
 
 getRawCausal :
     Hash32
-    -> Task (Http.Error Bytes) ( Hash32, Http.Response RawCausal )
+    -> Task (Http.Error Bytes) ( Hash32, Http.Response (RawCausal RawBranch) )
 getRawCausal hash =
     Http.getBytes
         { decoder = V1.rawCausalDecoder

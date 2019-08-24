@@ -387,7 +387,7 @@ viewRawBranch model branch =
 viewRawCausal :
     Model
     -> Hash32
-    -> RawCausal
+    -> RawCausal RawBranch
     -> Element Message
 viewRawCausal model hash causal =
     let

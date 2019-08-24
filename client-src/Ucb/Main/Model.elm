@@ -6,6 +6,7 @@ import HashingContainers.HashSet as HashSet exposing (HashSet)
 import Misc exposing (hashSetSingleton)
 import Ucb.Unison.Codebase.API exposing (..)
 import Ucb.Util.Http as Http
+import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)
 import Unison.Declaration exposing (..)
 import Unison.Hash exposing (..)
@@ -34,7 +35,7 @@ type alias Model =
     , codebase :
         { -- This data we've fetched directly from the codebase
           head : Maybe Hash32
-        , branches : HashDict Hash32 RawCausal
+        , branches : HashDict Hash32 (RawCausal RawBranch)
         , terms : HashDict Referent (Term Symbol)
         , termTypes : HashDict Referent (Type Symbol)
         , types : HashDict Reference (Declaration Symbol)

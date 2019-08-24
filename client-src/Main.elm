@@ -13,6 +13,7 @@ import Ucb.Unison.Codebase.API exposing (..)
 import Ucb.Unison.Codebase.API.GitHub exposing (..)
 import Ucb.Unison.Codebase.API.LocalServer exposing (..)
 import Ucb.Util.Http as Http
+import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)
 import Unison.Declaration exposing (..)
 import Unison.Hash exposing (..)
@@ -142,7 +143,7 @@ branch), and then every time the user requests one to be fetched via the UI.
 What do we do with all these branches? Just store them forever in a map.
 -}
 updateHttpGetRawCausal :
-    Result (Http.Error Bytes) ( Hash32, Http.Response RawCausal )
+    Result (Http.Error Bytes) ( Hash32, Http.Response (RawCausal RawBranch) )
     -> Model
     -> ( Model, Cmd message )
 updateHttpGetRawCausal result model =

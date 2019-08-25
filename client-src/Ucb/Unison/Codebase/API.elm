@@ -1,6 +1,7 @@
 module Ucb.Unison.Codebase.API exposing
     ( UnisonCodebaseAPI
     , getBranch
+    , getTermTypes
     , getTypes
     )
 
@@ -278,6 +279,24 @@ tasks xs f s0 =
         y :: ys ->
             f s0 y
                 |> Task.andThen (tasks ys f)
+
+
+{-| Batch getTermType
+-}
+getTermTypes :
+    UnisonCodebaseAPI
+    -> List Id
+    -> Task (Http.Error Bytes) (List ( Id, Type Symbol ))
+getTermTypes api ids =
+    case ids of
+        [] ->
+            Task.succeed []
+
+        id :: ids_ ->
+            Task.map2
+                (\( r, s ) rs -> ( r, s.body ) :: rs)
+                (api.getTermType id)
+                (getTermTypes api ids_)
 
 
 {-| Batch getType

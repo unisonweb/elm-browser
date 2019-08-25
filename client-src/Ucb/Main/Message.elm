@@ -19,9 +19,8 @@ import Unison.Type exposing (..)
 type Message
     = User_DebugButton
     | User_FocusBranch BranchHash
-    | User_GetTerm Referent
-    | User_GetType Id
     | User_ToggleBranch BranchHash
+    | User_ToggleTerm Id
     | Http_GetBranch
         (Result (Http.Error Bytes)
             ( BranchHash
@@ -33,6 +32,4 @@ type Message
         )
     | Http_GetHeadHash (Result (Http.Error String) (Http.Response BranchHash))
     | Http_GetTerm (Result (Http.Error Bytes) ( Id, Http.Response (Term Symbol) ))
-    | Http_GetTermType (Result (Http.Error Bytes) ( Id, Http.Response (Type Symbol) ))
-    | Http_GetType (Result (Http.Error Bytes) ( Id, Http.Response (Declaration Symbol) ))
-    | Http_GetTypes (Result (Http.Error Bytes) (List ( Id, Declaration Symbol )))
+    | Http_GetTermTypesAndTypes (Result (Http.Error Bytes) ( List ( Id, Type Symbol ), List ( Id, Declaration Symbol ) ))

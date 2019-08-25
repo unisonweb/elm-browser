@@ -47,15 +47,15 @@ init _ =
             , codebase =
                 { head = Nothing
                 , branches = emptyBranchDict
-                , terms = HashDict.empty referentEquality referentHashing
-                , termTypes = HashDict.empty referentEquality referentHashing
+                , terms = HashDict.empty idEquality idHashing
+                , termTypes = HashDict.empty idEquality idHashing
                 , types = HashDict.empty idEquality idHashing
                 , parents = emptyBranchDict
                 , successors = emptyBranchDict
                 }
             , ui =
                 { branches = emptyBranchDict
-                , terms = HashDict.empty referentEquality referentHashing
+                , terms = HashDict.empty idEquality idHashing
                 }
             , errors = []
             }
@@ -81,26 +81,17 @@ update message model =
         Http_GetTerm result ->
             updateHttpGetTerm result model
 
-        Http_GetTermType result ->
-            updateHttpGetTermType result model
-
-        Http_GetType result ->
-            updateHttpGetType result model
-
-        Http_GetTypes result ->
-            updateHttpGetTypes result model
+        Http_GetTermTypesAndTypes result ->
+            updateHttpGetTermTypesAndTypes result model
 
         User_FocusBranch hash ->
             updateUserFocusBranch hash model
 
-        User_GetType reference ->
-            updateUserGetType reference model
-
-        User_GetTerm referent ->
-            updateUserGetTerm referent model
-
         User_ToggleBranch hash ->
             updateUserToggleBranch hash model
+
+        User_ToggleTerm id ->
+            updateUserToggleTerm id model
 
         User_DebugButton ->
             updateUserDebugButton model
@@ -214,15 +205,18 @@ updateHttpGetBranch2 ( hash, { branches, parents, successors } ) model =
             Cmd.none
 
         Just branch ->
-            getMissingTypes model branch
-                |> Task.attempt Http_GetTypes
+            Task.map2
+                Tuple.pair
+                (getMissingTermTypes model branch)
+                (getMissingTypes model branch)
+                |> Task.attempt Http_GetTermTypesAndTypes
     )
 
 
 updateHttpGetTerm :
     Result (Http.Error Bytes) ( Id, Http.Response (Term Symbol) )
     -> Model
-    -> ( Model, Cmd Message )
+    -> ( Model, Cmd message )
 updateHttpGetTerm result model =
     case result of
         Err err ->
@@ -237,26 +231,11 @@ updateHttpGetTerm result model =
 updateHttpGetTerm2 :
     ( Id, Http.Response (Term Symbol) )
     -> Model
-    -> ( Model, Cmd Message )
+    -> ( Model, Cmd message )
 updateHttpGetTerm2 ( id, response ) model =
-    let
-        command : Cmd Message
-        command =
-            case HashDict.get (Ref (Derived id)) model.codebase.termTypes of
-                Nothing ->
-                    model.api.unison.getTermType id
-                        |> Task.attempt Http_GetTermType
-
-                Just _ ->
-                    Cmd.none
-    in
     ( { model
         | codebase =
-            { terms =
-                HashDict.insert
-                    (Ref (Derived id))
-                    response.body
-                    model.codebase.terms
+            { terms = HashDict.insert id response.body model.codebase.terms
 
             -- unchanged
             , head = model.codebase.head
@@ -267,97 +246,15 @@ updateHttpGetTerm2 ( id, response ) model =
             , successors = model.codebase.successors
             }
       }
-    , command
-    )
-
-
-updateHttpGetTermType :
-    Result (Http.Error Bytes) ( Id, Http.Response (Type Symbol) )
-    -> Model
-    -> ( Model, Cmd message )
-updateHttpGetTermType result model =
-    case result of
-        Err err ->
-            ( { model | errors = Err_GetTermType err :: model.errors }
-            , Cmd.none
-            )
-
-        Ok response ->
-            updateHttpGetTermType2 response model
-
-
-updateHttpGetTermType2 :
-    ( Id, Http.Response (Type Symbol) )
-    -> Model
-    -> ( Model, Cmd message )
-updateHttpGetTermType2 ( id, response ) model =
-    ( { model
-        | codebase =
-            { termTypes =
-                HashDict.insert
-                    (Ref (Derived id))
-                    response.body
-                    model.codebase.termTypes
-
-            -- unchanged
-            , head = model.codebase.head
-            , branches = model.codebase.branches
-            , terms = model.codebase.terms
-            , types = model.codebase.types
-            , parents = model.codebase.parents
-            , successors = model.codebase.successors
-            }
-      }
     , Cmd.none
     )
 
 
-updateHttpGetType :
-    Result (Http.Error Bytes) ( Id, Http.Response (Declaration Symbol) )
+updateHttpGetTermTypesAndTypes :
+    Result (Http.Error Bytes) ( List ( Id, Type Symbol ), List ( Id, Declaration Symbol ) )
     -> Model
     -> ( Model, Cmd message )
-updateHttpGetType result model =
-    case result of
-        Err err ->
-            ( { model | errors = Err_GetType err :: model.errors }
-            , Cmd.none
-            )
-
-        Ok response ->
-            updateHttpGetType2 response model
-
-
-updateHttpGetType2 :
-    ( Id, Http.Response (Declaration Symbol) )
-    -> Model
-    -> ( Model, Cmd message )
-updateHttpGetType2 ( id, response ) model =
-    ( { model
-        | codebase =
-            { types =
-                HashDict.insert
-                    id
-                    response.body
-                    model.codebase.types
-
-            -- unchanged
-            , head = model.codebase.head
-            , branches = model.codebase.branches
-            , terms = model.codebase.terms
-            , termTypes = model.codebase.termTypes
-            , parents = model.codebase.parents
-            , successors = model.codebase.successors
-            }
-      }
-    , Cmd.none
-    )
-
-
-updateHttpGetTypes :
-    Result (Http.Error Bytes) (List ( Id, Declaration Symbol ))
-    -> Model
-    -> ( Model, Cmd message )
-updateHttpGetTypes result model =
+updateHttpGetTermTypesAndTypes result model =
     case result of
         Err err ->
             ( { model | errors = Err_GetTypes err :: model.errors }
@@ -365,23 +262,24 @@ updateHttpGetTypes result model =
             )
 
         Ok response ->
-            updateHttpGetTypes2 response model
+            updateHttpGetTermTypesAndTypes2 response model
 
 
-updateHttpGetTypes2 :
-    List ( Id, Declaration Symbol )
+updateHttpGetTermTypesAndTypes2 :
+    ( List ( Id, Type Symbol ), List ( Id, Declaration Symbol ) )
     -> Model
     -> ( Model, Cmd message )
-updateHttpGetTypes2 types model =
+updateHttpGetTermTypesAndTypes2 ( termTypes, types ) model =
     ( { model
         | codebase =
-            { types =
+            { termTypes =
                 List.foldl
-                    (\( id, declaration ) ->
-                        HashDict.insert
-                            id
-                            declaration
-                    )
+                    (\( id, type_ ) -> HashDict.insert id type_)
+                    model.codebase.termTypes
+                    termTypes
+            , types =
+                List.foldl
+                    (\( id, declaration ) -> HashDict.insert id declaration)
                     model.codebase.types
                     types
 
@@ -389,7 +287,6 @@ updateHttpGetTypes2 types model =
             , head = model.codebase.head
             , branches = model.codebase.branches
             , terms = model.codebase.terms
-            , termTypes = model.codebase.termTypes
             , parents = model.codebase.parents
             , successors = model.codebase.successors
             }
@@ -437,79 +334,12 @@ updateUserFocusBranch hash model =
                     , successors = model.codebase.successors
                     }
               }
-            , getMissingTypes model branch
-                |> Task.attempt Http_GetTypes
+            , Task.map2
+                Tuple.pair
+                (getMissingTermTypes model branch)
+                (getMissingTypes model branch)
+                |> Task.attempt Http_GetTermTypesAndTypes
             )
-
-
-{-| Fetch the term if we haven't already
--}
-updateUserGetTerm :
-    Referent
-    -> Model
-    -> ( Model, Cmd Message )
-updateUserGetTerm referent model =
-    case referent of
-        Ref reference ->
-            case reference of
-                Builtin _ ->
-                    ( model, Cmd.none )
-
-                Derived id ->
-                    let
-                        command : Cmd Message
-                        command =
-                            case HashDict.get referent model.codebase.terms of
-                                Nothing ->
-                                    model.api.unison.getTerm id
-                                        |> Task.attempt Http_GetTerm
-
-                                Just _ ->
-                                    Cmd.none
-
-                        newTerms : HashDict Referent Bool
-                        newTerms =
-                            HashDict.update
-                                referent
-                                (maybe True not >> Just)
-                                model.ui.terms
-                    in
-                    ( { model
-                        | ui =
-                            { terms = newTerms
-
-                            -- unchanged
-                            , branches = model.ui.branches
-                            }
-                      }
-                    , command
-                    )
-
-        Con _ _ _ ->
-            ( model, Cmd.none )
-
-
-{-| Fetch the type if we haven't already
--}
-updateUserGetType :
-    Id
-    -> Model
-    -> ( Model, Cmd Message )
-updateUserGetType id model =
-    let
-        command : Cmd Message
-        command =
-            case HashDict.get id model.codebase.types of
-                Nothing ->
-                    model.api.unison.getType id
-                        |> Task.attempt Http_GetType
-
-                Just _ ->
-                    Cmd.none
-    in
-    ( model
-    , command
-    )
 
 
 updateUserToggleBranch :
@@ -535,8 +365,46 @@ updateUserToggleBranch hash model =
             Cmd.none
 
         Just branch ->
-            getMissingTypes model branch
-                |> Task.attempt Http_GetTypes
+            Task.map2
+                Tuple.pair
+                (getMissingTermTypes model branch)
+                (getMissingTypes model branch)
+                |> Task.attempt Http_GetTermTypesAndTypes
+    )
+
+
+updateUserToggleTerm :
+    Id
+    -> Model
+    -> ( Model, Cmd Message )
+updateUserToggleTerm id model =
+    let
+        command : Cmd Message
+        command =
+            case HashDict.get id model.codebase.terms of
+                Nothing ->
+                    model.api.unison.getTerm id
+                        |> Task.attempt Http_GetTerm
+
+                Just _ ->
+                    Cmd.none
+
+        newTerms : HashDict Id Bool
+        newTerms =
+            HashDict.update
+                id
+                (maybe True not >> Just)
+                model.ui.terms
+    in
+    ( { model
+        | ui =
+            { terms = newTerms
+
+            -- unchanged
+            , branches = model.ui.branches
+            }
+      }
+    , command
     )
 
 

@@ -24,7 +24,7 @@ type Error
     | Err_GetBranch (Http.Error Bytes)
     | Err_GetRawCausal (Http.Error Bytes)
     | Err_GetTerm (Http.Error Bytes)
-    | Err_GetTermType (Http.Error Bytes)
+    | Err_GetTermTypes (Http.Error Bytes)
     | Err_GetType (Http.Error Bytes)
     | Err_GetTypes (Http.Error Bytes)
 
@@ -40,8 +40,8 @@ type alias Model =
         { -- This data we've fetched directly from the codebase
           head : Maybe BranchHash
         , branches : BranchDict Branch
-        , terms : HashDict Referent (Term Symbol)
-        , termTypes : HashDict Referent (Type Symbol)
+        , terms : HashDict Id (Term Symbol)
+        , termTypes : HashDict Id (Type Symbol)
         , types : HashDict Id (Declaration Symbol)
 
         -- Mapping from branch to its parent(s). The codebase doesn't provide
@@ -59,7 +59,7 @@ type alias Model =
     , ui :
         -- Visible?
         { branches : BranchDict Bool
-        , terms : HashDict Referent Bool
+        , terms : HashDict Id Bool
         }
 
     -- The errors we've seen. Just slappin' them in the model to put into the
@@ -68,8 +68,39 @@ type alias Model =
     }
 
 
-{-| Given a branch we just switched to, fetch all of the type declarations that
-we haven't already.
+{-| Given a branch we just switched to, fetch all of the (shallow) terms' types
+that we haven't already.
+-}
+getMissingTermTypes :
+    Model
+    -> Branch
+    -> Task (Http.Error Bytes) (List ( Id, Type Symbol ))
+getMissingTermTypes model (Branch causal) =
+    getTermTypes
+        model.api.unison
+        (List.filterMap
+            (\referent ->
+                case referent of
+                    Con _ _ _ ->
+                        Nothing
+
+                    Ref (Builtin _) ->
+                        Nothing
+
+                    Ref (Derived id) ->
+                        case HashDict.get id model.codebase.termTypes of
+                            Nothing ->
+                                Just id
+
+                            _ ->
+                                Nothing
+            )
+            (HashSet.toList (rawCausalHead causal).terms.fact)
+        )
+
+
+{-| Given a branch we just switched to, fetch all of the (shallow) type
+declarations that we haven't already.
 -}
 getMissingTypes :
     Model

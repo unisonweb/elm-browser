@@ -39,16 +39,16 @@ viewBranch0 :
     -> Element Message
 viewBranch0 model { terms, types, children, edits, cache } =
     column
-        [ spacing 5 ]
+        [ spacing 10 ]
         [ column
             [ spacing 5 ]
             (List.map
-                (\( ref, name ) ->
+                (\( reference, name ) ->
                     viewBranchType
                         model
-                        ref
+                        reference
                         name
-                        (HashDict.get ref types.d3.domain)
+                        (HashDict.get reference types.d3.domain)
                 )
                 (types.d1
                     |> relationToList
@@ -56,14 +56,14 @@ viewBranch0 model { terms, types, children, edits, cache } =
                 )
             )
         , column
-            []
+            [ spacing 5 ]
             (List.map
-                (\( ref, name ) ->
+                (\( referent, name ) ->
                     viewBranchTerm
                         model
-                        ref
+                        referent
                         name
-                        (HashDict.get ref terms.d3.domain)
+                        (HashDict.get referent terms.d3.domain)
                 )
                 (terms.d1
                     |> relationToList
@@ -71,7 +71,7 @@ viewBranch0 model { terms, types, children, edits, cache } =
                 )
             )
         , column
-            []
+            [ spacing 5 ]
             (List.map
                 (\( name, ( hash, branch ) ) ->
                     viewBranchChild model name hash branch
@@ -126,61 +126,64 @@ viewBranchTerm :
     -> NameSegment
     -> Maybe (HashSet ( Reference, Reference ))
     -> Element Message
-viewBranchTerm model referent nameSegment links =
-    column
-        []
-        [ row
-            [ onClick (User_GetTerm referent)
-            , pointer
-            , spacing 5
-            ]
-            [ el [ bold ]
-                (case referent of
-                    Ref _ ->
-                        text "term"
+viewBranchTerm model referent name links =
+    case referent of
+        Ref reference ->
+            viewBranchTerm2 model reference name links
 
-                    Con _ _ Data ->
-                        text "constructor"
-
-                    Con _ _ Effect ->
-                        text "request"
-                )
-            , text nameSegment
-            , viewReferent
-                { showBuiltin = False
-                , take = Just 7
-                }
-                referent
-            , viewLinks links
-            ]
-        , maybe
+        Con _ _ _ ->
             none
-            (\term ->
-                case HashDict.get referent model.ui.terms of
-                    Just True ->
-                        el
-                            [ paddingEach
-                                { bottom = 5
-                                , left = 10
-                                , right = 0
-                                , top = 5
-                                }
-                            ]
-                            (column
-                                []
-                                [ maybe
-                                    none
-                                    (viewType model)
-                                    (HashDict.get referent model.codebase.termTypes)
-                                , viewTerm model term
+
+
+viewBranchTerm2 :
+    Model
+    -> Reference
+    -> NameSegment
+    -> Maybe (HashSet ( Reference, Reference ))
+    -> Element Message
+viewBranchTerm2 model reference name links =
+    case reference of
+        Builtin _ ->
+            row
+                [ spacing 5 ]
+                [ el [ bold ] (text "builtin term")
+                , text name
+                ]
+
+        Derived id ->
+            column []
+                [ row
+                    [ onClick (User_ToggleTerm id)
+                    , pointer
+                    , spacing 5
+                    ]
+                    [ text name
+                    , maybe
+                        none
+                        (\type_ ->
+                            row [ spacing 5 ]
+                                [ text ":"
+                                , viewType model type_
                                 ]
+                        )
+                        (HashDict.get id model.codebase.termTypes)
+                    , viewId (Just 7) id
+                    , viewLinks links
+                    ]
+                , case HashDict.get id model.ui.terms of
+                    Just True ->
+                        maybe
+                            none
+                            (\term ->
+                                el
+                                    [ paddingEach { bottom = 5, left = 10, right = 0, top = 5 } ]
+                                    (viewTerm model term)
                             )
+                            (HashDict.get id model.codebase.terms)
 
                     _ ->
                         none
-            )
-            (HashDict.get referent model.codebase.terms)
-        ]
+                ]
 
 
 {-| View a type in a branch.
@@ -259,13 +262,7 @@ viewBranchType2 model name links id declaration constructorType =
             , viewId (Just 7) id
             ]
         , el
-            [ paddingEach
-                { bottom = 5
-                , left = 10
-                , right = 0
-                , top = 5
-                }
-            ]
+            [ paddingEach { bottom = 5, left = 10, right = 0, top = 5 } ]
             (column
                 []
                 (List.map

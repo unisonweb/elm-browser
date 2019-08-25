@@ -1,4 +1,4 @@
-module Ucb.Main.View.Reference exposing (viewReference)
+module Ucb.Main.View.Reference exposing (viewId, viewReference)
 
 import Element exposing (..)
 import Element.Font exposing (..)

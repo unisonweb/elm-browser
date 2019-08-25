@@ -9,7 +9,7 @@ import Misc exposing (maybe)
 import Ucb.Main.Message exposing (..)
 import Ucb.Main.Model exposing (..)
 import Ucb.Main.View.Declaration exposing (viewDeclaration)
-import Ucb.Main.View.Reference exposing (viewReference)
+import Ucb.Main.View.Reference exposing (viewId, viewReference)
 import Ucb.Main.View.Referent exposing (viewReferent)
 import Ucb.Main.View.Term exposing (viewTerm)
 import Ucb.Main.View.Type exposing (viewType)
@@ -190,33 +190,43 @@ viewBranchType :
     -> Maybe (HashSet ( Reference, Reference ))
     -> Element Message
 viewBranchType model reference name links =
-    column
-        []
-        [ row
-            [ onClick (User_GetType reference)
-            , pointer
-            , spacing 5
-            ]
-            [ el [ bold ] (text "type")
-            , text name
-            , viewReference { showBuiltin = False, take = Just 7 } reference
-            , viewLinks links
-            ]
-        , maybe
-            none
-            (\declaration ->
-                el
-                    [ paddingEach
-                        { bottom = 5
-                        , left = 10
-                        , right = 0
-                        , top = 5
-                        }
+    case reference of
+        Builtin _ ->
+            row
+                [ spacing 5 ]
+                [ el [ bold ] (text "builtin type")
+                , text name
+                , viewLinks links
+                ]
+
+        Derived id ->
+            column
+                []
+                [ row
+                    [ onClick (User_GetType id)
+                    , pointer
+                    , spacing 5
                     ]
-                    (viewDeclaration declaration)
-            )
-            (HashDict.get reference model.codebase.types)
-        ]
+                    [ el [ bold ] (text "type")
+                    , text name
+                    , viewId (Just 7) id
+                    , viewLinks links
+                    ]
+                , maybe
+                    none
+                    (\declaration ->
+                        el
+                            [ paddingEach
+                                { bottom = 5
+                                , left = 10
+                                , right = 0
+                                , top = 5
+                                }
+                            ]
+                            (viewDeclaration declaration)
+                    )
+                    (HashDict.get id model.codebase.types)
+                ]
 
 
 viewCausal :

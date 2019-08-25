@@ -49,7 +49,7 @@ init _ =
                 , branches = emptyBranchDict
                 , terms = HashDict.empty referentEquality referentHashing
                 , termTypes = HashDict.empty referentEquality referentHashing
-                , types = HashDict.empty referenceEquality referenceHashing
+                , types = HashDict.empty idEquality idHashing
                 , parents = emptyBranchDict
                 , successors = emptyBranchDict
                 }
@@ -336,7 +336,7 @@ updateHttpGetType2 ( id, response ) model =
         | codebase =
             { types =
                 HashDict.insert
-                    (Derived id)
+                    id
                     response.body
                     model.codebase.types
 
@@ -379,7 +379,7 @@ updateHttpGetTypes2 types model =
                 List.foldl
                     (\( id, declaration ) ->
                         HashDict.insert
-                            (Derived id)
+                            id
                             declaration
                     )
                     model.codebase.types
@@ -492,29 +492,24 @@ updateUserGetTerm referent model =
 {-| Fetch the type if we haven't already
 -}
 updateUserGetType :
-    Reference
+    Id
     -> Model
     -> ( Model, Cmd Message )
-updateUserGetType reference model =
-    case reference of
-        Builtin _ ->
-            ( model, Cmd.none )
+updateUserGetType id model =
+    let
+        command : Cmd Message
+        command =
+            case HashDict.get id model.codebase.types of
+                Nothing ->
+                    model.api.unison.getType id
+                        |> Task.attempt Http_GetType
 
-        Derived id ->
-            let
-                command : Cmd Message
-                command =
-                    case HashDict.get reference model.codebase.types of
-                        Nothing ->
-                            model.api.unison.getType id
-                                |> Task.attempt Http_GetType
-
-                        Just _ ->
-                            Cmd.none
-            in
-            ( model
-            , command
-            )
+                Just _ ->
+                    Cmd.none
+    in
+    ( model
+    , command
+    )
 
 
 updateUserToggleBranch :

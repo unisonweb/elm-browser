@@ -42,7 +42,7 @@ type alias Model =
         , branches : BranchDict Branch
         , terms : HashDict Referent (Term Symbol)
         , termTypes : HashDict Referent (Type Symbol)
-        , types : HashDict Reference (Declaration Symbol)
+        , types : HashDict Id (Declaration Symbol)
 
         -- Mapping from branch to its parent(s). The codebase doesn't provide
         -- this, we just discover and cache it lazily as you move down into
@@ -80,17 +80,17 @@ getMissingTypes model (Branch causal) =
         model.api.unison
         (List.filterMap
             (\reference ->
-                case HashDict.get reference model.codebase.types of
-                    Nothing ->
-                        case reference of
-                            Derived id ->
+                case reference of
+                    Builtin _ ->
+                        Nothing
+
+                    Derived id ->
+                        case HashDict.get id model.codebase.types of
+                            Nothing ->
                                 Just id
 
-                            Builtin _ ->
+                            _ ->
                                 Nothing
-
-                    _ ->
-                        Nothing
             )
             (HashSet.toList (rawCausalHead causal).types.fact)
         )

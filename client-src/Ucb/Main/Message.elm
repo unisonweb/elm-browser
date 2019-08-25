@@ -20,7 +20,7 @@ type Message
     = User_DebugButton
     | User_FocusBranch BranchHash
     | User_GetTerm Referent
-    | User_GetType Reference
+    | User_GetType Id
     | User_ToggleBranch BranchHash
     | Http_GetBranch
         (Result (Http.Error Bytes)

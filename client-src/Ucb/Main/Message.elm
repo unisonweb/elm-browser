@@ -35,3 +35,4 @@ type Message
     | Http_GetTerm (Result (Http.Error Bytes) ( Id, Http.Response (Term Symbol) ))
     | Http_GetTermType (Result (Http.Error Bytes) ( Id, Http.Response (Type Symbol) ))
     | Http_GetType (Result (Http.Error Bytes) ( Id, Http.Response (Declaration Symbol) ))
+    | Http_GetTypes (Result (Http.Error Bytes) (List ( Id, Declaration Symbol )))

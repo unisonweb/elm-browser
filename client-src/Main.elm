@@ -56,7 +56,6 @@ init _ =
             , ui =
                 { branches = emptyBranchDict
                 , terms = HashDict.empty referentEquality referentHashing
-                , types = HashDict.empty referenceEquality referenceHashing
                 }
             , errors = []
             }
@@ -87,6 +86,9 @@ update message model =
 
         Http_GetType result ->
             updateHttpGetType result model
+
+        Http_GetTypes result ->
+            updateHttpGetTypes result model
 
         User_FocusBranch hash ->
             updateUserFocusBranch hash model
@@ -135,19 +137,7 @@ updateHttpGetHeadHash2 :
     -> Model
     -> ( Model, Cmd Message )
 updateHttpGetHeadHash2 response model =
-    ( { model
-        | codebase =
-            { head = Just response.body
-
-            -- unchanged
-            , branches = model.codebase.branches
-            , terms = model.codebase.terms
-            , termTypes = model.codebase.termTypes
-            , types = model.codebase.types
-            , parents = model.codebase.parents
-            , successors = model.codebase.successors
-            }
-      }
+    ( model
     , getBranch
         model.api.unison
         model.codebase
@@ -165,7 +155,7 @@ updateHttpGetBranch :
           }
         )
     -> Model
-    -> ( Model, Cmd message )
+    -> ( Model, Cmd Message )
 updateHttpGetBranch result model =
     case result of
         Err err ->
@@ -185,22 +175,26 @@ updateHttpGetBranch2 :
       }
     )
     -> Model
-    -> ( Model, Cmd message )
+    -> ( Model, Cmd Message )
 updateHttpGetBranch2 ( hash, { branches, parents, successors } ) model =
+    let
+        newBranches : BranchDict Branch
+        newBranches =
+            HashDict.foldl
+                (\( hash_, branch ) ->
+                    HashDict.update
+                        hash_
+                        (maybe (Just branch) Just)
+                )
+                model.codebase.branches
+                branches
+    in
     ( { model
         | codebase =
             { -- We assume that because we fetched this branch, we wanted to
-              -- focus it. Kind of race-conditioney.
+              -- focus it.
               head = Just hash
-            , branches =
-                HashDict.foldl
-                    (\( hash_, branch ) ->
-                        HashDict.update
-                            hash_
-                            (maybe (Just branch) Just)
-                    )
-                    model.codebase.branches
-                    branches
+            , branches = newBranches
             , parents =
                 (branchDictMonoid hashSetSemigroup).semigroup.prepend
                     parents
@@ -214,7 +208,14 @@ updateHttpGetBranch2 ( hash, { branches, parents, successors } ) model =
             , types = model.codebase.types
             }
       }
-    , Cmd.none
+    , case HashDict.get hash newBranches of
+        -- This should never be the case
+        Nothing ->
+            Cmd.none
+
+        Just branch ->
+            getMissingTypes model branch
+                |> Task.attempt Http_GetTypes
     )
 
 
@@ -352,10 +353,56 @@ updateHttpGetType2 ( id, response ) model =
     )
 
 
+updateHttpGetTypes :
+    Result (Http.Error Bytes) (List ( Id, Declaration Symbol ))
+    -> Model
+    -> ( Model, Cmd message )
+updateHttpGetTypes result model =
+    case result of
+        Err err ->
+            ( { model | errors = Err_GetTypes err :: model.errors }
+            , Cmd.none
+            )
+
+        Ok response ->
+            updateHttpGetTypes2 response model
+
+
+updateHttpGetTypes2 :
+    List ( Id, Declaration Symbol )
+    -> Model
+    -> ( Model, Cmd message )
+updateHttpGetTypes2 types model =
+    ( { model
+        | codebase =
+            { types =
+                List.foldl
+                    (\( id, declaration ) ->
+                        HashDict.insert
+                            (Derived id)
+                            declaration
+                    )
+                    model.codebase.types
+                    types
+
+            -- unchanged
+            , head = model.codebase.head
+            , branches = model.codebase.branches
+            , terms = model.codebase.terms
+            , termTypes = model.codebase.termTypes
+            , parents = model.codebase.parents
+            , successors = model.codebase.successors
+            }
+      }
+    , Cmd.none
+    )
+
+
 {-| Focus a branch:
 
   - We might've already fetched it (e.g. it's the child of a previous root). In
-    this case we have no work to do, we just adjust the UI.
+    this case we have no branches to fetch, but we do want to fetch all of the
+    new branch's types and terms (currently: just types, terms is a WIP).
 
   - Otherwise, it's somewhere in our history. So fetch it and all of its
     children! When the request comes back, we'll switch focus.
@@ -376,7 +423,7 @@ updateUserFocusBranch hash model =
                 |> Task.attempt Http_GetBranch
             )
 
-        Just _ ->
+        Just branch ->
             ( { model
                 | codebase =
                     { head = Just hash
@@ -390,7 +437,8 @@ updateUserFocusBranch hash model =
                     , successors = model.codebase.successors
                     }
               }
-            , Cmd.none
+            , getMissingTypes model branch
+                |> Task.attempt Http_GetTypes
             )
 
 
@@ -432,7 +480,6 @@ updateUserGetTerm referent model =
 
                             -- unchanged
                             , branches = model.ui.branches
-                            , types = model.ui.types
                             }
                       }
                     , command
@@ -464,30 +511,8 @@ updateUserGetType reference model =
 
                         Just _ ->
                             Cmd.none
-
-                newTypes : HashDict Reference Bool
-                newTypes =
-                    HashDict.update
-                        reference
-                        (\maybeVisible ->
-                            case maybeVisible of
-                                Nothing ->
-                                    Just True
-
-                                Just visible ->
-                                    Just (not visible)
-                        )
-                        model.ui.types
             in
-            ( { model
-                | ui =
-                    { types = newTypes
-
-                    -- unchanged
-                    , branches = model.ui.branches
-                    , terms = model.ui.terms
-                    }
-              }
+            ( model
             , command
             )
 
@@ -495,7 +520,7 @@ updateUserGetType reference model =
 updateUserToggleBranch :
     BranchHash
     -> Model
-    -> ( Model, Cmd message )
+    -> ( Model, Cmd Message )
 updateUserToggleBranch hash model =
     ( { model
         | ui =
@@ -507,10 +532,16 @@ updateUserToggleBranch hash model =
 
             -- unchanged
             , terms = model.ui.terms
-            , types = model.ui.types
             }
       }
-    , Cmd.none
+    , case HashDict.get hash model.codebase.branches of
+        -- Should never be the case
+        Nothing ->
+            Cmd.none
+
+        Just branch ->
+            getMissingTypes model branch
+                |> Task.attempt Http_GetTypes
     )
 
 

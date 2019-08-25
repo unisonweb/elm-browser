@@ -1,6 +1,7 @@
 module Ucb.Unison.Codebase.API exposing
     ( UnisonCodebaseAPI
     , getBranch
+    , getTypes
     )
 
 import Bytes exposing (Bytes)
@@ -170,9 +171,27 @@ getBranch4 hash causal cache =
                         (\_ ->
                             rawBranchToBranch0
                                 (\hash_ ->
-                                    Maybe.withDefault
-                                        (impossible "rawBranchToBranch0: Nothing")
-                                        (HashDict.get hash_ cache.branches)
+                                    case HashDict.get hash_ cache.branches of
+                                        Nothing ->
+                                            impossible <|
+                                                String.join "\n"
+                                                    [ "rawBranchToBranch0: fatal error"
+                                                    , ""
+                                                    , "could not find branch with hash"
+                                                    , ""
+                                                    , "  " ++ hash_
+                                                    , ""
+                                                    , "in branch cache, which contains:"
+                                                    , ""
+                                                    , cache.branches
+                                                        |> HashDict.toList
+                                                        |> List.map Tuple.first
+                                                        |> List.map (\s -> "  " ++ s)
+                                                        |> String.join "\n"
+                                                    ]
+
+                                        Just branch ->
+                                            branch
                                 )
                                 (rawCausalHead causal)
                         )
@@ -259,3 +278,21 @@ tasks xs f s0 =
         y :: ys ->
             f s0 y
                 |> Task.andThen (tasks ys f)
+
+
+{-| Batch getType
+-}
+getTypes :
+    UnisonCodebaseAPI
+    -> List Id
+    -> Task (Http.Error Bytes) (List ( Id, Declaration Symbol ))
+getTypes api ids =
+    case ids of
+        [] ->
+            Task.succeed []
+
+        id :: ids_ ->
+            Task.map2
+                (\( r, s ) rs -> ( r, s.body ) :: rs)
+                (api.getType id)
+                (getTypes api ids_)

@@ -4,13 +4,11 @@ import HashingContainers.HashDict as HashDict exposing (HashDict)
 import HashingContainers.HashSet exposing (HashSet)
 import Misc exposing (..)
 import Typeclasses.Classes.Monoid exposing (Monoid)
-import Typeclasses.Classes.Semigroup exposing (Semigroup)
 import Unison.Codebase.Causal exposing (RawCausal)
 import Unison.Codebase.NameSegment exposing (..)
 import Unison.Hash exposing (..)
 import Unison.Reference exposing (..)
 import Unison.Referent exposing (..)
-import Unison.Util.Relation exposing (Relation)
 import Unison.Util.Star3 exposing (Star3_)
 
 
@@ -53,11 +51,6 @@ type alias RawBranch =
 -}
 type alias BranchHash =
     Hash32
-
-
-branchSetMonoid : Monoid (HashSet BranchHash)
-branchSetMonoid =
-    hashSetMonoid hash32Equality hash32Hashing
 
 
 {-| Make a 'Branch0' from a 'RawBranch'.

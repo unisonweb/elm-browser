@@ -4,6 +4,7 @@ import Bytes exposing (Bytes)
 import HashingContainers.HashDict as HashDict exposing (HashDict)
 import HashingContainers.HashSet as HashSet exposing (HashSet)
 import Misc exposing (hashSetSingleton)
+import Task exposing (Task)
 import Ucb.Unison.BranchDict exposing (..)
 import Ucb.Unison.Codebase.API exposing (..)
 import Ucb.Util.Http as Http
@@ -25,6 +26,7 @@ type Error
     | Err_GetTerm (Http.Error Bytes)
     | Err_GetTermType (Http.Error Bytes)
     | Err_GetType (Http.Error Bytes)
+    | Err_GetTypes (Http.Error Bytes)
 
 
 type alias Model =
@@ -58,10 +60,37 @@ type alias Model =
         -- Visible?
         { branches : BranchDict Bool
         , terms : HashDict Referent Bool
-        , types : HashDict Reference Bool
         }
 
     -- The errors we've seen. Just slappin' them in the model to put into the
     -- HTML when something is going wrong.
     , errors : List Error
     }
+
+
+{-| Given a branch we just switched to, fetch all of the type declarations that
+we haven't already.
+-}
+getMissingTypes :
+    Model
+    -> Branch
+    -> Task (Http.Error Bytes) (List ( Id, Declaration Symbol ))
+getMissingTypes model (Branch causal) =
+    getTypes
+        model.api.unison
+        (List.filterMap
+            (\reference ->
+                case HashDict.get reference model.codebase.types of
+                    Nothing ->
+                        case reference of
+                            Derived id ->
+                                Just id
+
+                            Builtin _ ->
+                                Nothing
+
+                    _ ->
+                        Nothing
+            )
+            (HashSet.toList (rawCausalHead causal).types.fact)
+        )

@@ -205,20 +205,15 @@ viewBranchType model reference name links =
         , maybe
             none
             (\declaration ->
-                case HashDict.get reference model.ui.types of
-                    Just True ->
-                        el
-                            [ paddingEach
-                                { bottom = 5
-                                , left = 10
-                                , right = 0
-                                , top = 5
-                                }
-                            ]
-                            (viewDeclaration declaration)
-
-                    _ ->
-                        none
+                el
+                    [ paddingEach
+                        { bottom = 5
+                        , left = 10
+                        , right = 0
+                        , top = 5
+                        }
+                    ]
+                    (viewDeclaration declaration)
             )
             (HashDict.get reference model.codebase.types)
         ]

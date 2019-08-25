@@ -129,10 +129,13 @@ hashSetUnions equality hashing =
 
 
 {-| This is "error"...
+To compile with optimizations I guess we have to turn "Debug.todo" into an
+infinite loop.
 -}
 impossible : String -> a
 impossible s =
-    impossible s
+    -- impossible s
+    Debug.todo s
 
 
 maybe : b -> (a -> b) -> Maybe a -> b

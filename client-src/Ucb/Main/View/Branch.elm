@@ -11,14 +11,17 @@ import Ucb.Main.Model exposing (..)
 import Ucb.Main.View.Declaration exposing (viewDeclaration)
 import Ucb.Main.View.Reference exposing (viewId, viewReference)
 import Ucb.Main.View.Referent exposing (viewReferent)
+import Ucb.Main.View.Symbol exposing (viewSymbol)
 import Ucb.Main.View.Term exposing (viewTerm)
 import Ucb.Main.View.Type exposing (viewType)
 import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)
 import Unison.Codebase.NameSegment exposing (..)
 import Unison.ConstructorType exposing (..)
+import Unison.Declaration exposing (..)
 import Unison.Reference exposing (..)
 import Unison.Referent exposing (..)
+import Unison.Symbol exposing (..)
 import Unison.Util.Relation exposing (..)
 
 
@@ -39,7 +42,7 @@ viewBranch0 model { terms, types, children, edits } =
     column
         [ spacing 5 ]
         [ column
-            []
+            [ spacing 5 ]
             (List.map
                 (\( ref, name ) ->
                     viewBranchType
@@ -188,45 +191,97 @@ viewBranchType :
     -> Reference
     -> NameSegment
     -> Maybe (HashSet ( Reference, Reference ))
-    -> Element Message
+    -> Element message
 viewBranchType model reference name links =
     case reference of
         Builtin _ ->
             row
                 [ spacing 5 ]
-                [ el [ bold ] (text "builtin type")
+                [ el [ bold ] (text "type")
                 , text name
                 , viewLinks links
                 ]
 
         Derived id ->
-            column
-                []
-                [ row
-                    [ onClick (User_GetType id)
-                    , pointer
-                    , spacing 5
-                    ]
-                    [ el [ bold ] (text "type")
-                    , text name
-                    , viewId (Just 7) id
-                    , viewLinks links
-                    ]
-                , maybe
+            case HashDict.get id model.codebase.types of
+                Nothing ->
                     none
-                    (\declaration ->
-                        el
-                            [ paddingEach
-                                { bottom = 5
-                                , left = 10
-                                , right = 0
-                                , top = 5
-                                }
+
+                Just declaration ->
+                    case declaration of
+                        DataDecl dataDeclaration ->
+                            viewBranchType2 model name links id dataDeclaration Data
+
+                        EffectDecl dataDeclaration ->
+                            viewBranchType2 model name links id dataDeclaration Effect
+
+
+viewBranchType2 :
+    Model
+    -> NameSegment
+    -> Maybe (HashSet ( Reference, Reference ))
+    -> Id
+    -> DataDeclaration Symbol
+    -> ConstructorType
+    -> Element message
+viewBranchType2 model name links id declaration constructorType =
+    column
+        []
+        [ row
+            [ spacing 5
+            ]
+            [ el [ bold ]
+                (case constructorType of
+                    Data ->
+                        case declaration.modifier of
+                            Structural ->
+                                text "structural type"
+
+                            Unique _ ->
+                                text "unique type"
+
+                    Effect ->
+                        case declaration.modifier of
+                            Structural ->
+                                text "structural ability"
+
+                            Unique _ ->
+                                text "unique ability"
+                )
+            , text name
+            , case declaration.bound of
+                [] ->
+                    none
+
+                bound ->
+                    row
+                        [ spacing 5 ]
+                        (List.map viewSymbol declaration.bound)
+            , viewId (Just 7) id
+            ]
+        , el
+            [ paddingEach
+                { bottom = 5
+                , left = 10
+                , right = 0
+                , top = 5
+                }
+            ]
+            (column
+                []
+                (List.map
+                    (\( constructorName, type_ ) ->
+                        row
+                            [ spacing 5 ]
+                            [ viewSymbol constructorName
+                            , text ":"
+                            , viewType type_
                             ]
-                            (viewDeclaration declaration)
                     )
-                    (HashDict.get id model.codebase.types)
-                ]
+                    declaration.constructors
+                )
+            )
+        ]
 
 
 viewCausal :

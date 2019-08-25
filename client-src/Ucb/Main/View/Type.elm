@@ -107,8 +107,10 @@ viewType model { out } =
         TypeTm (TypeForall ty) ->
             row
                 [ spacing 2 ]
-                [ text "∀"
+                [ text "("
+                , text "∀"
                 , viewType model ty
+                , text ")"
                 ]
 
         TypeTm (TypeIntroOuter ty) ->

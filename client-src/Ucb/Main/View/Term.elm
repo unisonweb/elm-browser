@@ -1,71 +1,159 @@
 module Ucb.Main.View.Term exposing (viewTerm)
 
+import Array
 import Element exposing (..)
-import Unison.Symbol exposing (Symbol)
-import Unison.Term exposing (Term)
+import Ucb.Main.Model exposing (..)
+import Ucb.Main.View.Reference exposing (viewReference)
+import Ucb.Main.View.Symbol exposing (viewSymbol)
+import Ucb.Main.View.Type exposing (viewType)
+import Unison.Symbol exposing (..)
+import Unison.Term exposing (..)
+import Word64 exposing (..)
 
 
 viewTerm :
-    Term Symbol
+    Model
+    -> Term Symbol
     -> Element message
-viewTerm =
-    Debug.toString >> text
+viewTerm model { out } =
+    case out of
+        TermVar var ->
+            viewSymbol var
 
+        TermAbs var tm ->
+            row
+                [ spacing 2 ]
+                [ viewSymbol var
+                , text "->"
+                , viewTerm model tm
+                ]
 
+        TermTm (TermInt n) ->
+            text "TermInt"
 
-{-
-   case out of
-       TermVar var ->
-           viewSymbol var
+        TermTm (TermNat n) ->
+            text (String.fromInt (unsafeWord64ToWord53 n))
 
-       TermAbs var tm ->
-           row
-               [ spacing 2 ]
-               [ viewSymbol var
-               , text "->"
-               , viewTerm tm
-               ]
+        TermTm (TermFloat n) ->
+            text (String.fromFloat n)
 
-       TermTm (TermInt n) ->
-           text "TermInt"
+        TermTm (TermBoolean b) ->
+            text
+                (if b then
+                    "true"
 
-       TermTm (TermNat n) ->
-           text (String.fromInt (unsafeWord64ToWord53 n))
+                 else
+                    "false"
+                )
 
-       TermTm (TermFloat n) ->
-           text (String.fromFloat n)
+        TermTm (TermText s) ->
+            -- TODO escape double quotes
+            text ("\"" ++ s ++ "\"")
 
-       TermTm (TermBoolean b) ->
-           text
-               (if b then
-                   "true"
+        TermTm (TermChar c) ->
+            text ("'" ++ String.fromChar c ++ "'")
 
-                else
-                   "false"
-               )
+        TermTm (TermBlank blank) ->
+            text (Debug.toString blank)
 
-       TermTm (TermText s) ->
-           -- TODO escape
-           text ("\"" ++ s ++ "\"")
+        TermTm (TermRef reference) ->
+            viewReference { showBuiltin = True, take = Just 7 } reference
 
-       TermTm (TermChar c) ->
-           text ("'" ++ String.fromChar c ++ "'")
+        TermTm (TermConstructor reference n) ->
+            row
+                []
+                [ viewReference { showBuiltin = True, take = Just 7 } reference
+                , text (String.cons '#' (String.fromInt n))
+                ]
 
-       -- | TermBlank Blank
-       -- | TermRef Reference
-       -- | TermConstructor Reference Int
-       -- | TermRequest Reference Int
-       -- | TermHandle (Term var) (Term var)
-       -- | TermApp (Term var) (Term var)
-       -- | TermAnn (Term var) (Type var)
-       -- | TermSequence (Array (Term var))
-       -- | TermIf (Term var) (Term var) (Term var)
-       -- | TermAnd (Term var) (Term var)
-       -- | TermOr (Term var) (Term var)
-       -- | TermLam (Term var)
-       -- | TermLetRec Bool (List (Term var)) (Term var)
-       -- | TermLet Bool (Term var) (Term var)
-       -- | TermMatch (Term var) (List (MatchCase (Term var)))
-       TermCycle _ ->
-           text "TermCycle"
--}
+        TermTm (TermRequest reference n) ->
+            row
+                []
+                [ viewReference { showBuiltin = True, take = Just 7 } reference
+                , text (String.cons '#' (String.fromInt n))
+                ]
+
+        TermTm (TermHandle t1 t2) ->
+            row
+                [ spacing 2 ]
+                [ text "handle"
+                , viewTerm model t1
+                , text "in"
+                , viewTerm model t2
+                ]
+
+        TermTm (TermApp t1 t2) ->
+            row
+                [ spacing 2 ]
+                [ viewTerm model t1
+                , viewTerm model t2
+                ]
+
+        TermTm (TermAnn term type_) ->
+            row
+                [ spacing 2 ]
+                [ viewTerm model term
+                , text ":"
+                , viewType model type_
+                ]
+
+        TermTm (TermSequence terms) ->
+            row
+                []
+                [ text "["
+                , row []
+                    (terms
+                        |> Array.toList
+                        |> List.map (viewTerm model)
+                        |> List.intersperse (text ", ")
+                    )
+                , text "]"
+                ]
+
+        TermTm (TermIf t1 t2 t3) ->
+            row
+                [ spacing 2 ]
+                [ text "if"
+                , viewTerm model t1
+                , text "then"
+                , viewTerm model t2
+                , text "else"
+                , viewTerm model t3
+                ]
+
+        TermTm (TermAnd t1 t2) ->
+            row
+                [ spacing 2 ]
+                [ text "and"
+                , viewTerm model t1
+                , viewTerm model t2
+                ]
+
+        TermTm (TermOr t1 t2) ->
+            row
+                [ spacing 2 ]
+                [ text "or"
+                , viewTerm model t1
+                , viewTerm model t2
+                ]
+
+        TermTm (TermLam term) ->
+            row
+                [ spacing 2 ]
+                [ text "("
+                , text "λ"
+                , viewTerm model term
+                , text ")"
+                ]
+
+        TermTm (TermLetRec _ _ _) ->
+            text "TermLetRec"
+
+        TermTm (TermLet _ _ _) ->
+            text "TermLet"
+
+        TermTm (TermMatch _ _) ->
+            text "TermMatch"
+
+        TermCycle _ ->
+            text "TermCycle"

@@ -172,7 +172,7 @@ viewBranchTerm model referent nameSegment links =
                                     none
                                     (viewType model)
                                     (HashDict.get referent model.codebase.termTypes)
-                                , viewTerm term
+                                , viewTerm model term
                                 ]
                             )
 

@@ -3,12 +3,15 @@ module Unison.Codebase.Branch exposing (..)
 import HashingContainers.HashDict as HashDict exposing (HashDict)
 import HashingContainers.HashSet exposing (HashSet)
 import Misc exposing (..)
+import Typeclasses.Classes.Equality as Equality
+import Typeclasses.Classes.Hashing as Hashing
 import Typeclasses.Classes.Monoid exposing (Monoid)
-import Unison.Codebase.Causal exposing (RawCausal)
+import Unison.Codebase.Causal exposing (..)
 import Unison.Codebase.NameSegment exposing (..)
 import Unison.Hash exposing (..)
 import Unison.Reference exposing (..)
 import Unison.Referent exposing (..)
+import Unison.Util.Relation exposing (..)
 import Unison.Util.Star3 exposing (Star3_)
 
 
@@ -33,7 +36,9 @@ type alias Branch0 =
     , children : HashDict NameSegment ( BranchHash, Branch )
     , edits : HashDict NameSegment Hash32 -- TODO
 
-    -- TODO deepTerms, deepTypes, etc
+    -- Derived info
+    , cache :
+        { typeNames : Relation Reference (List NameSegment) }
     }
 
 
@@ -60,12 +65,51 @@ rawBranchToBranch0 :
     -> RawBranch
     -> Branch0
 rawBranchToBranch0 hashToBranch rawBranch =
+    let
+        children : HashDict NameSegment ( BranchHash, Branch )
+        children =
+            HashDict.foldl
+                (\( name, hash ) -> HashDict.insert name ( hash, hashToBranch hash ))
+                (HashDict.empty nameSegmentEquality nameSegmentHashing)
+                rawBranch.children
+
+        typeNames : Relation Reference (List NameSegment)
+        typeNames =
+            relationUnion
+                (relationMapRange
+                    referenceEquality
+                    referenceHashing
+                    (Equality.list nameSegmentEquality)
+                    (Hashing.list nameSegmentHashing)
+                    List.singleton
+                    rawBranch.types.d1
+                )
+                (HashDict.foldl
+                    (\( name, ( _, Branch child ) ) ->
+                        relationUnion
+                            (relationMapRange
+                                referenceEquality
+                                referenceHashing
+                                (Equality.list nameSegmentEquality)
+                                (Hashing.list nameSegmentHashing)
+                                (\names -> name :: names)
+                                (rawCausalHead child).cache.typeNames
+                            )
+                    )
+                    (emptyRelation
+                        referenceEquality
+                        referenceHashing
+                        (Equality.list nameSegmentEquality)
+                        (Hashing.list nameSegmentHashing)
+                    )
+                    children
+                )
+    in
     { terms = rawBranch.terms
     , types = rawBranch.types
-    , children =
-        HashDict.foldl
-            (\( name, hash ) -> HashDict.insert name ( hash, hashToBranch hash ))
-            (HashDict.empty nameSegmentEquality nameSegmentHashing)
-            rawBranch.children
+    , children = children
     , edits = rawBranch.edits
+    , cache =
+        { typeNames = typeNames
+        }
     }

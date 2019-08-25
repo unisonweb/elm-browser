@@ -37,7 +37,7 @@ viewBranch0 :
     Model
     -> Branch0
     -> Element Message
-viewBranch0 model { terms, types, children, edits } =
+viewBranch0 model { terms, types, children, edits, cache } =
     column
         [ spacing 5 ]
         [ column
@@ -170,7 +170,7 @@ viewBranchTerm model referent nameSegment links =
                                 []
                                 [ maybe
                                     none
-                                    viewType
+                                    (viewType model)
                                     (HashDict.get referent model.codebase.termTypes)
                                 , viewTerm term
                                 ]
@@ -196,7 +196,7 @@ viewBranchType model reference name links =
         Builtin _ ->
             row
                 [ spacing 5 ]
-                [ el [ bold ] (text "type")
+                [ el [ bold ] (text "builtin type")
                 , text name
                 , viewLinks links
                 ]
@@ -274,7 +274,7 @@ viewBranchType2 model name links id declaration constructorType =
                             [ spacing 5 ]
                             [ viewSymbol constructorName
                             , text ":"
-                            , viewType type_
+                            , viewType model type_
                             ]
                     )
                     declaration.constructors

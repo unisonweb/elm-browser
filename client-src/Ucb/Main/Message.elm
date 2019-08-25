@@ -3,6 +3,7 @@ module Ucb.Main.Message exposing (..)
 import Bytes exposing (Bytes)
 import HashingContainers.HashDict exposing (HashDict)
 import HashingContainers.HashSet exposing (HashSet)
+import Ucb.Unison.BranchDict exposing (..)
 import Ucb.Util.Http as Http
 import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)
@@ -24,9 +25,9 @@ type Message
     | Http_GetBranch
         (Result (Http.Error Bytes)
             ( BranchHash
-            , { branches : HashDict BranchHash Branch
-              , parents : HashDict BranchHash (HashSet BranchHash)
-              , successors : HashDict BranchHash (HashSet BranchHash)
+            , { branches : BranchDict Branch
+              , parents : BranchDict (HashSet BranchHash)
+              , successors : BranchDict (HashSet BranchHash)
               }
             )
         )

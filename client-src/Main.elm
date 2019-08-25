@@ -10,6 +10,7 @@ import Task exposing (Task)
 import Ucb.Main.Message exposing (Message(..))
 import Ucb.Main.Model exposing (..)
 import Ucb.Main.View exposing (view)
+import Ucb.Unison.BranchDict exposing (..)
 import Ucb.Unison.Codebase.API exposing (..)
 import Ucb.Unison.Codebase.API.GitHub exposing (..)
 import Ucb.Unison.Codebase.API.LocalServer exposing (..)
@@ -158,9 +159,9 @@ updateHttpGetHeadHash2 response model =
 updateHttpGetBranch :
     Result (Http.Error Bytes)
         ( BranchHash
-        , { branches : HashDict BranchHash Branch
-          , parents : HashDict BranchHash (HashSet BranchHash)
-          , successors : HashDict BranchHash (HashSet BranchHash)
+        , { branches : BranchDict Branch
+          , parents : BranchDict (HashSet BranchHash)
+          , successors : BranchDict (HashSet BranchHash)
           }
         )
     -> Model

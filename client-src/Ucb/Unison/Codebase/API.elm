@@ -6,8 +6,9 @@ module Ucb.Unison.Codebase.API exposing
 import Bytes exposing (Bytes)
 import HashingContainers.HashDict as HashDict exposing (HashDict)
 import HashingContainers.HashSet as HashSet exposing (HashSet)
-import Misc exposing (hashSetSingleton)
+import Misc exposing (..)
 import Task exposing (Task)
+import Ucb.Unison.BranchDict exposing (..)
 import Ucb.Util.Http as Http
 import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)
@@ -43,17 +44,17 @@ getBranch :
     UnisonCodebaseAPI
     ->
         { r
-            | branches : HashDict BranchHash Branch
-            , parents : HashDict BranchHash (HashSet BranchHash)
-            , successors : HashDict BranchHash (HashSet BranchHash)
+            | branches : BranchDict Branch
+            , parents : BranchDict (HashSet BranchHash)
+            , successors : BranchDict (HashSet BranchHash)
         }
     -> BranchHash
     ->
         Task (Http.Error Bytes)
             ( BranchHash
-            , { branches : HashDict BranchHash Branch
-              , parents : HashDict BranchHash (HashSet BranchHash)
-              , successors : HashDict BranchHash (HashSet BranchHash)
+            , { branches : BranchDict Branch
+              , parents : BranchDict (HashSet BranchHash)
+              , successors : BranchDict (HashSet BranchHash)
               }
             )
 getBranch api cache hash =
@@ -65,16 +66,16 @@ getBranch2 :
     UnisonCodebaseAPI
     ->
         { r
-            | branches : HashDict BranchHash Branch
-            , parents : HashDict BranchHash (HashSet BranchHash)
-            , successors : HashDict BranchHash (HashSet BranchHash)
+            | branches : BranchDict Branch
+            , parents : BranchDict (HashSet BranchHash)
+            , successors : BranchDict (HashSet BranchHash)
         }
     -> BranchHash
     ->
         Task (Http.Error Bytes)
-            { branches : HashDict BranchHash Branch
-            , parents : HashDict BranchHash (HashSet BranchHash)
-            , successors : HashDict BranchHash (HashSet BranchHash)
+            { branches : BranchDict Branch
+            , parents : BranchDict (HashSet BranchHash)
+            , successors : BranchDict (HashSet BranchHash)
             }
 getBranch2 api cache hash =
     case HashDict.get hash cache.branches of
@@ -94,16 +95,16 @@ getBranch3 :
     UnisonCodebaseAPI
     ->
         { r
-            | branches : HashDict BranchHash Branch
-            , parents : HashDict BranchHash (HashSet BranchHash)
-            , successors : HashDict BranchHash (HashSet BranchHash)
+            | branches : BranchDict Branch
+            , parents : BranchDict (HashSet BranchHash)
+            , successors : BranchDict (HashSet BranchHash)
         }
     -> ( BranchHash, Http.Response (RawCausal RawBranch) )
     ->
         Task (Http.Error Bytes)
-            { branches : HashDict BranchHash Branch
-            , parents : HashDict BranchHash (HashSet BranchHash)
-            , successors : HashDict BranchHash (HashSet BranchHash)
+            { branches : BranchDict Branch
+            , parents : BranchDict (HashSet BranchHash)
+            , successors : BranchDict (HashSet BranchHash)
             }
 getBranch3 api cache ( hash, { body } ) =
     let
@@ -115,9 +116,9 @@ getBranch3 api cache ( hash, { body } ) =
         -- before making the recursive call, though it is
         -- not necessary to.
         newCache :
-            { branches : HashDict BranchHash Branch
-            , parents : HashDict BranchHash (HashSet BranchHash)
-            , successors : HashDict BranchHash (HashSet BranchHash)
+            { branches : BranchDict Branch
+            , parents : BranchDict (HashSet BranchHash)
+            , successors : BranchDict (HashSet BranchHash)
             }
         newCache =
             { branches = cache.branches
@@ -153,11 +154,11 @@ getBranch4 :
     -> RawCausal RawBranch
     ->
         { r
-            | branches : HashDict BranchHash Branch
+            | branches : BranchDict Branch
         }
     ->
         { r
-            | branches : HashDict BranchHash Branch
+            | branches : BranchDict Branch
         }
 getBranch4 hash causal cache =
     { cache
@@ -168,7 +169,11 @@ getBranch4 hash causal cache =
                     (rawCausalMap
                         (\_ ->
                             rawBranchToBranch0
-                                cache.branches
+                                (\hash_ ->
+                                    Maybe.withDefault
+                                        (impossible "rawBranchToBranch0: Nothing")
+                                        (HashDict.get hash_ cache.branches)
+                                )
                                 (rawCausalHead causal)
                         )
                         causal
@@ -184,8 +189,8 @@ its children.
 insertParents :
     BranchHash
     -> List BranchHash
-    -> HashDict BranchHash (HashSet BranchHash)
-    -> HashDict BranchHash (HashSet BranchHash)
+    -> BranchDict (HashSet BranchHash)
+    -> BranchDict (HashSet BranchHash)
 insertParents parent children parentsCache =
     List.foldl
         (\child ->
@@ -215,8 +220,8 @@ each of its predecessors.
 insertSuccessors :
     BranchHash
     -> List BranchHash
-    -> HashDict BranchHash (HashSet BranchHash)
-    -> HashDict BranchHash (HashSet BranchHash)
+    -> BranchDict (HashSet BranchHash)
+    -> BranchDict (HashSet BranchHash)
 insertSuccessors successor predecessors successorsCache =
     List.foldl
         (\predecessor ->

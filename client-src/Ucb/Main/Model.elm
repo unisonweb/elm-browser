@@ -4,6 +4,7 @@ import Bytes exposing (Bytes)
 import HashingContainers.HashDict as HashDict exposing (HashDict)
 import HashingContainers.HashSet as HashSet exposing (HashSet)
 import Misc exposing (hashSetSingleton)
+import Ucb.Unison.BranchDict exposing (..)
 import Ucb.Unison.Codebase.API exposing (..)
 import Ucb.Util.Http as Http
 import Unison.Codebase.Branch exposing (..)
@@ -36,7 +37,7 @@ type alias Model =
     , codebase :
         { -- This data we've fetched directly from the codebase
           head : Maybe BranchHash
-        , branches : HashDict BranchHash Branch
+        , branches : BranchDict Branch
         , terms : HashDict Referent (Term Symbol)
         , termTypes : HashDict Referent (Type Symbol)
         , types : HashDict Reference (Declaration Symbol)
@@ -44,18 +45,18 @@ type alias Model =
         -- Mapping from branch to its parent(s). The codebase doesn't provide
         -- this, we just discover and cache it lazily as you move down into
         -- children.
-        , parents : HashDict BranchHash (HashSet BranchHash)
+        , parents : BranchDict (HashSet BranchHash)
 
         -- Mapping from branch to its successor(s). The codebase doesn't
         -- provide this, we just discover and cache it lazily as you move
         -- backwards in time.
-        , successors : HashDict BranchHash (HashSet BranchHash)
+        , successors : BranchDict (HashSet BranchHash)
         }
 
     -- UI state, not pulled (nor derived) from the codebase
     , ui :
         -- Visible?
-        { branches : HashDict BranchHash Bool
+        { branches : BranchDict Bool
         , terms : HashDict Referent Bool
         , types : HashDict Reference Bool
         }

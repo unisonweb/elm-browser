@@ -49,20 +49,10 @@ type alias RawBranch =
     }
 
 
+{-| The hash of a branch.
+-}
 type alias BranchHash =
     Hash32
-
-
-emptyBranchDict : HashDict BranchHash a
-emptyBranchDict =
-    HashDict.empty hash32Equality hash32Hashing
-
-
-branchDictMonoid :
-    Semigroup a
-    -> Monoid (HashDict BranchHash a)
-branchDictMonoid =
-    hashDictMonoid hash32Equality hash32Hashing
 
 
 branchSetMonoid : Monoid (HashSet BranchHash)
@@ -70,29 +60,18 @@ branchSetMonoid =
     hashSetMonoid hash32Equality hash32Hashing
 
 
-{-| Make a 'Branch0' from a 'RawBranch', given a map of branches.
-Invariant: our descendants are all in the given map.
+{-| Make a 'Branch0' from a 'RawBranch'.
 -}
 rawBranchToBranch0 :
-    HashDict BranchHash Branch
+    (BranchHash -> Branch)
     -> RawBranch
     -> Branch0
-rawBranchToBranch0 branches rawBranch =
+rawBranchToBranch0 hashToBranch rawBranch =
     { terms = rawBranch.terms
     , types = rawBranch.types
     , children =
         HashDict.foldl
-            (\( name, hash ) ->
-                HashDict.insert
-                    name
-                    (case HashDict.get hash branches of
-                        Nothing ->
-                            impossible "makeBranch0: Nothing"
-
-                        Just branch ->
-                            ( hash, branch )
-                    )
-            )
+            (\( name, hash ) -> HashDict.insert name ( hash, hashToBranch hash ))
             (HashDict.empty nameSegmentEquality nameSegmentHashing)
             rawBranch.children
     , edits = rawBranch.edits

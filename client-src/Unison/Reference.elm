@@ -6,7 +6,6 @@ module Unison.Reference exposing
     , idToString
     , referenceEquality
     , referenceHashing
-    , referenceToString
     )
 
 import Bytes.Encode
@@ -54,18 +53,6 @@ referenceHashing =
                         |> tumble (hashHash32 id.hash)
                         |> tumble id.pos
         )
-
-
-referenceToString :
-    Reference
-    -> String
-referenceToString reference =
-    case reference of
-        Builtin s ->
-            Debug.todo "referenceToString: Builtin"
-
-        Derived id ->
-            idToString id
 
 
 {-| Haskell type: Unison.Reference.Id

@@ -306,7 +306,9 @@ viewCausal model hash causal =
                 Just hashes ->
                     row
                         [ spacing 10 ]
-                        (text "Parents" :: List.map viewHash (HashSet.toList hashes))
+                        [ text "Parents"
+                        , column [] (List.map viewHash (HashSet.toList hashes))
+                        ]
 
         viewPredecessors :
             List BranchHash
@@ -314,7 +316,9 @@ viewCausal model hash causal =
         viewPredecessors hashes =
             row
                 [ spacing 10 ]
-                (text "Predecessors" :: List.map viewHash hashes)
+                [ text "Predecessors"
+                , column [] (List.map viewHash hashes)
+                ]
 
         viewSuccessors : Element Message
         viewSuccessors =
@@ -325,7 +329,9 @@ viewCausal model hash causal =
                 Just hashes ->
                     row
                         [ spacing 10 ]
-                        (text "Successors" :: List.map viewHash (HashSet.toList hashes))
+                        [ text "Successors"
+                        , column [] (List.map viewHash (HashSet.toList hashes))
+                        ]
     in
     el [ padding 10 ]
         (case causal of

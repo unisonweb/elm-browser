@@ -194,4 +194,8 @@ the hash.
 -}
 hashHash32 : Hash32 -> Int
 hashHash32 =
-    (Hashing.string 6).hash
+    (Hashing.string 100).hash
+
+
+
+-- (Hashing.string 6).hash

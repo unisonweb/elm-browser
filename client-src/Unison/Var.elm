@@ -25,7 +25,8 @@ varTypeHashing =
             case v of
                 User string ->
                     0
-                        |> tumble ((Hashing.string 4).hash string)
+                        -- |> tumble ((Hashing.string 4).hash string)
+                        |> tumble ((Hashing.string 100).hash string)
 
                 Inference inferenceType ->
                     1
@@ -46,8 +47,10 @@ varTypeHashing =
 
                 UnnamedWatch s t ->
                     6
-                        |> tumble ((Hashing.string 4).hash s)
-                        |> tumble ((Hashing.string 4).hash t)
+                        |> tumble ((Hashing.string 100).hash s)
+                        -- |> tumble ((Hashing.string 4).hash s)
+                        |> tumble ((Hashing.string 100).hash t)
+         -- |> tumble ((Hashing.string 4).hash t)
         )
 
 

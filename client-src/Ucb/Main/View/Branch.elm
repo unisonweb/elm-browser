@@ -6,6 +6,8 @@ import Element.Font exposing (..)
 import HashingContainers.HashDict as HashDict
 import HashingContainers.HashSet as HashSet exposing (HashSet)
 import Misc exposing (maybe)
+import Typeclasses.Classes.Equality as Equality
+import Typeclasses.Classes.Hashing as Hashing
 import Ucb.Main.Message exposing (..)
 import Ucb.Main.Model exposing (..)
 import Ucb.Main.View.Reference exposing (viewId, viewReference)
@@ -157,11 +159,26 @@ viewBranchTerm2 :
     -> Maybe (HashSet ( Reference, Reference ))
     -> Element Message
 viewBranchTerm2 model reference name links =
+    let
+        -- Surround by parens if it begins with a symboly character
+        name2 : String
+        name2 =
+            case String.uncons name of
+                Just ( c, _ ) ->
+                    if HashSet.member c symbolyIdChars then
+                        "(" ++ name ++ ")"
+
+                    else
+                        name
+
+                Nothing ->
+                    name
+    in
     case reference of
         Builtin _ ->
             el
                 [ codeFontFamily ]
-                (text name)
+                (text name2)
 
         Derived id ->
             column []
@@ -170,7 +187,7 @@ viewBranchTerm2 model reference name links =
                     , onClick (User_ToggleTerm id)
                     , pointer
                     ]
-                    [ text name
+                    [ text name2
                     , maybe
                         none
                         (\type_ ->
@@ -211,7 +228,7 @@ viewBranchType model reference name links =
             row
                 [ codeFontFamily
                 ]
-                [ el [ bold ] (text "builtin type ")
+                [ el [ bold ] (text "unique type ")
                 , text name
                 ]
 
@@ -396,3 +413,28 @@ viewLinks maybeLinks =
                         )
                         (HashSet.toList links)
                 )
+
+
+symbolyIdChars : HashSet Char
+symbolyIdChars =
+    HashSet.fromList
+        Equality.char
+        Hashing.char
+        [ '!'
+        , '$'
+        , '%'
+        , '^'
+        , '&'
+        , '*'
+        , '-'
+        , '='
+        , '+'
+        , '<'
+        , '>'
+        , '.'
+        , '~'
+        , '\\'
+        , '/'
+        , '|'
+        , ':'
+        ]

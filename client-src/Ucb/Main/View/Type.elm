@@ -132,6 +132,11 @@ viewType model p ty0 =
             text "TypeAnn"
 
 
+flattenEffects : Type var -> List (Type var)
+flattenEffects =
+    Debug.todo ""
+
+
 paren : Bool -> Element message -> Element message
 paren b x =
     if b then
@@ -141,6 +146,39 @@ paren b x =
         x
 
 
+{-| Haskell function: Unison.Type.unEffectfulArrows
+Difference: this function takes the rhs of the first arrow, not the whole thing
+-}
+unEffectfulArrows : Type var -> List ( Maybe (List (Type var)), Type var )
+unEffectfulArrows ty =
+    case ty.out of
+        TypeTm (TypeEffect ty1 ty2) ->
+            case ty1.out of
+                TypeTm (TypeEffects es) ->
+                    let
+                        es2 : Maybe (List (Type var))
+                        es2 =
+                            Just (List.concatMap flattenEffects es)
+                    in
+                    case ty2.out of
+                        TypeTm (TypeArrow ty3 ty4) ->
+                            ( es2, ty3 ) :: unEffectfulArrows ty4
+
+                        _ ->
+                            [ ( es2, ty2 ) ]
+
+                _ ->
+                    [ ( Nothing, ty ) ]
+
+        TypeTm (TypeArrow ty3 ty4) ->
+            ( Nothing, ty3 ) :: unEffectfulArrows ty4
+
+        _ ->
+            [ ( Nothing, ty ) ]
+
+
+{-| Haskell type: Unison.Type.unForalls
+-}
 unForalls : List var -> Type var -> ( List var, Type var )
 unForalls vars ty =
     case ty.out of

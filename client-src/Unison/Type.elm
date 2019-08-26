@@ -142,3 +142,63 @@ typeReferences { out } =
 
         TypeTm (TypeIntroOuter ty) ->
             typeReferences ty
+
+
+{-| Haskell function: Unison.Type.flattenEffects
+-}
+flattenEffects : Type var -> List (Type var)
+flattenEffects ty =
+    case ty.out of
+        TypeTm (TypeEffects tys) ->
+            List.concatMap flattenEffects tys
+
+        _ ->
+            List.singleton ty
+
+
+{-| Haskell function: Unison.Type.unEffectfulArrows
+Difference: this function takes the rhs of the first arrow, not the whole thing
+-}
+unEffectfulArrows : Type var -> List ( Maybe (List (Type var)), Type var )
+unEffectfulArrows ty =
+    case ty.out of
+        TypeTm (TypeEffect ty1 ty2) ->
+            case ty1.out of
+                TypeTm (TypeEffects es) ->
+                    let
+                        es2 : Maybe (List (Type var))
+                        es2 =
+                            Just (List.concatMap flattenEffects es)
+                    in
+                    case ty2.out of
+                        TypeTm (TypeArrow ty3 ty4) ->
+                            ( es2, ty3 ) :: unEffectfulArrows ty4
+
+                        _ ->
+                            [ ( es2, ty2 ) ]
+
+                _ ->
+                    [ ( Nothing, ty ) ]
+
+        TypeTm (TypeArrow ty3 ty4) ->
+            ( Nothing, ty3 ) :: unEffectfulArrows ty4
+
+        _ ->
+            [ ( Nothing, ty ) ]
+
+
+{-| Haskell type: Unison.Type.unForalls
+-}
+unForalls : List var -> Type var -> ( List var, Type var )
+unForalls vars ty =
+    case ty.out of
+        TypeTm (TypeForall ty2) ->
+            case ty2.out of
+                TypeAbs var ty3 ->
+                    unForalls (var :: vars) ty3
+
+                _ ->
+                    impossible "unForalls: forall not followed by abs"
+
+        _ ->
+            ( List.reverse vars, ty )

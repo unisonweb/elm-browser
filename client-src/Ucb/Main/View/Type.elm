@@ -7,6 +7,7 @@ import Misc exposing (..)
 import Ucb.Main.Model exposing (..)
 import Ucb.Main.View.Reference exposing (viewReference)
 import Ucb.Main.View.Symbol exposing (viewSymbol)
+import Ucb.Util.Pretty exposing (..)
 import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)
 import Unison.Symbol exposing (..)
@@ -22,14 +23,6 @@ viewType model p ty0 =
     case ty0.out of
         TypeVar var ->
             viewSymbol var
-
-        TypeAbs var ty ->
-            row
-                [ spacing 2 ]
-                [ viewSymbol var
-                , text "."
-                , viewType model p ty
-                ]
 
         TypeTm (TypeRef reference) ->
             let
@@ -74,14 +67,13 @@ viewType model p ty0 =
                                                 |> text
 
         TypeTm (TypeArrow ty1 ty2) ->
-            row
-                [ spacing 2 ]
-                [ text "("
-                , viewType model p ty1
-                , text "->"
-                , viewType model p ty2
-                , text ")"
-                ]
+            ppParen (p >= 0)
+                (row
+                    []
+                    [ viewType model 0 ty1
+                    , viewArrows model (unEffectfulArrows ty2)
+                    ]
+                )
 
         TypeTm (TypeApp ty1 ty2) ->
             row
@@ -114,7 +106,7 @@ viewType model p ty0 =
                 ( tyvars, ty ) =
                     unForalls [] ty0
             in
-            paren (p >= 0)
+            ppParen (p >= 0)
                 (row
                     [ spacing 2 ]
                     [ text (String.join " " ("∀" :: List.map symbolToString tyvars) ++ ". ")
@@ -125,70 +117,60 @@ viewType model p ty0 =
         TypeTm (TypeIntroOuter ty) ->
             viewType model p ty
 
+        TypeAbs _ _ ->
+            impossible "viewType: TypeAbs"
+
         TypeCycle _ ->
+            -- impossible?
             text "TypeCycle"
 
         TypeTm (TypeAnn _ _) ->
+            -- impossible?
             text "TypeAnn"
 
 
-flattenEffects : Type var -> List (Type var)
-flattenEffects =
-    Debug.todo ""
-
-
-paren : Bool -> Element message -> Element message
-paren b x =
-    if b then
-        row [] [ text "(", x, text ")" ]
-
-    else
-        x
-
-
-{-| Haskell function: Unison.Type.unEffectfulArrows
-Difference: this function takes the rhs of the first arrow, not the whole thing
+{-| Haskell function: Unison.TypePrinter.arrow
 -}
-unEffectfulArrows : Type var -> List ( Maybe (List (Type var)), Type var )
-unEffectfulArrows ty =
-    case ty.out of
-        TypeTm (TypeEffect ty1 ty2) ->
-            case ty1.out of
-                TypeTm (TypeEffects es) ->
-                    let
-                        es2 : Maybe (List (Type var))
-                        es2 =
-                            Just (List.concatMap flattenEffects es)
-                    in
-                    case ty2.out of
-                        TypeTm (TypeArrow ty3 ty4) ->
-                            ( es2, ty3 ) :: unEffectfulArrows ty4
-
-                        _ ->
-                            [ ( es2, ty2 ) ]
-
-                _ ->
-                    [ ( Nothing, ty ) ]
-
-        TypeTm (TypeArrow ty3 ty4) ->
-            ( Nothing, ty3 ) :: unEffectfulArrows ty4
-
-        _ ->
-            [ ( Nothing, ty ) ]
+viewArrow :
+    Model
+    -> Maybe (List (Type Symbol))
+    -> Element message
+viewArrow model maybeEffects =
+    row
+        []
+        [ text " ->"
+        , maybe none (viewEffects model) maybeEffects
+        , text " "
+        ]
 
 
-{-| Haskell type: Unison.Type.unForalls
+{-| Haskell function: Unison.TypePrinter.arrows
 -}
-unForalls : List var -> Type var -> ( List var, Type var )
-unForalls vars ty =
-    case ty.out of
-        TypeTm (TypeForall ty2) ->
-            case ty2.out of
-                TypeAbs var ty3 ->
-                    unForalls (var :: vars) ty3
+viewArrows :
+    Model
+    -> List ( Maybe (List (Type Symbol)), Type Symbol )
+    -> Element message
+viewArrows model input =
+    case input of
+        [] ->
+            none
 
-                _ ->
-                    impossible "unForalls: forall not followed by abs"
+        ( maybeEffects, ty ) :: tys ->
+            row []
+                [ viewArrow model maybeEffects
+                , viewType model 0 ty
+                , viewArrows model tys
+                ]
 
-        _ ->
-            ( List.reverse vars, ty )
+
+viewEffects :
+    Model
+    -> List (Type Symbol)
+    -> Element message
+viewEffects model effects =
+    row
+        []
+        [ text "{"
+        , ppCommas (List.map (viewType model 0) effects)
+        , text "}"
+        ]

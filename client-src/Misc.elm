@@ -138,6 +138,19 @@ impossible s =
     Debug.todo s
 
 
+listLast : List a -> Maybe a
+listLast xs =
+    case xs of
+        [] ->
+            Nothing
+
+        [ x ] ->
+            Just x
+
+        y :: ys ->
+            listLast ys
+
+
 maybe : b -> (a -> b) -> Maybe a -> b
 maybe n j mx =
     case mx of

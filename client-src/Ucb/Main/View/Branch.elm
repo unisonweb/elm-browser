@@ -24,6 +24,13 @@ import Unison.Symbol exposing (..)
 import Unison.Util.Relation exposing (..)
 
 
+codeFontFamily : Attribute message
+codeFontFamily =
+    family
+        [ typeface "monospace"
+        ]
+
+
 viewBranch :
     Model
     -> BranchHash
@@ -39,48 +46,56 @@ viewBranch0 :
     -> Element Message
 viewBranch0 model { terms, types, children, edits, cache } =
     column
-        [ spacing 10 ]
-        [ column
-            [ spacing 5 ]
-            (List.map
-                (\( reference, name ) ->
-                    viewBranchType
-                        model
-                        reference
-                        name
-                        (HashDict.get reference types.d3.domain)
-                )
-                (types.d1
-                    |> relationToList
-                    |> List.sortBy Tuple.second
-                )
-            )
-        , column
-            [ spacing 5 ]
-            (List.map
-                (\( referent, name ) ->
-                    viewBranchTerm
-                        model
-                        referent
-                        name
-                        (HashDict.get referent terms.d3.domain)
-                )
-                (terms.d1
-                    |> relationToList
-                    |> List.sortBy Tuple.second
-                )
-            )
-        , column
-            [ spacing 5 ]
-            (List.map
-                (\( name, ( hash, branch ) ) ->
-                    viewBranchChild model name hash branch
-                )
-                (children
-                    |> HashDict.toList
-                    |> List.sortBy Tuple.first
-                )
-            )
+        [ spacing 30 ]
+        [ case relationToList types.d1 of
+            [] ->
+                none
+
+            types2 ->
+                column [ spacing 20 ]
+                    (types2
+                        |> List.sortBy Tuple.second
+                        |> List.map
+                            (\( reference, name ) ->
+                                viewBranchType
+                                    model
+                                    reference
+                                    name
+                                    (HashDict.get reference types.d3.domain)
+                            )
+                    )
+        , case relationToList terms.d1 of
+            [] ->
+                none
+
+            terms2 ->
+                column
+                    [ spacing 20 ]
+                    (terms2
+                        |> List.sortBy Tuple.second
+                        |> List.map
+                            (\( referent, name ) ->
+                                viewBranchTerm
+                                    model
+                                    referent
+                                    name
+                                    (HashDict.get referent terms.d3.domain)
+                            )
+                    )
+        , case HashDict.toList children of
+            [] ->
+                none
+
+            children2 ->
+                column
+                    [ spacing 20 ]
+                    (children2
+                        |> List.sortBy Tuple.first
+                        |> List.map
+                            (\( name, ( hash, branch ) ) ->
+                                viewBranchChild model name hash branch
+                            )
+                    )
 
         -- , column [] (List.map text edits)
         ]
@@ -102,8 +117,8 @@ viewBranchChild model name hash branch =
             , pointer
             ]
             (row
-                [ spacing 5 ]
-                [ el [ bold ] (text "child")
+                []
+                [ el [ bold ] (text "child ")
                 , text name
                 ]
             )
@@ -144,31 +159,27 @@ viewBranchTerm2 :
 viewBranchTerm2 model reference name links =
     case reference of
         Builtin _ ->
-            row
-                [ spacing 5 ]
-                [ el [ bold ] (text "builtin term")
-                , text name
-                ]
+            el
+                [ codeFontFamily ]
+                (text name)
 
         Derived id ->
             column []
                 [ row
-                    [ onClick (User_ToggleTerm id)
+                    [ codeFontFamily
+                    , onClick (User_ToggleTerm id)
                     , pointer
-                    , spacing 5
                     ]
                     [ text name
                     , maybe
                         none
                         (\type_ ->
-                            row [ spacing 5 ]
-                                [ text ":"
+                            row []
+                                [ text " : "
                                 , viewType model type_
                                 ]
                         )
                         (HashDict.get id model.codebase.termTypes)
-                    , viewId (Just 7) id
-                    , viewLinks links
                     ]
                 , case HashDict.get id model.ui.terms of
                     Just True ->
@@ -198,10 +209,10 @@ viewBranchType model reference name links =
     case reference of
         Builtin _ ->
             row
-                [ spacing 5 ]
-                [ el [ bold ] (text "builtin type")
+                [ codeFontFamily
+                ]
+                [ el [ bold ] (text "builtin type ")
                 , text name
-                , viewLinks links
                 ]
 
         Derived id ->
@@ -230,47 +241,40 @@ viewBranchType2 model name links id declaration constructorType =
     column
         []
         [ row
-            [ spacing 5
+            [ codeFontFamily
             ]
             [ el [ bold ]
                 (case constructorType of
                     Data ->
                         case declaration.modifier of
                             Structural ->
-                                text "structural type"
+                                text "structural type "
 
                             Unique _ ->
-                                text "unique type"
+                                text "unique type "
 
                     Effect ->
                         case declaration.modifier of
                             Structural ->
-                                text "structural ability"
+                                text "structural ability "
 
                             Unique _ ->
-                                text "unique ability"
+                                text "unique ability "
                 )
-            , text name
-            , case declaration.bound of
-                [] ->
-                    none
-
-                bound ->
-                    row
-                        [ spacing 5 ]
-                        (List.map viewSymbol declaration.bound)
-            , viewId (Just 7) id
+            , text (String.join " " (name :: List.map symbolToString declaration.bound))
             ]
         , el
             [ paddingEach { bottom = 5, left = 10, right = 0, top = 5 } ]
             (column
-                []
+                [ codeFontFamily
+                , spacing 5
+                ]
                 (List.map
                     (\( constructorName, type_ ) ->
                         row
-                            [ spacing 5 ]
+                            []
                             [ viewSymbol constructorName
-                            , text ":"
+                            , text " : "
                             , viewType model type_
                             ]
                     )
@@ -305,8 +309,8 @@ viewCausal model hash causal =
 
                 Just hashes ->
                     row
-                        [ spacing 10 ]
-                        [ text "Parents"
+                        []
+                        [ text "Parents "
                         , column [] (List.map viewHash (HashSet.toList hashes))
                         ]
 
@@ -315,8 +319,8 @@ viewCausal model hash causal =
             -> Element Message
         viewPredecessors hashes =
             row
-                [ spacing 10 ]
-                [ text "Predecessors"
+                []
+                [ text "Predecessors "
                 , column [] (List.map viewHash hashes)
                 ]
 
@@ -328,8 +332,8 @@ viewCausal model hash causal =
 
                 Just hashes ->
                     row
-                        [ spacing 10 ]
-                        [ text "Successors"
+                        []
+                        [ text "Successors "
                         , column [] (List.map viewHash (HashSet.toList hashes))
                         ]
     in
@@ -337,7 +341,7 @@ viewCausal model hash causal =
         (case causal of
             RawOne branch ->
                 column
-                    [ spacing 5 ]
+                    [ spacing 40 ]
                     [ column []
                         [ viewHash hash
                         , viewParents
@@ -348,7 +352,7 @@ viewCausal model hash causal =
 
             RawCons branch hash_ ->
                 column
-                    [ spacing 5 ]
+                    [ spacing 40 ]
                     [ column []
                         [ viewHash hash
                         , viewParents
@@ -360,7 +364,7 @@ viewCausal model hash causal =
 
             RawMerge branch hashes ->
                 column
-                    [ spacing 5 ]
+                    [ spacing 40 ]
                     [ column []
                         [ viewHash hash
                         , viewParents

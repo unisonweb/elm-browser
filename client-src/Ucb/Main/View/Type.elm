@@ -3,6 +3,7 @@ module Ucb.Main.View.Type exposing (viewType)
 import Element exposing (..)
 import HashingContainers.HashDict as HashDict
 import HashingContainers.HashSet as HashSet
+import Misc exposing (..)
 import Ucb.Main.Model exposing (..)
 import Ucb.Main.View.Reference exposing (viewReference)
 import Ucb.Main.View.Symbol exposing (viewSymbol)
@@ -59,9 +60,12 @@ viewType model { out } =
                                         [] ->
                                             fallback
 
-                                        -- Horrible monster, just want to show
-                                        -- all the aliases for now, rather than
-                                        -- arbitrarily pick one
+                                        [ name ] ->
+                                            name
+                                                |> listLast
+                                                |> Maybe.withDefault "???"
+                                                |> text
+
                                         names2 ->
                                             names2
                                                 |> List.map (String.join ".")

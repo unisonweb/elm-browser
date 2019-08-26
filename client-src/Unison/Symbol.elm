@@ -29,3 +29,26 @@ symbolHashing =
                 (word64Hashing.hash w)
                 (varTypeHashing.hash v)
         )
+
+
+symbolToString :
+    Symbol
+    -> String
+symbolToString symbol =
+    case symbol of
+        Symbol n var ->
+            case var of
+                User name ->
+                    let
+                        m : Int
+                        m =
+                            unsafeWord64ToWord53 n
+                    in
+                    if m == 0 then
+                        name
+
+                    else
+                        name ++ String.fromInt m
+
+                _ ->
+                    "???"

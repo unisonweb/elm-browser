@@ -176,7 +176,7 @@ viewBranchTerm2 model reference name links =
                         (\type_ ->
                             row []
                                 [ text " : "
-                                , viewType model type_
+                                , viewType model -1 type_
                                 ]
                         )
                         (HashDict.get id model.codebase.termTypes)
@@ -275,7 +275,7 @@ viewBranchType2 model name links id declaration constructorType =
                             []
                             [ viewSymbol constructorName
                             , text " : "
-                            , viewType model type_
+                            , viewType model -1 type_
                             ]
                     )
                     declaration.constructors

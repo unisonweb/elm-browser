@@ -94,7 +94,7 @@ viewTerm model { out } =
                 [ spacing 2 ]
                 [ viewTerm model term
                 , text ":"
-                , viewType model type_
+                , viewType model -1 type_
                 ]
 
         TermTm (TermSequence terms) ->

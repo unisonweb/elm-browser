@@ -15,10 +15,11 @@ import Unison.Type exposing (..)
 
 viewType :
     Model
+    -> Int
     -> Type Symbol
     -> Element message
-viewType model { out } =
-    case out of
+viewType model p ty0 =
+    case ty0.out of
         TypeVar var ->
             viewSymbol var
 
@@ -27,7 +28,7 @@ viewType model { out } =
                 [ spacing 2 ]
                 [ viewSymbol var
                 , text "."
-                , viewType model ty
+                , viewType model p ty
                 ]
 
         TypeTm (TypeRef reference) ->
@@ -76,9 +77,9 @@ viewType model { out } =
             row
                 [ spacing 2 ]
                 [ text "("
-                , viewType model ty1
+                , viewType model p ty1
                 , text "->"
-                , viewType model ty2
+                , viewType model p ty2
                 , text ")"
                 ]
 
@@ -86,8 +87,8 @@ viewType model { out } =
             row
                 [ spacing 2 ]
                 [ text "("
-                , viewType model ty1
-                , viewType model ty2
+                , viewType model p ty1
+                , viewType model p ty2
                 , text ")"
                 ]
 
@@ -95,8 +96,8 @@ viewType model { out } =
             row
                 [ spacing 2 ]
                 [ text "("
-                , viewType model ty1
-                , viewType model ty2
+                , viewType model p ty1
+                , viewType model p ty2
                 , text ")"
                 ]
 
@@ -104,24 +105,52 @@ viewType model { out } =
             row
                 [ spacing 2 ]
                 [ text "{"
-                , row [] (List.map (viewType model) tys)
+                , row [] (List.map (viewType model p) tys)
                 , text "}"
                 ]
 
-        TypeTm (TypeForall ty) ->
-            row
-                [ spacing 2 ]
-                [ text "("
-                , text "∀"
-                , viewType model ty
-                , text ")"
-                ]
+        TypeTm (TypeForall _) ->
+            let
+                ( tyvars, ty ) =
+                    unForalls [] ty0
+            in
+            paren (p >= 0)
+                (row
+                    [ spacing 2 ]
+                    [ text (String.join " " ("∀" :: List.map symbolToString tyvars) ++ ". ")
+                    , viewType model -1 ty
+                    ]
+                )
 
         TypeTm (TypeIntroOuter ty) ->
-            viewType model ty
+            viewType model p ty
 
         TypeCycle _ ->
             text "TypeCycle"
 
         TypeTm (TypeAnn _ _) ->
             text "TypeAnn"
+
+
+paren : Bool -> Element message -> Element message
+paren b x =
+    if b then
+        row [] [ text "(", x, text ")" ]
+
+    else
+        x
+
+
+unForalls : List var -> Type var -> ( List var, Type var )
+unForalls vars ty =
+    case ty.out of
+        TypeTm (TypeForall ty2) ->
+            case ty2.out of
+                TypeAbs var ty3 ->
+                    unForalls (var :: vars) ty3
+
+                _ ->
+                    impossible "unForalls: forall not followed by abs"
+
+        _ ->
+            ( List.reverse vars, ty )

@@ -6,6 +6,7 @@ import Int64 exposing (..)
 import Ucb.Main.Model exposing (..)
 import Ucb.Main.View.Reference exposing (viewReference)
 import Ucb.Main.View.Type exposing (viewType)
+import Ucb.Util.Pretty exposing (..)
 import Unison.Symbol exposing (..)
 import Unison.Term exposing (..)
 import Word64 exposing (..)
@@ -47,7 +48,7 @@ viewTerm2 env { out } =
         TermVar var ->
             text (symbolToString var)
 
-        TermAbs var tm ->
+        TermAbs var term ->
             text "(not implemented: TermAbs)"
 
         TermTm (TermInt n) ->
@@ -77,9 +78,10 @@ viewTerm2 env { out } =
                     (terms
                         |> Array.map
                             (viewTerm2
-                                { env
-                                    | precedence = 0
-                                    , blockContext = Normal
+                                { model = env.model
+                                , precedence = 0
+                                , blockContext = Normal
+                                , infixContext = NonInfix
                                 }
                             )
                         |> Array.toList
@@ -113,7 +115,21 @@ viewTerm2 env { out } =
             text "(not implemented: TermApp)"
 
         TermTm (TermAnn term type_) ->
-            text "(not implemented: TermAnn)"
+            ppParen
+                (env.precedence >= 0)
+                (row
+                    []
+                    [ viewTerm2
+                        { model = env.model
+                        , precedence = 0
+                        , blockContext = Normal
+                        , infixContext = NonInfix
+                        }
+                        term
+                    , text " : "
+                    , viewType env.model 0 type_
+                    ]
+                )
 
         TermTm (TermIf t1 t2 t3) ->
             text "(not implemented: TermIf)"

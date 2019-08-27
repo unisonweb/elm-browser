@@ -75,44 +75,43 @@ viewType model p ty0 =
                     ]
                 )
 
-        TypeTm (TypeApp ty1 ty2) ->
-            row
-                [ spacing 2 ]
-                [ text "("
-                , viewType model p ty1
-                , viewType model p ty2
-                , text ")"
-                ]
+        TypeTm (TypeApp _ _) ->
+            case unApps ty0 of
+                Nothing ->
+                    impossible "viewType: unApps returned Nothing"
+
+                Just ( f, xs ) ->
+                    ppParen (p >= 10)
+                        (row
+                            []
+                            [ viewType model 9 f
+                            , text " "
+                            , ppSpaced (List.map (viewType model 10) xs)
+                            ]
+                        )
 
         TypeTm (TypeEffect ty1 ty2) ->
-            row
-                [ spacing 2 ]
-                [ text "("
-                , viewType model p ty1
-                , viewType model p ty2
-                , text ")"
-                ]
+            text "(not implemented: TypeEffect)"
 
         TypeTm (TypeEffects tys) ->
-            row
-                [ spacing 2 ]
-                [ text "{"
-                , row [] (List.map (viewType model p) tys)
-                , text "}"
-                ]
+            text "(not implemented: TypeEffects)"
 
         TypeTm (TypeForall _) ->
             let
                 ( tyvars, ty ) =
                     unForalls [] ty0
             in
-            ppParen (p >= 0)
-                (row
-                    [ spacing 2 ]
-                    [ text (String.join " " ("∀" :: List.map symbolToString tyvars) ++ ". ")
-                    , viewType model -1 ty
-                    ]
-                )
+            if p < 0 && List.all symbolIsLowercase tyvars then
+                viewType model p ty
+
+            else
+                ppParen (p >= 0)
+                    (row
+                        [ spacing 2 ]
+                        [ text (String.join " " ("∀" :: List.map symbolToString tyvars) ++ ". ")
+                        , viewType model -1 ty
+                        ]
+                    )
 
         TypeTm (TypeIntroOuter ty) ->
             viewType model p ty
@@ -122,11 +121,11 @@ viewType model p ty0 =
 
         TypeCycle _ ->
             -- impossible?
-            text "TypeCycle"
+            text "(not implemented: TypeCycle)"
 
         TypeTm (TypeAnn _ _) ->
             -- impossible?
-            text "TypeAnn"
+            text "(not implemented: TypeAnn)"
 
 
 {-| Haskell function: Unison.TypePrinter.arrow

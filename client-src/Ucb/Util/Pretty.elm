@@ -22,3 +22,10 @@ ppParen b x =
 
     else
         x
+
+
+{-| Haskell function: Unison.Util.Pretty.spaced
+-}
+ppSpaced : List (Element message) -> Element message
+ppSpaced =
+    List.intersperse (text " ") >> row []

@@ -156,6 +156,28 @@ flattenEffects ty =
             List.singleton ty
 
 
+{-| Haskell function: Unison.Type.unApps
+-}
+unApps : Type var -> Maybe ( Type var, List (Type var) )
+unApps ty0 =
+    let
+        go : Type var -> List (Type var) -> List (Type var)
+        go ty acc =
+            case ty.out of
+                TypeTm (TypeApp ty1 ty2) ->
+                    go ty1 (ty2 :: acc)
+
+                _ ->
+                    ty :: acc
+    in
+    case go ty0 [] of
+        x :: y :: ys ->
+            Just ( x, y :: ys )
+
+        _ ->
+            Nothing
+
+
 {-| Haskell function: Unison.Type.unEffectfulArrows
 Difference: this function takes the rhs of the first arrow, not the whole thing
 -}

@@ -10,6 +10,7 @@ import Ucb.Main.View.Symbol exposing (viewSymbol)
 import Ucb.Util.Pretty exposing (..)
 import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)
+import Unison.Codebase.NameSegment exposing (..)
 import Unison.Reference exposing (..)
 import Unison.Symbol exposing (..)
 import Unison.Type exposing (..)
@@ -26,46 +27,7 @@ viewType model p ty0 =
             viewSymbol var
 
         TypeTm (TypeRef reference) ->
-            let
-                fallback : Element message
-                fallback =
-                    viewReference
-                        { showBuiltin = True
-                        , take = Just 7
-                        }
-                        reference
-            in
-            case model.codebase.head of
-                Nothing ->
-                    fallback
-
-                Just hash ->
-                    case HashDict.get hash model.codebase.branches of
-                        Nothing ->
-                            fallback
-
-                        Just (Branch causal) ->
-                            case HashDict.get reference (rawCausalHead causal).cache.typeNames.domain of
-                                Nothing ->
-                                    fallback
-
-                                Just names ->
-                                    case HashSet.toList names of
-                                        -- ???
-                                        [] ->
-                                            fallback
-
-                                        [ name ] ->
-                                            name
-                                                |> listLast
-                                                |> Maybe.withDefault "???"
-                                                |> text
-
-                                        names2 ->
-                                            names2
-                                                |> List.map (String.join ".")
-                                                |> String.join "∕"
-                                                |> text
+            viewTypeRef model reference
 
         TypeTm (TypeArrow ty1 ty2) ->
             ppParen (p >= 0)
@@ -98,12 +60,6 @@ viewType model p ty0 =
                                     ]
                                 )
 
-        TypeTm (TypeEffect ty1 ty2) ->
-            text "(not implemented: TypeEffect)"
-
-        TypeTm (TypeEffects tys) ->
-            text "(not implemented: TypeEffects)"
-
         TypeTm (TypeForall _) ->
             let
                 ( tyvars, ty ) =
@@ -115,7 +71,7 @@ viewType model p ty0 =
             else
                 ppParen (p >= 0)
                     (row
-                        [ spacing 2 ]
+                        []
                         [ text (String.join " " ("∀" :: List.map symbolToString tyvars) ++ ". ")
                         , viewType model -1 ty
                         ]
@@ -134,6 +90,67 @@ viewType model p ty0 =
         TypeTm (TypeAnn _ _) ->
             -- impossible?
             text "(not implemented: TypeAnn)"
+
+        TypeTm (TypeEffect ty1 ty2) ->
+            text "(not implemented: TypeEffect)"
+
+        TypeTm (TypeEffects tys) ->
+            text "(not implemented: TypeEffects)"
+
+
+viewTypeRef :
+    Model
+    -> Reference
+    -> Element message
+viewTypeRef model reference =
+    let
+        fallback : Element message
+        fallback =
+            viewReference
+                { showBuiltin = True
+                , take = Just 7
+                }
+                reference
+    in
+    case model.codebase.head of
+        Nothing ->
+            fallback
+
+        Just hash ->
+            case HashDict.get hash model.codebase.branches of
+                Nothing ->
+                    fallback
+
+                Just (Branch causal) ->
+                    case HashDict.get reference (rawCausalHead causal).cache.typeNames.domain of
+                        Nothing ->
+                            fallback
+
+                        Just names ->
+                            viewTypeRef2 (HashSet.toList names)
+
+
+viewTypeRef2 :
+    List (List NameSegment)
+    -> Element message
+viewTypeRef2 names =
+    case names of
+        [] ->
+            impossible "viewTypeRef2: []"
+
+        [ name ] ->
+            case listLast name of
+                Nothing ->
+                    impossible "viewTypeRef2: Nothing"
+
+                Just name2 ->
+                    text name2
+
+        names2 ->
+            names2
+                |> List.map (String.join ".")
+                |> String.join "∕"
+                |> text
 
 
 {-| Haskell function: Unison.TypePrinter.arrow

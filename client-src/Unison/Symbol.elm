@@ -64,7 +64,7 @@ symbolToString symbol =
                     let
                         m : Int
                         m =
-                            unsafeWord64ToWord53 n
+                            unsafeWord64ToInt53 n
                     in
                     if m == 0 then
                         name

@@ -6,7 +6,6 @@ import HashingContainers.HashSet as HashSet
 import Misc exposing (..)
 import Ucb.Main.Model exposing (..)
 import Ucb.Main.View.Reference exposing (viewReference)
-import Ucb.Main.View.Symbol exposing (viewSymbol)
 import Ucb.Util.Pretty exposing (..)
 import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)
@@ -24,7 +23,7 @@ viewType :
 viewType model p ty0 =
     case ty0.out of
         TypeVar var ->
-            viewSymbol var
+            text (symbolToString var)
 
         TypeTm (TypeRef reference) ->
             viewTypeRef model reference

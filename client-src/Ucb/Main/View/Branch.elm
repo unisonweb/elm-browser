@@ -12,7 +12,6 @@ import Ucb.Main.Message exposing (..)
 import Ucb.Main.Model exposing (..)
 import Ucb.Main.View.Reference exposing (viewId, viewReference)
 import Ucb.Main.View.Referent exposing (viewReferent)
-import Ucb.Main.View.Symbol exposing (viewSymbol)
 import Ucb.Main.View.Term exposing (viewTerm)
 import Ucb.Main.View.Type exposing (viewType)
 import Unison.Codebase.Branch exposing (..)
@@ -290,8 +289,7 @@ viewBranchType2 model name links id declaration constructorType =
                     (\( constructorName, type_ ) ->
                         row
                             []
-                            [ viewSymbol constructorName
-                            , text " : "
+                            [ text (symbolToString constructorName ++ " : ")
                             , viewType model -1 type_
                             ]
                     )

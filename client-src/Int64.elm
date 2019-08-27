@@ -1,5 +1,7 @@
 module Int64 exposing (..)
 
+import Bitwise
+
 
 type Int64
     = SmallInt64 Int
@@ -19,3 +21,15 @@ intsToInt64 x y =
 
     else
         BigInt64 x y
+
+
+{-| Unsafely convert an Int64 to a 53-bit JavaScript number.
+-}
+unsafeInt64ToInt53 : Int64 -> Int
+unsafeInt64ToInt53 word =
+    case word of
+        SmallInt64 n ->
+            n
+
+        BigInt64 n m ->
+            Debug.todo "unsafeInt64ToInt53: BigInt64"

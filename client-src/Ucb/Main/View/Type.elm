@@ -10,6 +10,7 @@ import Ucb.Main.View.Symbol exposing (viewSymbol)
 import Ucb.Util.Pretty exposing (..)
 import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)
+import Unison.Reference exposing (..)
 import Unison.Symbol exposing (..)
 import Unison.Type exposing (..)
 
@@ -75,20 +76,27 @@ viewType model p ty0 =
                     ]
                 )
 
-        TypeTm (TypeApp _ _) ->
-            case unApps ty0 of
-                Nothing ->
-                    impossible "viewType: unApps returned Nothing"
+        TypeTm (TypeApp ty1 ty2) ->
+            case ty1.out of
+                TypeTm (TypeRef (Builtin "Sequence")) ->
+                    row
+                        []
+                        [ text "[", viewType model 0 ty2, text "]" ]
 
-                Just ( f, xs ) ->
-                    ppParen (p >= 10)
-                        (row
-                            []
-                            [ viewType model 9 f
-                            , text " "
-                            , ppSpaced (List.map (viewType model 10) xs)
-                            ]
-                        )
+                _ ->
+                    case unApps ty0 of
+                        Nothing ->
+                            impossible "viewType: unApps returned Nothing"
+
+                        Just ( f, xs ) ->
+                            ppParen (p >= 10)
+                                (row
+                                    []
+                                    [ viewType model 9 f
+                                    , text " "
+                                    , ppSpaced (List.map (viewType model 10) xs)
+                                    ]
+                                )
 
         TypeTm (TypeEffect ty1 ty2) ->
             text "(not implemented: TypeEffect)"

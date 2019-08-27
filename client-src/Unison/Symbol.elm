@@ -43,11 +43,11 @@ symbolIsLowercase (Symbol _ var) =
                 Nothing ->
                     impossible "symbolIsLowercase: empty symbol"
 
-                -- FIXME Horrible hack, but Elm's Char.isLower function is not
-                -- Unicode-aware... so we just manually list a few common
-                -- lowercase unicode characters for now...
+                -- FIXME this is inaccurate, but may be the best we can do in
+                -- Elm... returns the wrong answer for uppercase letters that
+                -- have no lowercase variant
                 Just ( c, _ ) ->
-                    Char.isLower c || c == '𝕖'
+                    Char.toLower c == c
 
         _ ->
             Debug.todo "symbolIsLowercase: non-User symbol"

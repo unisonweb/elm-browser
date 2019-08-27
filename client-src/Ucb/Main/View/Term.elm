@@ -3,6 +3,7 @@ module Ucb.Main.View.Term exposing (viewTerm)
 import Array
 import Element exposing (..)
 import Int64 exposing (..)
+import Misc exposing (..)
 import Ucb.Main.Model exposing (..)
 import Ucb.Main.View.Reference exposing (viewReference)
 import Ucb.Main.View.Type exposing (viewType)
@@ -115,21 +116,48 @@ viewTerm2 env { out } =
             text "(not implemented: TermApp)"
 
         TermTm (TermAnn term type_) ->
-            ppParen
-                (env.precedence >= 0)
-                (row
-                    []
-                    [ viewTerm2
-                        { model = env.model
-                        , precedence = 0
-                        , blockContext = Normal
-                        , infixContext = NonInfix
-                        }
-                        term
-                    , text " : "
-                    , viewType env.model 0 type_
-                    ]
-                )
+            viewTerm2 env term
+
+        {-
+           ppParen
+               (env.precedence >= 0)
+               (row
+                   []
+                   [ viewTerm2
+                       { model = env.model
+                       , precedence = 0
+                       , blockContext = Normal
+                       , infixContext = NonInfix
+                       }
+                       term
+                   , text " : "
+                   , viewType env.model 0 type_
+                   ]
+               )
+        -}
+        TermTm (TermLam term) ->
+            case term.out of
+                TermAbs var body ->
+                    ppParen (env.precedence >= 3)
+                        (column
+                            []
+                            [ text (symbolToString var ++ " -> ")
+                            , row
+                                []
+                                [ text "  "
+                                , viewTerm2
+                                    { model = env.model
+                                    , precedence = 2
+                                    , blockContext = Block
+                                    , infixContext = NonInfix
+                                    }
+                                    body
+                                ]
+                            ]
+                        )
+
+                _ ->
+                    impossible "viewTerm: TermLam, then no TermAbs?"
 
         TermTm (TermIf t1 t2 t3) ->
             text "(not implemented: TermIf)"
@@ -139,9 +167,6 @@ viewTerm2 env { out } =
 
         TermTm (TermOr t1 t2) ->
             text "(not implemented: TermOr)"
-
-        TermTm (TermLam term) ->
-            text "(not implemented: TermLam)"
 
         TermTm (TermLetRec _ _ _) ->
             text "(not implemented: TermLetRec)"

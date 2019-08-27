@@ -10,6 +10,7 @@ import Typeclasses.Classes.Equality as Equality
 import Typeclasses.Classes.Hashing as Hashing
 import Ucb.Main.Message exposing (..)
 import Ucb.Main.Model exposing (..)
+import Ucb.Main.View.Palette exposing (codeFont)
 import Ucb.Main.View.Reference exposing (viewId, viewReference)
 import Ucb.Main.View.Referent exposing (viewReferent)
 import Ucb.Main.View.Term exposing (viewTerm)
@@ -23,13 +24,6 @@ import Unison.Reference exposing (..)
 import Unison.Referent exposing (..)
 import Unison.Symbol exposing (..)
 import Unison.Util.Relation exposing (..)
-
-
-codeFontFamily : Attribute message
-codeFontFamily =
-    family
-        [ typeface "monospace"
-        ]
 
 
 viewBranch :
@@ -176,13 +170,13 @@ viewBranchTerm2 model reference name links =
     case reference of
         Builtin _ ->
             el
-                [ codeFontFamily ]
+                [ codeFont ]
                 (text name2)
 
         Derived id ->
             column []
                 [ row
-                    [ codeFontFamily
+                    [ codeFont
                     , onClick (User_ToggleTerm id)
                     , pointer
                     ]
@@ -203,7 +197,7 @@ viewBranchTerm2 model reference name links =
                             none
                             (\term ->
                                 el
-                                    [ codeFontFamily
+                                    [ codeFont
                                     , paddingEach { bottom = 5, left = 10, right = 0, top = 5 }
                                     ]
                                     (viewTerm model term)
@@ -227,7 +221,7 @@ viewBranchType model reference name links =
     case reference of
         Builtin _ ->
             row
-                [ codeFontFamily
+                [ codeFont
                 ]
                 [ el [ bold ] (text "unique type ")
                 , text name
@@ -259,8 +253,7 @@ viewBranchType2 model name links id declaration constructorType =
     column
         []
         [ row
-            [ codeFontFamily
-            ]
+            [ codeFont ]
             [ el [ bold ]
                 (case constructorType of
                     Data ->
@@ -284,7 +277,7 @@ viewBranchType2 model name links id declaration constructorType =
         , el
             [ paddingEach { bottom = 5, left = 10, right = 0, top = 5 } ]
             (column
-                [ codeFontFamily
+                [ codeFont
                 , spacing 5
                 ]
                 (List.map
@@ -308,13 +301,13 @@ viewCausal :
     -> Element Message
 viewCausal model hash causal =
     let
-        viewHash :
-            BranchHash
-            -> Element Message
+        viewHash : BranchHash -> Element Message
         viewHash hash_ =
             el
                 [ onClick (User_FocusBranch hash_)
                 , pointer
+                , width (px 100)
+                , clipX
                 ]
                 (text hash_)
 

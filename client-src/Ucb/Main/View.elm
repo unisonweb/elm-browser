@@ -1,7 +1,8 @@
-module Ucb.Main.View exposing (..)
+module Ucb.Main.View exposing (view)
 
 import Browser exposing (Document)
 import Element exposing (..)
+import Element.Font as Font
 import Element.Input exposing (labelLeft)
 import HashingContainers.HashDict as HashDict exposing (HashDict)
 import HashingContainers.HashSet as HashSet exposing (HashSet)
@@ -9,6 +10,7 @@ import Html exposing (Html)
 import Ucb.Main.Message exposing (..)
 import Ucb.Main.Model exposing (..)
 import Ucb.Main.View.Branch exposing (..)
+import Ucb.Main.View.Palette exposing (mainFont)
 import Ucb.Unison.NameSet as NameSet
 import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)
@@ -17,14 +19,31 @@ import Unison.Name exposing (..)
 
 view : Model -> Document Message
 view model =
-    { title = "Unison Code Browser", body = [ layout [] (view2 model) ] }
+    { title = "Unison Code Browser"
+    , body =
+        [ layout [ width (fill |> minimum 800 |> maximum 1280), mainFont ]
+            (view2 model)
+        ]
+    }
 
 
 view2 : Model -> Element Message
 view2 model =
-    column
-        []
-        (List.filterMap identity
+    column [ spacing 80, padding 20, height fill, width fill ]
+        [ header
+        , row [ padding 20, spaceEvenly ]
+            [ branches model
+            , viewSearchPrototype model
+            ]
+        , errors model
+        ]
+
+
+branches : Model -> Element Message
+branches model =
+    column [ alignTop, width <| (fill |> minimum 500 |> maximum 1000) ] <|
+        List.filterMap
+            identity
             [ model.codebase.head
                 |> Maybe.andThen
                     (\head ->
@@ -32,19 +51,7 @@ view2 model =
                             (viewBranch model head)
                             (HashDict.get head model.codebase.branches)
                     )
-            , if List.isEmpty model.errors then
-                Nothing
-
-              else
-                Just
-                    (column []
-                        (text "Errors:"
-                            :: List.map viewError (List.reverse model.errors)
-                        )
-                    )
-            , Just (viewSearchPrototype model)
             ]
-        )
 
 
 viewSearchPrototype :
@@ -114,24 +121,36 @@ viewSearchPrototype model =
                     )
                     strings
     in
-    column
-        []
-        [ text "Hi, I'm your friendly neighborhood search box"
-        , text "While I look great just the way I am, we are excited for colorful UI improvements coming soon!"
-        , text "Anywho please give me a spin!"
-        , Element.Input.text
+    column [ alignTop, width <| (fill |> minimum 200 |> maximum 500), alignRight, spacing 10 ]
+        [ Element.Input.text
             []
             { onChange = User_Search
             , text = model.ui.search
             , placeholder = Nothing
-            , label = labelLeft [] (text "Search")
+            , label = labelLeft [ centerX ] (text "Search")
             }
-        , column [] (List.map text matching)
+        , column [ scrollbarY, centerX, height (px 500) ] (List.map text matching)
         ]
 
 
-viewError :
-    Error
-    -> Element message
+errors : Model -> Element Message
+errors model =
+    if List.isEmpty model.errors then
+        none
+
+    else
+        let
+            errHeader =
+                el [ Font.bold ] (text "Errors")
+        in
+        column [] <| errHeader :: List.map viewError (List.reverse model.errors)
+
+
+header : Element msg
+header =
+    el [ centerX, Font.bold, Font.size 28 ] (Element.text "Unison Code Browser")
+
+
+viewError : Error -> Element message
 viewError error =
     text (Debug.toString error)

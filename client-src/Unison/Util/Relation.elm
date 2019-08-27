@@ -2,9 +2,10 @@ module Unison.Util.Relation exposing (..)
 
 import HashingContainers.HashDict as HashDict exposing (HashDict)
 import HashingContainers.HashSet as HashSet exposing (HashSet)
-import Misc exposing (..)
 import Typeclasses.Classes.Equality exposing (Equality)
 import Typeclasses.Classes.Hashing exposing (Hashing)
+import Util.HashDict as HashDict
+import Util.HashSet as HashSet
 
 
 {-| Haskell type: Unison.Util.Relation.Relation
@@ -36,21 +37,21 @@ relationFromList :
     -> Relation a b
 relationFromList ea ha eb hb elements =
     { domain =
-        hashDictFromListWith
+        HashDict.fromListWith
             ea
             ha
-            hashSetUnion
+            HashSet.union
             (List.map
-                (\( x, y ) -> ( x, hashSetSingleton eb hb y ))
+                (\( x, y ) -> ( x, HashSet.singleton eb hb y ))
                 elements
             )
     , range =
-        hashDictFromListWith
+        HashDict.fromListWith
             eb
             hb
-            hashSetUnion
+            HashSet.union
             (List.map
-                (\( x, y ) -> ( y, hashSetSingleton ea ha x ))
+                (\( x, y ) -> ( y, HashSet.singleton ea ha x ))
                 elements
             )
     }
@@ -94,6 +95,6 @@ relationUnion :
     -> Relation a b
     -> Relation a b
 relationUnion r1 r2 =
-    { domain = hashDictUnion hashSetSemigroup r1.domain r2.domain
-    , range = hashDictUnion hashSetSemigroup r1.range r2.range
+    { domain = HashDict.union HashSet.semigroup r1.domain r2.domain
+    , range = HashDict.union HashSet.semigroup r1.range r2.range
     }

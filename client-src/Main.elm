@@ -10,7 +10,7 @@ import Task exposing (Task)
 import Ucb.Main.Message exposing (Message(..))
 import Ucb.Main.Model exposing (..)
 import Ucb.Main.View exposing (view)
-import Ucb.Unison.BranchDict exposing (..)
+import Ucb.Unison.BranchDict as BranchDict exposing (BranchDict)
 import Ucb.Unison.Codebase.API exposing (..)
 import Ucb.Unison.Codebase.API.GitHub exposing (..)
 import Ucb.Unison.Codebase.API.LocalServer exposing (..)
@@ -24,6 +24,7 @@ import Unison.Referent exposing (..)
 import Unison.Symbol exposing (..)
 import Unison.Term exposing (..)
 import Unison.Type exposing (..)
+import Util.HashSet as HashSet
 
 
 main : Program () Model Message
@@ -46,15 +47,15 @@ init _ =
                 }
             , codebase =
                 { head = Nothing
-                , branches = emptyBranchDict
+                , branches = BranchDict.empty
                 , terms = HashDict.empty idEquality idHashing
                 , termTypes = HashDict.empty idEquality idHashing
                 , types = HashDict.empty idEquality idHashing
-                , parents = emptyBranchDict
-                , successors = emptyBranchDict
+                , parents = BranchDict.empty
+                , successors = BranchDict.empty
                 }
             , ui =
-                { branches = emptyBranchDict
+                { branches = BranchDict.empty
                 , terms = HashDict.empty idEquality idHashing
                 }
             , errors = []
@@ -187,11 +188,11 @@ updateHttpGetBranch2 ( hash, { branches, parents, successors } ) model =
               head = Just hash
             , branches = newBranches
             , parents =
-                (branchDictMonoid hashSetSemigroup).semigroup.prepend
+                (BranchDict.monoid HashSet.semigroup).semigroup.prepend
                     parents
                     model.codebase.parents
             , successors =
-                (branchDictMonoid hashSetSemigroup).semigroup.prepend
+                (BranchDict.monoid HashSet.semigroup).semigroup.prepend
                     successors
                     model.codebase.successors
             , terms = model.codebase.terms

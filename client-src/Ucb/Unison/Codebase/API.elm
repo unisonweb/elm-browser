@@ -20,6 +20,7 @@ import Unison.Reference exposing (..)
 import Unison.Symbol exposing (..)
 import Unison.Term exposing (..)
 import Unison.Type exposing (..)
+import Util.HashSet as HashSet
 
 
 {-| An abstract interfact to the Unison codebase served over HTTP.
@@ -220,7 +221,7 @@ insertParents parent children parentsCache =
                     case existingParents of
                         Nothing ->
                             Just
-                                (hashSetSingleton
+                                (HashSet.singleton
                                     hash32Equality
                                     hash32Hashing
                                     parent
@@ -251,7 +252,7 @@ insertSuccessors successor predecessors successorsCache =
                     case existingSuccessors of
                         Nothing ->
                             Just
-                                (hashSetSingleton
+                                (HashSet.singleton
                                     hash32Equality
                                     hash32Hashing
                                     successor

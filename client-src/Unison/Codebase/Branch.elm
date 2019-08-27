@@ -13,6 +13,8 @@ import Unison.Reference exposing (..)
 import Unison.Referent exposing (..)
 import Unison.Util.Relation exposing (..)
 import Unison.Util.Star3 exposing (Star3_)
+import Util.HashDict as HashDict
+import Util.HashSet as HashSet
 
 
 type alias Star a n =
@@ -113,12 +115,12 @@ rawBranchToBranch0 hashToBranch rawBranch =
         typeToName =
             HashDict.foldl
                 (\( name, ( _, Branch child ) ) ->
-                    hashDictUnion
-                        hashSetSemigroup
-                        (hashDictMap
+                    HashDict.union
+                        HashSet.semigroup
+                        (HashDict.map
                             referenceEquality
                             referenceHashing
-                            (hashSetMap
+                            (HashSet.map
                                 (Equality.list nameSegmentEquality)
                                 (Hashing.list nameSegmentHashing)
                                 (\names -> name :: names)
@@ -126,10 +128,10 @@ rawBranchToBranch0 hashToBranch rawBranch =
                             (rawCausalHead child).cache.typeToName
                         )
                 )
-                (hashDictMap
+                (HashDict.map
                     referenceEquality
                     referenceHashing
-                    (hashSetMap
+                    (HashSet.map
                         (Equality.list nameSegmentEquality)
                         (Hashing.list nameSegmentHashing)
                         List.singleton

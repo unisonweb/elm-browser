@@ -3,7 +3,6 @@ module Ucb.Main.Model exposing (..)
 import Bytes exposing (Bytes)
 import HashingContainers.HashDict as HashDict exposing (HashDict)
 import HashingContainers.HashSet as HashSet exposing (HashSet)
-import Misc exposing (hashSetSingleton)
 import Task exposing (Task)
 import Ucb.Unison.BranchDict exposing (..)
 import Ucb.Unison.Codebase.API exposing (..)
@@ -17,6 +16,7 @@ import Unison.Referent exposing (..)
 import Unison.Symbol exposing (..)
 import Unison.Term exposing (..)
 import Unison.Type exposing (..)
+import Util.HashSet as HashSet
 
 
 type Error

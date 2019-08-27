@@ -7,6 +7,7 @@ import Typeclasses.Classes.Hashing exposing (Hashing)
 import Unison.ABT exposing (..)
 import Unison.Kind exposing (Kind)
 import Unison.Reference exposing (..)
+import Util.HashSet as HashSet
 
 
 {-| Haskell type: Unison.Type.Type
@@ -44,19 +45,19 @@ typeFFreeVars varEquality varHashing term =
             HashSet.empty varEquality varHashing
 
         TypeArrow t1 t2 ->
-            hashSetUnion t1.freeVars t2.freeVars
+            HashSet.union t1.freeVars t2.freeVars
 
         TypeAnn t _ ->
             t.freeVars
 
         TypeApp t1 t2 ->
-            hashSetUnion t1.freeVars t2.freeVars
+            HashSet.union t1.freeVars t2.freeVars
 
         TypeEffect t1 t2 ->
-            hashSetUnion t1.freeVars t2.freeVars
+            HashSet.union t1.freeVars t2.freeVars
 
         TypeEffects ts ->
-            hashSetUnions varEquality varHashing (List.map .freeVars ts)
+            HashSet.unions varEquality varHashing (List.map .freeVars ts)
 
         TypeForall t ->
             t.freeVars
@@ -117,22 +118,22 @@ typeReferences { out } =
             typeReferences ty2
 
         TypeTm (TypeRef ref) ->
-            hashSetSingleton referenceEquality referenceHashing ref
+            HashSet.singleton referenceEquality referenceHashing ref
 
         TypeTm (TypeArrow ty1 ty2) ->
-            hashSetUnion (typeReferences ty1) (typeReferences ty2)
+            HashSet.union (typeReferences ty1) (typeReferences ty2)
 
         TypeTm (TypeAnn ty2 _) ->
             typeReferences ty2
 
         TypeTm (TypeApp ty1 ty2) ->
-            hashSetUnion (typeReferences ty1) (typeReferences ty2)
+            HashSet.union (typeReferences ty1) (typeReferences ty2)
 
         TypeTm (TypeEffect ty1 ty2) ->
-            hashSetUnion (typeReferences ty1) (typeReferences ty2)
+            HashSet.union (typeReferences ty1) (typeReferences ty2)
 
         TypeTm (TypeEffects tys) ->
-            hashSetUnions
+            HashSet.unions
                 referenceEquality
                 referenceHashing
                 (List.map typeReferences tys)

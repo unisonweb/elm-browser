@@ -1,9 +1,9 @@
 module Unison.ABT exposing (..)
 
 import HashingContainers.HashSet as HashSet exposing (HashSet)
-import Misc exposing (hashSetSingleton)
 import Typeclasses.Classes.Equality exposing (Equality)
 import Typeclasses.Classes.Hashing exposing (Hashing)
+import Util.HashSet as HashSet
 
 
 type alias AbtTerm var term =
@@ -19,7 +19,7 @@ abtVar :
     -> var
     -> AbtTerm var term
 abtVar equality hashing tmVar var =
-    { freeVars = hashSetSingleton equality hashing var
+    { freeVars = HashSet.singleton equality hashing var
     , out = tmVar var
     }
 

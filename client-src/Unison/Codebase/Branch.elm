@@ -38,7 +38,11 @@ type alias Branch0 =
 
     -- Derived info
     , cache :
-        { typeNames : Relation Reference (List NameSegment) }
+        { -- Mapping from type (reference) to a set of its names.
+          -- Invariant: the sets are non-empty.
+          typeToName : HashDict Reference (HashSet (List NameSegment))
+        , typeNames : Relation Reference (List NameSegment)
+        }
     }
 
 
@@ -104,6 +108,35 @@ rawBranchToBranch0 hashToBranch rawBranch =
                     )
                     children
                 )
+
+        typeToName : HashDict Reference (HashSet (List NameSegment))
+        typeToName =
+            HashDict.foldl
+                (\( name, ( _, Branch child ) ) ->
+                    hashDictUnion
+                        hashSetSemigroup
+                        (hashDictMap
+                            referenceEquality
+                            referenceHashing
+                            (hashSetMap
+                                (Equality.list nameSegmentEquality)
+                                (Hashing.list nameSegmentHashing)
+                                (\names -> name :: names)
+                            )
+                            (rawCausalHead child).cache.typeToName
+                        )
+                )
+                (hashDictMap
+                    referenceEquality
+                    referenceHashing
+                    (hashSetMap
+                        (Equality.list nameSegmentEquality)
+                        (Hashing.list nameSegmentHashing)
+                        List.singleton
+                    )
+                    rawBranch.types.d1.domain
+                )
+                children
     in
     { terms = rawBranch.terms
     , types = rawBranch.types
@@ -111,5 +144,6 @@ rawBranchToBranch0 hashToBranch rawBranch =
     , edits = rawBranch.edits
     , cache =
         { typeNames = typeNames
+        , typeToName = typeToName
         }
     }

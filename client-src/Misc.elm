@@ -41,6 +41,18 @@ hashDictFromListWith equality hashing combine =
         (HashDict.empty equality hashing)
 
 
+hashDictMap :
+    Equality k
+    -> Hashing k
+    -> (a -> b)
+    -> HashDict k a
+    -> HashDict k b
+hashDictMap equality hashing f =
+    HashDict.foldl
+        (\( k, v ) -> HashDict.insert k (f v))
+        (HashDict.empty equality hashing)
+
+
 hashDictMonoid :
     Equality k
     -> Hashing k
@@ -73,6 +85,18 @@ hashDictUnion { prepend } xs ys =
         )
         ys
         xs
+
+
+hashSetMap :
+    Equality b
+    -> Hashing b
+    -> (a -> b)
+    -> HashSet a
+    -> HashSet b
+hashSetMap equality hashing f =
+    HashSet.foldl
+        (\x -> HashSet.insert (f x))
+        (HashSet.empty equality hashing)
 
 
 hashSetSingleton :

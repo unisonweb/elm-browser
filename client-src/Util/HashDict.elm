@@ -53,6 +53,8 @@ monoid keyEquality keyHashing valueSemigroup =
         (HashDict.empty keyEquality keyHashing)
 
 
+{-| The smaller dict should come first.
+-}
 union :
     Semigroup v
     -> HashDict k v

@@ -1,5 +1,6 @@
 module Unison.Name exposing (..)
 
+import Misc exposing (..)
 import Typeclasses.Classes.Equality as Equality exposing (Equality)
 import Typeclasses.Classes.Hashing as Hashing exposing (Hashing)
 import Unison.Codebase.NameSegment exposing (..)
@@ -23,3 +24,26 @@ nameEquality =
 nameHashing : Hashing Name
 nameHashing =
     Hashing.list nameSegmentHashing
+
+
+{-|
+
+> nameTails ["foo", "bar", "baz"]
+
+    [ [ "foo", "bar", "baz" ]
+    , [ "bar", "baz" ]
+    , [ "baz" ]
+    ]
+
+-}
+nameTails : Name -> List Name
+nameTails name =
+    case name of
+        [] ->
+            impossible "nameTails: empty name"
+
+        [ x ] ->
+            [ [ x ] ]
+
+        x :: xs ->
+            (x :: xs) :: nameTails xs

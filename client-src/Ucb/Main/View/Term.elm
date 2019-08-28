@@ -2,12 +2,24 @@ module Ucb.Main.View.Term exposing (viewTerm)
 
 import Array
 import Element exposing (..)
+import HashingContainers.HashDict as HashDict
+import HashingContainers.HashSet as HashSet
 import Int64 exposing (..)
 import Misc exposing (..)
 import Ucb.Main.Model exposing (..)
 import Ucb.Main.View.Reference exposing (viewReference)
+import Ucb.Main.View.Referent exposing (viewReferent)
 import Ucb.Main.View.Type exposing (viewType)
+import Ucb.Unison.Name exposing (..)
+import Ucb.Unison.NameDict exposing (..)
+import Ucb.Unison.ReferentSet exposing (..)
 import Ucb.Util.Pretty exposing (..)
+import Unison.Codebase.Branch exposing (..)
+import Unison.Codebase.Causal exposing (..)
+import Unison.ConstructorType exposing (..)
+import Unison.Name exposing (..)
+import Unison.Reference exposing (..)
+import Unison.Referent exposing (..)
 import Unison.Symbol exposing (..)
 import Unison.Term exposing (..)
 import Word64 exposing (..)
@@ -91,6 +103,9 @@ viewTerm2 env { out } =
                 , text "]"
                 ]
 
+        TermTm (TermConstructor reference n) ->
+            viewConstructor env.model reference n
+
         TermTm (TermText s) ->
             text "(not implemented: TermText)"
 
@@ -102,9 +117,6 @@ viewTerm2 env { out } =
 
         TermTm (TermRef reference) ->
             text "(not implemented: TermRef)"
-
-        TermTm (TermConstructor reference n) ->
-            text "(not implemented: TermConstructor)"
 
         TermTm (TermRequest reference n) ->
             text "(not implemented: TermRequest)"
@@ -179,3 +191,59 @@ viewTerm2 env { out } =
 
         TermCycle _ ->
             text "(not implemented: TypeCycle)"
+
+
+viewConstructor :
+    Model
+    -> Reference
+    -> Int
+    -> Element message
+viewConstructor model reference n =
+    let
+        referent : Referent
+        referent =
+            Con reference n Data
+
+        fallback : Element message
+        fallback =
+            viewReferent
+                { showBuiltin = True
+                , take = Just 7
+                }
+                referent
+    in
+    case model.codebase.head of
+        Nothing ->
+            fallback
+
+        Just hash ->
+            case HashDict.get hash model.codebase.branches of
+                Nothing ->
+                    fallback
+
+                Just (Branch causal) ->
+                    let
+                        head =
+                            rawCausalHead causal
+                    in
+                    case HashDict.get referent head.cache.termToName of
+                        Nothing ->
+                            fallback
+
+                        Just names ->
+                            case HashSet.toList names of
+                                [] ->
+                                    impossible "viewConstructor: empty names"
+
+                                -- TODO, we should handle aliases better. this
+                                -- just takes the first name
+                                name :: _ ->
+                                    viewConstructor2 head.cache.nameToTerm name
+
+
+viewConstructor2 :
+    NameDict ReferentSet
+    -> Name
+    -> Element message
+viewConstructor2 nameToTerm fullName =
+    text (String.join "." (shortenName nameToTerm fullName))

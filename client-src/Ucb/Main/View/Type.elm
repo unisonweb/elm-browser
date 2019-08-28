@@ -6,6 +6,7 @@ import HashingContainers.HashSet as HashSet
 import Misc exposing (..)
 import Ucb.Main.Model exposing (..)
 import Ucb.Main.View.Reference exposing (viewReference)
+import Ucb.Unison.Name exposing (..)
 import Ucb.Unison.NameDict exposing (NameDict)
 import Ucb.Unison.ReferenceSet exposing (ReferenceSet)
 import Ucb.Util.Pretty exposing (..)
@@ -146,54 +147,10 @@ viewTypeRef model reference =
 
 viewTypeRef2 :
     NameDict ReferenceSet
-    -> Name -- The full name
+    -> Name
     -> Element message
 viewTypeRef2 nameToType fullName =
-    let
-        -- Shorten "foo.bar.Baz" as much as possible by picking the shortest
-        -- unambiguous name. Note that the full name might be ambiguous, that's
-        -- okay.
-        shorten : List Name -> Name
-        shorten candidates =
-            case candidates of
-                [] ->
-                    fullName
-
-                name :: names ->
-                    case HashDict.get name nameToType of
-                        Nothing ->
-                            impossible "viewTypeRef2: name missing from map"
-
-                        Just references ->
-                            if HashSet.size references == 1 then
-                                name
-
-                            else
-                                shorten names
-    in
-    fullName
-        |> nameTails
-        |> List.reverse
-        |> shorten
-        |> String.join "."
-        |> text
-
-
-
--- case names of
---     [] ->
---         impossible "viewTypeRef2: []"
---     [ name ] ->
---         case listLast name of
---             Nothing ->
---                 impossible "viewTypeRef2: Nothing"
---             Just name2 ->
---                 text name2
---     names2 ->
---         names2
---             |> List.map (String.join ".")
---             |> String.join "∕"
---             |> text
+    text (String.join "." (shortenName nameToType fullName))
 
 
 {-| Haskell function: Unison.TypePrinter.arrow

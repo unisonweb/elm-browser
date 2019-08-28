@@ -9,6 +9,8 @@ import Ucb.Unison.NameSegmentDict as NameSegmentDict exposing (NameSegmentDict)
 import Ucb.Unison.NameSet as NameSet exposing (NameSet)
 import Ucb.Unison.ReferenceDict as ReferenceDict exposing (ReferenceDict)
 import Ucb.Unison.ReferenceSet as ReferenceSet exposing (ReferenceSet)
+import Ucb.Unison.ReferentDict as ReferentDict exposing (ReferentDict)
+import Ucb.Unison.ReferentSet as ReferentSet exposing (ReferentSet)
 import Unison.Codebase.Causal exposing (..)
 import Unison.Codebase.NameSegment exposing (..)
 import Unison.Hash exposing (..)
@@ -44,12 +46,16 @@ type alias Branch0 =
 
     -- Derived info
     , cache :
-        { -- Mapping from type (reference) to a set of its names.
+        { -- Mapping from term (referent) to a set of its names.
           -- Invariant: the sets are non-empty.
-          typeToName : ReferenceDict NameSet
+          termToName : ReferentDict NameSet
 
         -- Inverted mapping, but including name suffixes. See comment on
-        -- 'makeNameToType' below.
+        -- 'makeNameToTerm' below.
+        , nameToTerm : NameDict ReferentSet
+
+        -- Same as termToName/nameToTerm, but for types
+        , typeToName : ReferenceDict NameSet
         , nameToType : NameDict ReferenceSet
         }
     }
@@ -86,34 +92,37 @@ rawBranchToBranch0 hashToBranch rawBranch =
                 NameSegmentDict.empty
                 rawBranch.children
 
+        termToName : ReferentDict NameSet
+        termToName =
+            makeTermToName
+                rawBranch.terms.d1.domain
+                children
+
         typeToName : ReferenceDict NameSet
         typeToName =
             makeTypeToName
                 rawBranch.types.d1.domain
                 children
-
-        nameToType : NameDict ReferenceSet
-        nameToType =
-            makeNameToType
-                typeToName
     in
     { terms = rawBranch.terms
     , types = rawBranch.types
     , children = children
     , edits = rawBranch.edits
     , cache =
-        { typeToName = typeToName
-        , nameToType = nameToType
+        { termToName = termToName
+        , nameToTerm = makeNameToTerm termToName
+        , typeToName = typeToName
+        , nameToType = makeNameToType typeToName
         }
     }
 
 
-{-| Given the current branch's reference names
+{-| Given the current branch's referent names
 
-      #foobar -> { "abc", "xyz" }  // this reference has two aliases
+      #foobar -> { "abc", "xyz" }  // this referent has two aliases
       #bazqux -> { "123" }
 
-    and the children branches (whose typeToNames we are interested in)
+    and the children branches (whose termToNames we are interested in)
 
       "child1" -> ( #aaa -> { ["a", "b", "c"] }
                     #bbb -> { ["ddd"] )
@@ -130,6 +139,94 @@ rawBranchToBranch0 hashToBranch rawBranch =
       #bbb    -> { ["child1", "ddd"] }
       #ccc    -> { ["child2", "ccc"] }
 
+-}
+makeTermToName :
+    ReferentDict (HashSet NameSegment)
+    -> NameSegmentDict ( BranchHash, Branch )
+    -> ReferentDict NameSet
+makeTermToName branch =
+    HashDict.foldl
+        (\( name, ( _, Branch child ) ) ->
+            HashDict.union
+                HashSet.semigroup
+                (ReferentDict.map
+                    (NameSet.map (\names -> name :: names))
+                    (rawCausalHead child).cache.termToName
+                )
+        )
+        (ReferentDict.map
+            (HashSet.map nameEquality nameHashing List.singleton)
+            branch
+        )
+
+
+{-| Like the reverse mapping of termToName, except that when inverting a mapping
+like
+
+      #aaa -> { ["a", "b", "c"] }
+
+    we don't just store
+
+      ["a", "b", "c"] -> { #aaa }
+
+    but also
+
+      ["b", "c"] -> { #aaa }
+      ["c"]      -> { #aaa }
+
+    This "suffix-name" lookup table allows us to compute the shortest possible
+    unambiguous name for a term in a branch with the following simple algorithm:
+
+    * First, look up the forward mapping from referent to (full) name.
+
+    * Then, for each suffix of the name (beginning with the shortest), look the
+      referents up in the reversed mapping, until we find a singleton set.
+
+    * If we don't even find a singleton set all the way up to the full name of
+      the referent, that just means we have the same name for two referents
+      (due to a merge, for example).
+
+-}
+makeNameToTerm :
+    ReferentDict NameSet
+    -> NameDict ReferentSet
+makeNameToTerm =
+    let
+        f1 :
+            ( Referent, NameSet )
+            -> NameDict ReferentSet
+            -> NameDict ReferentSet
+        f1 =
+            f2 >> HashDict.union HashSet.semigroup
+
+        f2 :
+            ( Referent, NameSet )
+            -> NameDict ReferentSet
+        f2 ( referent, names ) =
+            HashSet.foldl
+                (f3 referent)
+                NameDict.empty
+                names
+
+        f3 :
+            Referent
+            -> Name
+            -> NameDict ReferentSet
+            -> NameDict ReferentSet
+        f3 referent name acc =
+            List.foldl
+                (\suffix ->
+                    HashDict.insert
+                        suffix
+                        (ReferentSet.singleton referent)
+                )
+                acc
+                (nameTails name)
+    in
+    HashDict.foldl f1 NameDict.empty
+
+
+{-| See 'makeTermToName'
 -}
 makeTypeToName :
     ReferenceDict (HashSet NameSegment)
@@ -151,32 +248,7 @@ makeTypeToName branch =
         )
 
 
-{-| Like the reverse mapping of typeToName, except that when inverting a mapping
-like
-
-      #aaa -> { ["a", "b", "c"] }
-
-    we don't just store
-
-      ["a", "b", "c"] -> { #aaa }
-
-    but also
-
-      ["b", "c"] -> { #aaa }
-      ["c"]      -> { #aaa }
-
-    This "suffix-name" lookup table allows us to compute the shortest possible
-    unambiguous name for a type in a branch with the following simple algorithm:
-
-    * First, look up the forward mapping from reference to (full) name.
-
-    * Then, for each suffix of the name (beginning with the shortest), look the
-      references up in the reversed mapping, until we find a singleton set.
-
-    * If we don't even find a singleton set all the way up to the full name of
-      the reference, that just means we have the same name for two references
-      (due to a merge, for example).
-
+{-| See 'makeNameToTerm'
 -}
 makeNameToType :
     ReferenceDict NameSet

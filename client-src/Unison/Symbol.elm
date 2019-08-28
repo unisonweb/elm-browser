@@ -43,11 +43,9 @@ symbolIsLowercase (Symbol _ var) =
                 Nothing ->
                     impossible "symbolIsLowercase: empty symbol"
 
-                -- FIXME this is inaccurate, but may be the best we can do in
-                -- Elm... returns the wrong answer for uppercase letters that
-                -- have no lowercase variant
+                -- FIXME this is inaccurate, need proper unicode-aware toLower
                 Just ( c, _ ) ->
-                    Char.toLower c == c
+                    Char.isLower c || c == '𝕖'
 
         _ ->
             Debug.todo "symbolIsLowercase: non-User symbol"

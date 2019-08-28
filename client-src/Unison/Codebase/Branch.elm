@@ -3,12 +3,14 @@ module Unison.Codebase.Branch exposing (..)
 import HashingContainers.HashDict as HashDict exposing (HashDict)
 import HashingContainers.HashSet exposing (HashSet)
 import Misc exposing (..)
-import Typeclasses.Classes.Equality as Equality
-import Typeclasses.Classes.Hashing as Hashing
 import Typeclasses.Classes.Monoid exposing (Monoid)
+import Ucb.Unison.NameSegmentDict as NameSegmentDict exposing (NameSegmentDict)
+import Ucb.Unison.NameSet as NameSet exposing (NameSet)
+import Ucb.Unison.ReferenceDict as ReferenceDict exposing (ReferenceDict)
 import Unison.Codebase.Causal exposing (..)
 import Unison.Codebase.NameSegment exposing (..)
 import Unison.Hash exposing (..)
+import Unison.Name exposing (..)
 import Unison.Reference exposing (..)
 import Unison.Referent exposing (..)
 import Unison.Util.Relation exposing (..)
@@ -42,8 +44,8 @@ type alias Branch0 =
     , cache :
         { -- Mapping from type (reference) to a set of its names.
           -- Invariant: the sets are non-empty.
-          typeToName : HashDict Reference (HashSet (List NameSegment))
-        , typeNames : Relation Reference (List NameSegment)
+          typeToName : HashDict Reference NameSet
+        , typeNames : Relation Reference Name
         }
     }
 
@@ -76,17 +78,17 @@ rawBranchToBranch0 hashToBranch rawBranch =
         children =
             HashDict.foldl
                 (\( name, hash ) -> HashDict.insert name ( hash, hashToBranch hash ))
-                (HashDict.empty nameSegmentEquality nameSegmentHashing)
+                NameSegmentDict.empty
                 rawBranch.children
 
-        typeNames : Relation Reference (List NameSegment)
+        typeNames : Relation Reference Name
         typeNames =
             relationUnion
                 (relationMapRange
                     referenceEquality
                     referenceHashing
-                    (Equality.list nameSegmentEquality)
-                    (Hashing.list nameSegmentHashing)
+                    nameEquality
+                    nameHashing
                     List.singleton
                     rawBranch.types.d1
                 )
@@ -96,8 +98,8 @@ rawBranchToBranch0 hashToBranch rawBranch =
                             (relationMapRange
                                 referenceEquality
                                 referenceHashing
-                                (Equality.list nameSegmentEquality)
-                                (Hashing.list nameSegmentHashing)
+                                nameEquality
+                                nameHashing
                                 (\names -> name :: names)
                                 (rawCausalHead child).cache.typeNames
                             )
@@ -105,37 +107,25 @@ rawBranchToBranch0 hashToBranch rawBranch =
                     (emptyRelation
                         referenceEquality
                         referenceHashing
-                        (Equality.list nameSegmentEquality)
-                        (Hashing.list nameSegmentHashing)
+                        nameEquality
+                        nameHashing
                     )
                     children
                 )
 
-        typeToName : HashDict Reference (HashSet (List NameSegment))
+        typeToName : ReferenceDict NameSet
         typeToName =
             HashDict.foldl
                 (\( name, ( _, Branch child ) ) ->
                     HashDict.union
                         HashSet.semigroup
-                        (HashDict.map
-                            referenceEquality
-                            referenceHashing
-                            (HashSet.map
-                                (Equality.list nameSegmentEquality)
-                                (Hashing.list nameSegmentHashing)
-                                (\names -> name :: names)
-                            )
+                        (ReferenceDict.map
+                            (NameSet.map (\names -> name :: names))
                             (rawCausalHead child).cache.typeToName
                         )
                 )
-                (HashDict.map
-                    referenceEquality
-                    referenceHashing
-                    (HashSet.map
-                        (Equality.list nameSegmentEquality)
-                        (Hashing.list nameSegmentHashing)
-                        List.singleton
-                    )
+                (ReferenceDict.map
+                    (HashSet.map nameEquality nameHashing List.singleton)
                     rawBranch.types.d1.domain
                 )
                 children

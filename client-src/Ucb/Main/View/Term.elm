@@ -104,7 +104,10 @@ viewTerm2 env { out } =
                 ]
 
         TermTm (TermConstructor reference n) ->
-            viewConstructor env.model reference n
+            viewReferent_ env.model (Con reference n Data)
+
+        TermTm (TermRequest reference n) ->
+            viewReferent_ env.model (Con reference n Effect)
 
         TermTm (TermText s) ->
             text "(not implemented: TermText)"
@@ -117,9 +120,6 @@ viewTerm2 env { out } =
 
         TermTm (TermRef reference) ->
             text "(not implemented: TermRef)"
-
-        TermTm (TermRequest reference n) ->
-            text "(not implemented: TermRequest)"
 
         TermTm (TermHandle t1 t2) ->
             text "(not implemented: TermHandle)"
@@ -193,17 +193,12 @@ viewTerm2 env { out } =
             text "(not implemented: TypeCycle)"
 
 
-viewConstructor :
+viewReferent_ :
     Model
-    -> Reference
-    -> Int
+    -> Referent
     -> Element message
-viewConstructor model reference n =
+viewReferent_ model referent =
     let
-        referent : Referent
-        referent =
-            Con reference n Data
-
         fallback : Element message
         fallback =
             viewReferent
@@ -233,17 +228,17 @@ viewConstructor model reference n =
                         Just names ->
                             case HashSet.toList names of
                                 [] ->
-                                    impossible "viewConstructor: empty names"
+                                    impossible "viewReferent: empty names"
 
                                 -- TODO, we should handle aliases better. this
                                 -- just takes the first name
                                 name :: _ ->
-                                    viewConstructor2 head.cache.nameToTerm name
+                                    viewReferent2 head.cache.nameToTerm name
 
 
-viewConstructor2 :
+viewReferent2 :
     NameDict ReferentSet
     -> Name
     -> Element message
-viewConstructor2 nameToTerm fullName =
+viewReferent2 nameToTerm fullName =
     text (String.join "." (shortenName nameToTerm fullName))

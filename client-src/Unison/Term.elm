@@ -191,3 +191,28 @@ termTerm varEquality varHashing term =
     { freeVars = termFFreeVars varEquality varHashing term
     , out = TermTm term
     }
+
+
+{-| Haskell function: Unison.Term.unApps
+Difference: we take the two outer terms from the first TermApp node instead.
+-}
+termUnApps :
+    Term var -- f
+    -> Term var -- x
+    -> ( Term var, List (Term var) )
+termUnApps =
+    termUnApps_ []
+
+
+termUnApps_ :
+    List (Term var)
+    -> Term var
+    -> Term var
+    -> ( Term var, List (Term var) )
+termUnApps_ acc t1 t2 =
+    case t1.out of
+        TermTm (TermApp t3 t4) ->
+            termUnApps_ (t2 :: acc) t3 t4
+
+        _ ->
+            ( t1, t2 :: acc )

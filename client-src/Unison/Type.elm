@@ -147,11 +147,11 @@ typeReferences { out } =
 
 {-| Haskell function: Unison.Type.flattenEffects
 -}
-flattenEffects : Type var -> List (Type var)
-flattenEffects ty =
+typeFlattenEffects : Type var -> List (Type var)
+typeFlattenEffects ty =
     case ty.out of
         TypeTm (TypeEffects tys) ->
-            List.concatMap flattenEffects tys
+            List.concatMap typeFlattenEffects tys
 
         _ ->
             List.singleton ty
@@ -159,8 +159,8 @@ flattenEffects ty =
 
 {-| Haskell function: Unison.Type.unApps
 -}
-unApps : Type var -> Maybe ( Type var, List (Type var) )
-unApps ty0 =
+typeUnApps : Type var -> Maybe ( Type var, List (Type var) )
+typeUnApps ty0 =
     let
         go : Type var -> List (Type var) -> List (Type var)
         go ty acc =
@@ -182,8 +182,8 @@ unApps ty0 =
 {-| Haskell function: Unison.Type.unEffectfulArrows
 Difference: this function takes the rhs of the first arrow, not the whole thing
 -}
-unEffectfulArrows : Type var -> List ( Maybe (List (Type var)), Type var )
-unEffectfulArrows ty =
+typeUnEffectfulArrows : Type var -> List ( Maybe (List (Type var)), Type var )
+typeUnEffectfulArrows ty =
     case ty.out of
         TypeTm (TypeEffect ty1 ty2) ->
             case ty1.out of
@@ -191,11 +191,11 @@ unEffectfulArrows ty =
                     let
                         es2 : Maybe (List (Type var))
                         es2 =
-                            Just (List.concatMap flattenEffects es)
+                            Just (List.concatMap typeFlattenEffects es)
                     in
                     case ty2.out of
                         TypeTm (TypeArrow ty3 ty4) ->
-                            ( es2, ty3 ) :: unEffectfulArrows ty4
+                            ( es2, ty3 ) :: typeUnEffectfulArrows ty4
 
                         _ ->
                             [ ( es2, ty2 ) ]
@@ -204,7 +204,7 @@ unEffectfulArrows ty =
                     [ ( Nothing, ty ) ]
 
         TypeTm (TypeArrow ty3 ty4) ->
-            ( Nothing, ty3 ) :: unEffectfulArrows ty4
+            ( Nothing, ty3 ) :: typeUnEffectfulArrows ty4
 
         _ ->
             [ ( Nothing, ty ) ]
@@ -212,13 +212,13 @@ unEffectfulArrows ty =
 
 {-| Haskell type: Unison.Type.unForalls
 -}
-unForalls : List var -> Type var -> ( List var, Type var )
-unForalls vars ty =
+typeUnForalls : List var -> Type var -> ( List var, Type var )
+typeUnForalls vars ty =
     case ty.out of
         TypeTm (TypeForall ty2) ->
             case ty2.out of
                 TypeAbs var ty3 ->
-                    unForalls (var :: vars) ty3
+                    typeUnForalls (var :: vars) ty3
 
                 _ ->
                     impossible "unForalls: forall not followed by abs"

@@ -38,7 +38,7 @@ viewType model p ty0 =
                 (row
                     []
                     [ viewType model 0 ty1
-                    , viewArrows model (unEffectfulArrows ty2)
+                    , viewArrows model (typeUnEffectfulArrows ty2)
                     ]
                 )
 
@@ -50,7 +50,7 @@ viewType model p ty0 =
                         [ text "[", viewType model 0 ty2, text "]" ]
 
                 _ ->
-                    case unApps ty0 of
+                    case typeUnApps ty0 of
                         Nothing ->
                             impossible "viewType: unApps returned Nothing"
 
@@ -67,7 +67,7 @@ viewType model p ty0 =
         TypeTm (TypeForall _) ->
             let
                 ( tyvars, ty ) =
-                    unForalls [] ty0
+                    typeUnForalls [] ty0
             in
             if p < 0 && List.all symbolIsLowercase tyvars then
                 viewType model p ty

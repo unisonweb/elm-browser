@@ -51,10 +51,6 @@ type alias Branch0 =
         -- Inverted mapping, but including name suffixes. See comment on
         -- 'makeNameToType' below.
         , nameToType : NameDict ReferenceSet
-
-        -- Legacy, will go away soon.
-        -- TODO make it go away
-        , typeNames : Relation Reference Name
         }
     }
 
@@ -90,38 +86,6 @@ rawBranchToBranch0 hashToBranch rawBranch =
                 NameSegmentDict.empty
                 rawBranch.children
 
-        typeNames : Relation Reference Name
-        typeNames =
-            relationUnion
-                (relationMapRange
-                    referenceEquality
-                    referenceHashing
-                    nameEquality
-                    nameHashing
-                    List.singleton
-                    rawBranch.types.d1
-                )
-                (HashDict.foldl
-                    (\( name, ( _, Branch child ) ) ->
-                        relationUnion
-                            (relationMapRange
-                                referenceEquality
-                                referenceHashing
-                                nameEquality
-                                nameHashing
-                                (\names -> name :: names)
-                                (rawCausalHead child).cache.typeNames
-                            )
-                    )
-                    (emptyRelation
-                        referenceEquality
-                        referenceHashing
-                        nameEquality
-                        nameHashing
-                    )
-                    children
-                )
-
         typeToName : ReferenceDict NameSet
         typeToName =
             makeTypeToName
@@ -138,8 +102,7 @@ rawBranchToBranch0 hashToBranch rawBranch =
     , children = children
     , edits = rawBranch.edits
     , cache =
-        { typeNames = typeNames
-        , typeToName = typeToName
+        { typeToName = typeToName
         , nameToType = nameToType
         }
     }

@@ -6,13 +6,17 @@ import HashingContainers.HashSet as HashSet
 import Misc exposing (..)
 import Ucb.Main.Model exposing (..)
 import Ucb.Main.View.Reference exposing (viewReference)
+import Ucb.Unison.NameDict exposing (NameDict)
+import Ucb.Unison.ReferenceSet exposing (ReferenceSet)
 import Ucb.Util.Pretty exposing (..)
 import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)
 import Unison.Codebase.NameSegment exposing (..)
+import Unison.Name exposing (..)
 import Unison.Reference exposing (..)
 import Unison.Symbol exposing (..)
 import Unison.Type exposing (..)
+import Util.HashSet as HashSet
 
 
 viewType :
@@ -121,35 +125,75 @@ viewTypeRef model reference =
                     fallback
 
                 Just (Branch causal) ->
-                    case HashDict.get reference (rawCausalHead causal).cache.typeNames.domain of
+                    let
+                        head =
+                            rawCausalHead causal
+                    in
+                    case HashDict.get reference head.cache.typeToName of
                         Nothing ->
                             fallback
 
                         Just names ->
-                            viewTypeRef2 (HashSet.toList names)
+                            case HashSet.toList names of
+                                [] ->
+                                    impossible "viewType: empty names"
+
+                                -- TODO, we should handle aliases better. this
+                                -- just takes the first name
+                                name :: _ ->
+                                    viewTypeRef2 head.cache.nameToType name
 
 
 viewTypeRef2 :
-    List (List NameSegment)
+    NameDict ReferenceSet
+    -> Name -- The full name
     -> Element message
-viewTypeRef2 names =
-    case names of
-        [] ->
-            impossible "viewTypeRef2: []"
+viewTypeRef2 nameToType fullName =
+    let
+        -- Shorten "foo.bar.Baz" as much as possible by picking the shortest
+        -- unambiguous name. Note that the full name might be ambiguous, that's
+        -- okay.
+        shorten : List Name -> Name
+        shorten candidates =
+            case candidates of
+                [] ->
+                    fullName
 
-        [ name ] ->
-            case listLast name of
-                Nothing ->
-                    impossible "viewTypeRef2: Nothing"
+                name :: names ->
+                    case HashDict.get name nameToType of
+                        Nothing ->
+                            impossible "viewTypeRef2: name missing from map"
 
-                Just name2 ->
-                    text name2
+                        Just references ->
+                            if HashSet.size references == 1 then
+                                name
 
-        names2 ->
-            names2
-                |> List.map (String.join ".")
-                |> String.join "∕"
-                |> text
+                            else
+                                shorten names
+    in
+    fullName
+        |> nameTails
+        |> List.reverse
+        |> shorten
+        |> String.join "."
+        |> text
+
+
+
+-- case names of
+--     [] ->
+--         impossible "viewTypeRef2: []"
+--     [ name ] ->
+--         case listLast name of
+--             Nothing ->
+--                 impossible "viewTypeRef2: Nothing"
+--             Just name2 ->
+--                 text name2
+--     names2 ->
+--         names2
+--             |> List.map (String.join ".")
+--             |> String.join "∕"
+--             |> text
 
 
 {-| Haskell function: Unison.TypePrinter.arrow

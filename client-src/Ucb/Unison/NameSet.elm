@@ -17,6 +17,11 @@ empty =
     HashSet.empty nameEquality nameHashing
 
 
+fromList : List Name -> NameSet
+fromList =
+    HashSet.fromList nameEquality nameHashing
+
+
 map :
     (Name -> Name)
     -> NameSet

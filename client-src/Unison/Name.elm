@@ -26,6 +26,11 @@ nameHashing =
     Hashing.list nameSegmentHashing
 
 
+nameToString : Name -> String
+nameToString =
+    String.join "."
+
+
 {-|
 
 > nameTails ["foo", "bar", "baz"]

@@ -77,6 +77,7 @@ init _ url key =
             , ui =
                 { branches = BranchDict.empty
                 , terms = HashDict.empty idEquality idHashing
+                , search = ""
                 , key = key
                 }
             , errors = []
@@ -92,6 +93,8 @@ init _ url key =
     ( model, initialCommand )
 
 
+{-| TODO rename updateHttpFooBarBaz to update\_Http\_FooBarBaz
+-}
 update : Message -> Model -> ( Model, Cmd Message )
 update message model =
     case message of
@@ -109,6 +112,9 @@ update message model =
 
         User_FocusBranch hash ->
             updateUserFocusBranch hash model
+
+        User_Search search ->
+            update_User_Search search model
 
         User_ToggleBranch hash ->
             updateUserToggleBranch hash model
@@ -324,6 +330,27 @@ updateHttpGetTermTypesAndTypes2 ( termTypes, types ) model =
     )
 
 
+{-| The user has adjusted the current search.
+-}
+update_User_Search :
+    String
+    -> Model
+    -> ( Model, Cmd msg )
+update_User_Search search model =
+    ( { model
+        | ui =
+            { search = String.toLower search
+
+            -- unchanged
+            , branches = model.ui.branches
+            , terms = model.ui.terms
+            , key = model.ui.key
+            }
+      }
+    , Cmd.none
+    )
+
+
 {-| Focus a branch:
 
   - We might've already fetched it (e.g. it's the child of a previous root). In
@@ -385,6 +412,7 @@ updateUserToggleBranch hash model =
                     model.ui.branches
 
             -- unchanged
+            , search = model.ui.search
             , terms = model.ui.terms
             , key = model.ui.key
             }
@@ -432,6 +460,7 @@ updateUserToggleTerm id model =
 
             -- unchanged
             , branches = model.ui.branches
+            , search = model.ui.search
             , key = model.ui.key
             }
       }

@@ -210,7 +210,7 @@ viewTerm2 env { out } =
             text "(not implemented: TermMatch)"
 
         TermCycle _ ->
-            text "(not implemented: TypeCycle)"
+            text "(not implemented: TermCycle)"
 
 
 viewReferent_ :
@@ -261,4 +261,4 @@ viewReferent2 :
     -> Name
     -> Element message
 viewReferent2 nameToTerm fullName =
-    text (String.join "." (shortenName nameToTerm fullName))
+    text (nameToString (shortenName nameToTerm fullName))

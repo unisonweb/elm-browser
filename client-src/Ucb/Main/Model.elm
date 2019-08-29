@@ -56,11 +56,16 @@ type alias Model =
         , successors : BranchDict (HashSet BranchHash)
         }
 
-    -- UI state, not pulled (nor derived) from the codebase
+    -- UI state
     , ui :
+        { -- Visible?
+          branches : BranchDict Bool
+
         -- Visible?
-        { branches : BranchDict Bool
         , terms : HashDict Id Bool
+
+        -- Search box
+        , search : String
         , key : Nav.Key
         }
 

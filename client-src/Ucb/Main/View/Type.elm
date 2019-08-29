@@ -150,7 +150,7 @@ viewTypeRef2 :
     -> Name
     -> Element message
 viewTypeRef2 nameToType fullName =
-    text (String.join "." (shortenName nameToType fullName))
+    text (nameToString (shortenName nameToType fullName))
 
 
 {-| Haskell function: Unison.TypePrinter.arrow

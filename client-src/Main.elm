@@ -1,6 +1,7 @@
 module Main exposing (..)
 
 import Browser
+import Browser.Navigation as Nav
 import Bytes exposing (Bytes)
 import Dict
 import HashingContainers.HashDict as HashDict exposing (HashDict)
@@ -24,26 +25,45 @@ import Unison.Referent exposing (..)
 import Unison.Symbol exposing (..)
 import Unison.Term exposing (..)
 import Unison.Type exposing (..)
+import Url
 import Util.HashSet as HashSet
 
 
 main : Program () Model Message
 main =
-    Browser.element
+    Browser.application
         { init = init
         , subscriptions = subscriptions
         , update = update
         , view = view
+        , onUrlRequest = LinkClicked
+        , onUrlChange = UrlChanged
         }
 
 
-init : () -> ( Model, Cmd Message )
-init _ =
+{-| Port that elm-live runs on
+-}
+elmLivePort : number
+elmLivePort =
+    8000
+
+
+init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Message )
+init _ url key =
     let
+        isDevMode : Bool
+        isDevMode =
+            case url.port_ of
+                Nothing ->
+                    False
+
+                Just portNum ->
+                    portNum == elmLivePort
+
         model : Model
         model =
             { api =
-                { unison = makeLocalServerUnisonCodebaseAPI
+                { unison = makeLocalServerUnisonCodebaseAPI isDevMode
                 }
             , codebase =
                 { head = Nothing
@@ -57,8 +77,10 @@ init _ =
             , ui =
                 { branches = BranchDict.empty
                 , terms = HashDict.empty idEquality idHashing
+                , key = key
                 }
             , errors = []
+            , isDevMode = isDevMode
             }
 
         -- First command: fetch _head path!
@@ -96,6 +118,12 @@ update message model =
 
         User_DebugButton ->
             updateUserDebugButton model
+
+        UrlChanged _ ->
+            ( model, Cmd.none )
+
+        LinkClicked _ ->
+            ( model, Cmd.none )
 
 
 {-| Whatever you're debugging. Might be nothing!
@@ -358,6 +386,7 @@ updateUserToggleBranch hash model =
 
             -- unchanged
             , terms = model.ui.terms
+            , key = model.ui.key
             }
       }
     , case HashDict.get hash model.codebase.branches of
@@ -403,6 +432,7 @@ updateUserToggleTerm id model =
 
             -- unchanged
             , branches = model.ui.branches
+            , key = model.ui.key
             }
       }
     , command

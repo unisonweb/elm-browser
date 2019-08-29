@@ -28,6 +28,18 @@ To build, you need `elm` 0.19+ and either `cabal-install` 2.4+ or `stack`.
 That's it! Now you have a `unison-browser` executable that you can run in any
 directory with a `.unison` folder.
 
+### Note: Development Workflow
+
+For a slightly optimized workflow, you can have live reloading with [elm-live](https://github.com/wking-io/elm-live)
+
+- Start the haskell server in dev mode
+
+      DEV=true stack exec unison-browser
+
+- Use elm-live
+
+      elm-live client-src/Main.elm --debug
+
 ## Code guide
 
 Module guide:

@@ -1,5 +1,6 @@
 module Ucb.Main.Model exposing (..)
 
+import Browser.Navigation as Nav
 import Bytes exposing (Bytes)
 import HashingContainers.HashDict as HashDict exposing (HashDict)
 import HashingContainers.HashSet as HashSet exposing (HashSet)
@@ -60,11 +61,15 @@ type alias Model =
         -- Visible?
         { branches : BranchDict Bool
         , terms : HashDict Id Bool
+        , key : Nav.Key
         }
 
     -- The errors we've seen. Just slappin' them in the model to put into the
     -- HTML when something is going wrong.
     , errors : List Error
+
+    -- Whether we're running in dev and need to use CORS headers
+    , isDevMode : Bool
     }
 
 

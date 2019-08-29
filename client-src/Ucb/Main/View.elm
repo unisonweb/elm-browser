@@ -1,5 +1,6 @@
 module Ucb.Main.View exposing (..)
 
+import Browser exposing (Document)
 import Element exposing (..)
 import HashingContainers.HashDict as HashDict exposing (HashDict)
 import Html exposing (Html)
@@ -8,9 +9,9 @@ import Ucb.Main.Model exposing (..)
 import Ucb.Main.View.Branch exposing (..)
 
 
-view : Model -> Html Message
+view : Model -> Document Message
 view model =
-    layout [] (view2 model)
+    { title = "Unison Code Browser", body = [ layout [] (view2 model) ] }
 
 
 view2 : Model -> Element Message

@@ -64,6 +64,26 @@ viewTerm2 env { out } =
         TermAbs var term ->
             text "(not implemented: TermAbs)"
 
+        TermTm (TermApp t1 t2) ->
+            case termUnApps t1 t2 of
+                ( f, xs ) ->
+                    ppParen
+                        (env.precedence >= 10)
+                        (row
+                            []
+                            ((f :: xs)
+                                |> List.map
+                                    (viewTerm2
+                                        { model = env.model
+                                        , precedence = 10
+                                        , blockContext = Normal
+                                        , infixContext = NonInfix
+                                        }
+                                    )
+                                |> List.intersperse (text " ")
+                            )
+                        )
+
         TermTm (TermInt n) ->
             text (String.fromInt (unsafeInt64ToInt53 n))
 
@@ -123,9 +143,6 @@ viewTerm2 env { out } =
 
         TermTm (TermHandle t1 t2) ->
             text "(not implemented: TermHandle)"
-
-        TermTm (TermApp t1 t2) ->
-            text "(not implemented: TermApp)"
 
         TermTm (TermAnn term type_) ->
             viewTerm2 env term

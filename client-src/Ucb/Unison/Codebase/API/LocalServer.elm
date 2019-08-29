@@ -17,73 +17,93 @@ import Unison.Term exposing (Term)
 import Unison.Type exposing (..)
 
 
-makeLocalServerUnisonCodebaseAPI : UnisonCodebaseAPI
-makeLocalServerUnisonCodebaseAPI =
-    { getHeadHash = getHeadHash
-    , getRawCausal = getRawCausal
-    , getTerm = getTerm
-    , getTermType = getTermType
-    , getType = getType
+{-| Haskell server localhost base url
+-}
+devBase : String
+devBase =
+    "http://localhost:8180/"
+
+
+prefixIfDev : Bool -> String -> String
+prefixIfDev isDev path =
+    if isDev then
+        devBase ++ path
+
+    else
+        path
+
+
+makeLocalServerUnisonCodebaseAPI : Bool -> UnisonCodebaseAPI
+makeLocalServerUnisonCodebaseAPI isDev =
+    { getHeadHash = getHeadHash isDev
+    , getRawCausal = getRawCausal isDev
+    , getTerm = getTerm isDev
+    , getTermType = getTermType isDev
+    , getType = getType isDev
     }
 
 
-getHeadHash : Task (Http.Error String) (Http.Response BranchHash)
-getHeadHash =
+getHeadHash : Bool -> Task (Http.Error String) (Http.Response BranchHash)
+getHeadHash isDev =
     Http.getJson
         { decoder = Json.Decode.string
         , headers = []
         , timeout = Nothing
-        , url = "head"
+        , url = prefixIfDev isDev "head"
         }
 
 
 getRawCausal :
-    BranchHash
+    Bool
+    -> BranchHash
     -> Task (Http.Error Bytes) ( BranchHash, Http.Response (RawCausal RawBranch) )
-getRawCausal hash =
+getRawCausal isDev hash =
     Http.getBytes
         { decoder = V1.rawCausalDecoder
         , headers = []
         , timeout = Nothing
-        , url = "branch/" ++ hash
+        , url = prefixIfDev isDev ("branch/" ++ hash)
         }
         |> Task.map (\response -> ( hash, response ))
 
 
 getTerm :
-    Id
+    Bool
+    -> Id
     -> Task (Http.Error Bytes) ( Id, Http.Response (Term Symbol) )
-getTerm id =
+getTerm isDev id =
     Http.getBytes
         { decoder = V1.termDecoder
         , headers = []
         , timeout = Nothing
-        , url = "term/" ++ idToString id ++ "/term"
+        , url = prefixIfDev isDev ("term/" ++ idToString id ++ "/term")
         }
         |> Task.map (\response -> ( id, response ))
 
 
 getTermType :
-    Id
+    Bool
+    -> Id
     -> Task (Http.Error Bytes) ( Id, Http.Response (Type Symbol) )
-getTermType id =
+getTermType isDev id =
     Http.getBytes
         { decoder = V1.typeDecoder
         , headers = []
         , timeout = Nothing
-        , url = "term/" ++ idToString id ++ "/type"
+        , url = prefixIfDev isDev ("term/" ++ idToString id ++ "/type")
         }
         |> Task.map (\response -> ( id, response ))
 
 
 getType :
-    Id
+    Bool
+    -> Id
     -> Task (Http.Error Bytes) ( Id, Http.Response (Declaration Symbol) )
-getType id =
+getType isDev id =
     Http.getBytes
         { decoder = V1.declarationDecoder
         , headers = []
         , timeout = Nothing
-        , url = "declaration/" ++ idToString id
+        , url = prefixIfDev isDev ("declaration/" ++ idToString id)
         }
         |> Task.map (\response -> ( id, response ))

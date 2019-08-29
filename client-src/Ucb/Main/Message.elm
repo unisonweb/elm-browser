@@ -1,5 +1,6 @@
 module Ucb.Main.Message exposing (..)
 
+import Browser
 import Bytes exposing (Bytes)
 import HashingContainers.HashDict exposing (HashDict)
 import HashingContainers.HashSet exposing (HashSet)
@@ -14,6 +15,7 @@ import Unison.Referent exposing (..)
 import Unison.Symbol exposing (..)
 import Unison.Term exposing (..)
 import Unison.Type exposing (..)
+import Url
 
 
 type Message
@@ -33,3 +35,5 @@ type Message
     | Http_GetHeadHash (Result (Http.Error String) (Http.Response BranchHash))
     | Http_GetTerm (Result (Http.Error Bytes) ( Id, Http.Response (Term Symbol) ))
     | Http_GetTermTypesAndTypes (Result (Http.Error Bytes) ( List ( Id, Type Symbol ), List ( Id, Declaration Symbol ) ))
+    | UrlChanged Url.Url
+    | LinkClicked Browser.UrlRequest

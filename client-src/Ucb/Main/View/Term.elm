@@ -139,7 +139,7 @@ viewTerm2 env { out } =
             text "(not implemented: TermBlank)"
 
         TermTm (TermRef reference) ->
-            text "(not implemented: TermRef)"
+            viewReferent_ env.model (Ref reference)
 
         TermTm (TermHandle t1 t2) ->
             text "(not implemented: TermHandle)"

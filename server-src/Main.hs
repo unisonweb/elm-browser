@@ -9,10 +9,12 @@ module Main where
 import Control.Exception (throwIO)
 import Control.Monad
 import Data.Function ((&))
+import Data.Maybe
 import Data.Text (Text)
 import Network.HTTP.Types hiding (StdMethod(..))
 import Network.Wai
 import Network.Wai.Handler.Warp
+import Network.Wai.Middleware.Cors
 import Paths_unison_browser (getDataFileName)
 import Prelude hiding (head)
 import System.Directory
@@ -54,13 +56,27 @@ main =
             _ ->
               throwIO err
 
+      isDev :: Bool <-
+        isJust <$> lookupEnv "DEV"
+
       runSettings
         (defaultSettings
           & setBeforeMainLoop (putStrLn ("Running on 127.0.0.1:" ++ show port))
           & setHost "127.0.0.1"
           & setPort port)
-        app
+        ((if isDev then simpleCorsWithContentType else id) app)
         `catchIOError` handler
+
+  where
+    simpleCorsWithContentType :: Middleware
+    simpleCorsWithContentType =
+      cors
+        (\_ ->
+          Just
+            simpleCorsResourcePolicy
+              { corsRequestHeaders = ["content-type"]
+              })
+
 
 printUsage :: IO ()
 printUsage = do

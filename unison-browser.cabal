@@ -12,6 +12,7 @@ executable unison-browser
     http-types ^>= 0.12.3,
     text ^>= 1.2.3,
     wai ^>= 3.2.2,
+    wai-cors ^>= 0.2.7,
     warp ^>= 3.3.0,
   default-language: Haskell2010
   ghc-options: -Wall -threaded

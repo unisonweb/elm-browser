@@ -165,12 +165,18 @@ viewTerm2 env { out } =
                )
         -}
         TermTm (TermLam term) ->
-            case term.out of
-                TermAbs var body ->
+            case termUnLams term of
+                ( vars, body ) ->
                     ppParen (env.precedence >= 3)
                         (column
                             []
-                            [ text (symbolToString var ++ " -> ")
+                            [ row
+                                []
+                                [ vars
+                                    |> List.map (\var -> text (symbolToString var ++ " "))
+                                    |> row []
+                                , text "->"
+                                ]
                             , row
                                 []
                                 [ text "  "
@@ -184,9 +190,6 @@ viewTerm2 env { out } =
                                 ]
                             ]
                         )
-
-                _ ->
-                    impossible "viewTerm: TermLam, then no TermAbs?"
 
         TermTm (TermIf t1 t2 t3) ->
             text "(not implemented: TermIf)"

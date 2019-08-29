@@ -1,8 +1,20 @@
-module Unison.Term exposing (..)
+module Unison.Term exposing
+    ( MatchCase(..)
+    , Term
+    , TermAbt(..)
+    , TermF(..)
+    , termAbs
+    , termCycle
+    , termTerm
+    , termUnApps
+    , termUnLams
+    , termVar
+    )
 
 import Array exposing (Array)
 import HashingContainers.HashSet as HashSet exposing (HashSet)
 import Int64 exposing (Int64)
+import Misc exposing (..)
 import Typeclasses.Classes.Equality exposing (Equality)
 import Typeclasses.Classes.Hashing exposing (Hashing)
 import Unison.ABT exposing (..)
@@ -191,6 +203,35 @@ termTerm varEquality varHashing term =
     { freeVars = termFFreeVars varEquality varHashing term
     , out = TermTm term
     }
+
+
+{-| Given a term that "must" be an Abs (because it was preceded by a Lam),
+return a list of all vars bound by consecutive lambdas, and the final body.
+-}
+termUnLams :
+    Term var
+    -> ( List var, Term var )
+termUnLams term0 =
+    case unAbs term0 of
+        ( var, term1 ) ->
+            case term1.out of
+                TermTm (TermLam term2) ->
+                    case termUnLams term2 of
+                        ( vars, body ) ->
+                            ( var :: vars, body )
+
+                _ ->
+                    ( [ var ], term1 )
+
+
+unAbs : Term var -> ( var, Term var )
+unAbs term =
+    case term.out of
+        TermAbs var body ->
+            ( var, body )
+
+        _ ->
+            impossible "termUnLams: Lam not followed by Abs?"
 
 
 {-| Haskell function: Unison.Term.unApps

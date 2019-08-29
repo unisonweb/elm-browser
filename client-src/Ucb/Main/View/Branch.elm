@@ -203,7 +203,9 @@ viewBranchTerm2 model reference name links =
                             none
                             (\term ->
                                 el
-                                    [ paddingEach { bottom = 5, left = 10, right = 0, top = 5 } ]
+                                    [ codeFontFamily
+                                    , paddingEach { bottom = 5, left = 10, right = 0, top = 5 }
+                                    ]
                                     (viewTerm model term)
                             )
                             (HashDict.get id model.codebase.terms)

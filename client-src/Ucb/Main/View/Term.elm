@@ -1,6 +1,6 @@
 module Ucb.Main.View.Term exposing (viewTerm)
 
-import Array
+import Array exposing (Array)
 import Element exposing (..)
 import HashingContainers.HashDict as HashDict
 import HashingContainers.HashSet as HashSet
@@ -22,7 +22,16 @@ import Unison.Reference exposing (..)
 import Unison.Referent exposing (..)
 import Unison.Symbol exposing (..)
 import Unison.Term exposing (..)
+import Unison.Type exposing (..)
 import Word64 exposing (..)
+
+
+type alias Env =
+    { model : Model -- TODO pick out the bits we actually care about
+    , precedence : Int
+    , blockContext : BlockContext
+    , infixContext : InfixContext
+    }
 
 
 type BlockContext
@@ -49,168 +58,421 @@ viewTerm model =
 
 
 viewTerm2 :
-    { model : Model
-    , precedence : Int
-    , blockContext : BlockContext
-    , infixContext : InfixContext
-    }
+    Env
     -> Term Symbol
     -> Element message
 viewTerm2 env { out } =
     case out of
-        TermVar var ->
-            text (symbolToString var)
-
         TermAbs var term ->
             text "(not implemented: TermAbs)"
 
+        TermCycle _ ->
+            text "(not implemented: TermCycle)"
+
+        TermVar var ->
+            viewTermVar var
+
         TermTm (TermApp t1 t2) ->
-            case termUnApps t1 t2 of
-                ( f, xs ) ->
-                    ppParen
-                        (env.precedence >= 10)
-                        (row
-                            []
-                            ((f :: xs)
-                                |> List.map
-                                    (viewTerm2
-                                        { model = env.model
-                                        , precedence = 10
-                                        , blockContext = Normal
-                                        , infixContext = NonInfix
-                                        }
-                                    )
-                                |> List.intersperse (text " ")
-                            )
-                        )
+            viewTermApp env t1 t2
 
-        TermTm (TermInt n) ->
-            text (String.fromInt (unsafeInt64ToInt53 n))
+        TermTm (TermAnd t1 t2) ->
+            viewTermAnd env t1 t2
 
-        TermTm (TermNat n) ->
-            text (String.fromInt (unsafeWord64ToInt53 n))
-
-        TermTm (TermFloat n) ->
-            text (String.fromFloat n)
-
-        TermTm (TermBoolean b) ->
-            text
-                (if b then
-                    "true"
-
-                 else
-                    "false"
-                )
-
-        TermTm (TermSequence terms) ->
-            row
-                []
-                [ text "["
-                , row
-                    []
-                    (terms
-                        |> Array.map
-                            (viewTerm2
-                                { model = env.model
-                                , precedence = 0
-                                , blockContext = Normal
-                                , infixContext = NonInfix
-                                }
-                            )
-                        |> Array.toList
-                        |> List.intersperse (text ", ")
-                    )
-                , text "]"
-                ]
-
-        TermTm (TermConstructor reference n) ->
-            viewReferent_ env.model (Con reference n Data)
-
-        TermTm (TermRequest reference n) ->
-            viewReferent_ env.model (Con reference n Effect)
-
-        TermTm (TermText s) ->
-            text "(not implemented: TermText)"
-
-        TermTm (TermChar c) ->
-            text "(not implemented: TermChar)"
+        TermTm (TermAnn term type_) ->
+            viewTermAnn env term type_
 
         TermTm (TermBlank blank) ->
             text "(not implemented: TermBlank)"
 
-        TermTm (TermRef reference) ->
-            viewReferent_ env.model (Ref reference)
+        TermTm (TermBoolean b) ->
+            viewTermBoolean b
+
+        TermTm (TermChar c) ->
+            viewTermChar c
+
+        TermTm (TermConstructor reference n) ->
+            viewTermConstructor env reference n
+
+        TermTm (TermFloat n) ->
+            viewTermFloat n
 
         TermTm (TermHandle t1 t2) ->
-            text "(not implemented: TermHandle)"
-
-        TermTm (TermAnn term type_) ->
-            viewTerm2 env term
-
-        {-
-           ppParen
-               (env.precedence >= 0)
-               (row
-                   []
-                   [ viewTerm2
-                       { model = env.model
-                       , precedence = 0
-                       , blockContext = Normal
-                       , infixContext = NonInfix
-                       }
-                       term
-                   , text " : "
-                   , viewType env.model 0 type_
-                   ]
-               )
-        -}
-        TermTm (TermLam term) ->
-            case termUnLams term of
-                ( vars, body ) ->
-                    ppParen (env.precedence >= 3)
-                        (column
-                            []
-                            [ row
-                                []
-                                [ vars
-                                    |> List.map (\var -> text (symbolToString var ++ " "))
-                                    |> row []
-                                , text "->"
-                                ]
-                            , row
-                                []
-                                [ text "  "
-                                , viewTerm2
-                                    { model = env.model
-                                    , precedence = 2
-                                    , blockContext = Block
-                                    , infixContext = NonInfix
-                                    }
-                                    body
-                                ]
-                            ]
-                        )
+            viewTermHandle env t1 t2
 
         TermTm (TermIf t1 t2 t3) ->
-            text "(not implemented: TermIf)"
+            viewTermIf env t1 t2 t3
 
-        TermTm (TermAnd t1 t2) ->
-            text "(not implemented: TermAnd)"
+        TermTm (TermInt n) ->
+            viewTermInt n
 
-        TermTm (TermOr t1 t2) ->
-            text "(not implemented: TermOr)"
-
-        TermTm (TermLetRec _ _ _) ->
-            text "(not implemented: TermLetRec)"
+        TermTm (TermLam term) ->
+            viewTermLam env term
 
         TermTm (TermLet _ _ _) ->
             text "(not implemented: TermLet)"
 
+        TermTm (TermLetRec _ _ _) ->
+            text "(not implemented: TermLetRec)"
+
         TermTm (TermMatch _ _) ->
             text "(not implemented: TermMatch)"
 
-        TermCycle _ ->
-            text "(not implemented: TermCycle)"
+        TermTm (TermNat n) ->
+            viewTermNat n
+
+        TermTm (TermOr t1 t2) ->
+            viewTermOr env t1 t2
+
+        TermTm (TermRef reference) ->
+            viewTermRef env reference
+
+        TermTm (TermRequest reference n) ->
+            viewTermRequest env reference n
+
+        TermTm (TermSequence terms) ->
+            viewTermSequence env terms
+
+        TermTm (TermText s) ->
+            text "(not implemented: TermText)"
+
+
+{-| Should be the same as viewTermOr
+-}
+viewTermAnd :
+    Env
+    -> Term Symbol
+    -> Term Symbol
+    -> Element message
+viewTermAnd env t1 t2 =
+    let
+        env2 : Env
+        env2 =
+            { model = env.model
+            , precedence = 10
+            , blockContext = Normal
+            , infixContext = NonInfix
+            }
+    in
+    ppParen (env.precedence >= 10)
+        (column []
+            [ text "and"
+            , row []
+                [ text "  "
+                , column []
+                    [ viewTerm2 env2 t1
+                    , viewTerm2 env2 t2
+                    ]
+                ]
+            ]
+        )
+
+
+viewTermAnn :
+    Env
+    -> Term Symbol
+    -> Type Symbol
+    -> Element message
+viewTermAnn env term type_ =
+    viewTerm2 env term
+
+
+
+{-
+   ppParen
+       (env.precedence >= 0)
+       (row
+           []
+           [ viewTerm2
+               { model = env.model
+               , precedence = 0
+               , blockContext = Normal
+               , infixContext = NonInfix
+               }
+               term
+           , text " : "
+           , viewType env.model 0 type_
+           ]
+       )
+-}
+
+
+viewTermApp :
+    Env
+    -> Term Symbol
+    -> Term Symbol
+    -> Element message
+viewTermApp env t1 t2 =
+    case termUnApps t1 t2 of
+        ( f, xs ) ->
+            ppParen
+                (env.precedence >= 10)
+                (row []
+                    ((f :: xs)
+                        |> List.map
+                            (viewTerm2
+                                { model = env.model
+                                , precedence = 10
+                                , blockContext = Normal
+                                , infixContext = NonInfix
+                                }
+                            )
+                        |> List.intersperse (text " ")
+                    )
+                )
+
+
+viewTermBoolean :
+    Bool
+    -> Element message
+viewTermBoolean b =
+    text
+        (if b then
+            "true"
+
+         else
+            "false"
+        )
+
+
+viewTermChar :
+    Char
+    -> Element message
+viewTermChar c =
+    text ("'" ++ String.fromChar c ++ "'")
+
+
+viewTermConstructor :
+    Env
+    -> Reference
+    -> Int
+    -> Element message
+viewTermConstructor env reference n =
+    viewReferent_ env.model (Con reference n Data)
+
+
+viewTermFloat :
+    Float
+    -> Element message
+viewTermFloat n =
+    text (String.fromFloat n)
+
+
+viewTermHandle :
+    Env
+    -> Term Symbol
+    -> Term Symbol
+    -> Element message
+viewTermHandle env t1 t2 =
+    let
+        env2 : Env
+        env2 =
+            { model = env.model
+            , precedence = 10
+            , blockContext = Normal
+            , infixContext = NonInfix
+            }
+    in
+    ppParen (env.precedence >= 2)
+        (column []
+            [ row []
+                [ text "handle "
+                , viewTerm2
+                    { model = env.model
+                    , precedence = 2
+                    , blockContext = Normal
+                    , infixContext = NonInfix
+                    }
+                    t1
+                , text "in"
+                ]
+            , row []
+                [ text "  "
+                , viewTerm2
+                    { model = env.model
+                    , precedence = 2
+                    , blockContext = Block
+                    , infixContext = NonInfix
+                    }
+                    t2
+                ]
+            ]
+        )
+
+
+viewTermIf :
+    Env
+    -> Term Symbol
+    -> Term Symbol
+    -> Term Symbol
+    -> Element message
+viewTermIf env t1 t2 t3 =
+    ppParen (env.precedence >= 2)
+        (column []
+            [ row []
+                [ text "if "
+                , viewTerm2
+                    { model = env.model
+                    , precedence = 2
+                    , blockContext = Block
+                    , infixContext = NonInfix
+                    }
+                    t1
+                , text " then"
+                ]
+            , row []
+                [ text "  "
+                , viewTerm2
+                    { model = env.model
+                    , precedence = 0
+                    , blockContext = Block
+                    , infixContext = NonInfix
+                    }
+                    t2
+                ]
+            , text "else"
+            , row []
+                [ text "  "
+                , viewTerm2
+                    { model = env.model
+                    , precedence = 0
+                    , blockContext = Block
+                    , infixContext = NonInfix
+                    }
+                    t3
+                ]
+            ]
+        )
+
+
+viewTermInt :
+    Int64
+    -> Element message
+viewTermInt n =
+    let
+        n2 : Int
+        n2 =
+            unsafeInt64ToInt53 n
+    in
+    if n2 >= 0 then
+        text (String.cons '+' (String.fromInt n2))
+
+    else
+        text (String.fromInt n2)
+
+
+viewTermLam :
+    Env
+    -> Term Symbol
+    -> Element message
+viewTermLam env term =
+    case termUnLams term of
+        ( vars, body ) ->
+            ppParen (env.precedence >= 3)
+                (column []
+                    [ row []
+                        [ vars
+                            |> List.map (\var -> text (symbolToString var ++ " "))
+                            |> row []
+                        , text "->"
+                        ]
+                    , row []
+                        [ text "  "
+                        , viewTerm2
+                            { model = env.model
+                            , precedence = 2
+                            , blockContext = Block
+                            , infixContext = NonInfix
+                            }
+                            body
+                        ]
+                    ]
+                )
+
+
+viewTermNat :
+    Word64
+    -> Element message
+viewTermNat n =
+    text (String.fromInt (unsafeWord64ToInt53 n))
+
+
+{-| Should be the same as viewTermAnd
+-}
+viewTermOr :
+    Env
+    -> Term Symbol
+    -> Term Symbol
+    -> Element message
+viewTermOr env t1 t2 =
+    let
+        env2 : Env
+        env2 =
+            { model = env.model
+            , precedence = 10
+            , blockContext = Normal
+            , infixContext = NonInfix
+            }
+    in
+    ppParen (env.precedence >= 10)
+        (column []
+            [ text "or"
+            , row []
+                [ text "  "
+                , column []
+                    [ viewTerm2 env2 t1
+                    , viewTerm2 env2 t2
+                    ]
+                ]
+            ]
+        )
+
+
+viewTermRef :
+    Env
+    -> Reference
+    -> Element message
+viewTermRef env reference =
+    viewReferent_ env.model (Ref reference)
+
+
+viewTermRequest :
+    Env
+    -> Reference
+    -> Int
+    -> Element message
+viewTermRequest env reference n =
+    viewReferent_ env.model (Con reference n Effect)
+
+
+viewTermSequence :
+    Env
+    -> Array (Term Symbol)
+    -> Element message
+viewTermSequence env terms =
+    row []
+        [ text "["
+        , row []
+            (terms
+                |> Array.map
+                    (viewTerm2
+                        { model = env.model
+                        , precedence = 0
+                        , blockContext = Normal
+                        , infixContext = NonInfix
+                        }
+                    )
+                |> Array.toList
+                |> List.intersperse (text ", ")
+            )
+        , text "]"
+        ]
+
+
+viewTermVar :
+    Symbol
+    -> Element message
+viewTermVar var =
+    text (symbolToString var)
 
 
 viewReferent_ :

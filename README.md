@@ -30,15 +30,27 @@ directory with a `.unison` folder.
 
 ### Note: Development Workflow
 
+#### Client
+
 For a slightly optimized workflow, you can have live reloading with [elm-live](https://github.com/wking-io/elm-live)
 
 - Start the haskell server in dev mode
 
-      DEV=true stack exec unison-browser
+      // One or the other
+      DEV=true cabal v2-run
+      DEV=true stack run
 
 - Use elm-live
 
       elm-live client-src/Main.elm --debug
+
+#### Server
+
+Use `ghcid` to for live reloading.
+
+    // One or the other
+    ghcid -c "cabal v2-repl -O0" --restart unison-browser.cabal
+    ghcid -c "stack ghci" --restart unison-browser.cabal
 
 ## Code guide
 

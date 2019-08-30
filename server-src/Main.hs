@@ -25,6 +25,7 @@ import System.IO
 import System.IO.Error
 import Text.Read
 
+import qualified Data.ByteString.Char8 as ByteString.Char8
 import qualified Data.ByteString.Lazy.Char8 as LazyByteString.Char8
 import qualified Data.Text as Text
 
@@ -85,7 +86,10 @@ app
   :: Request
   -> (Response -> IO ResponseReceived)
   -> IO ResponseReceived
-app request respond =
+app request respond = do
+  ByteString.Char8.putStrLn
+    (requestMethod request <> " " <> rawPathInfo request)
+
   case request of
     GET [] -> do
       indexHtml <- getDataFileName "index.html"
@@ -96,7 +100,7 @@ app request respond =
           indexHtml
           Nothing)
 
-    GET ["branch", branch] -> do
+    GET ["branch", branch] ->
       respond
         (responseFile
           status200

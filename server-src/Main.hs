@@ -1,3 +1,4 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -61,7 +62,10 @@ main =
 
       runSettings
         (defaultSettings
-          & setBeforeMainLoop (putStrLn ("Running on 127.0.0.1:" ++ show port))
+          & setBeforeMainLoop (do
+              putStrLn ("Running on 127.0.0.1:" ++ show port)
+              when isDev do
+                putStrLn "Developer mode: allowing cross-origin requests")
           & setHost "127.0.0.1"
           & setPort port)
         ((if isDev then simpleCorsWithContentType else id) app)
@@ -70,12 +74,7 @@ main =
   where
     simpleCorsWithContentType :: Middleware
     simpleCorsWithContentType =
-      cors
-        (\_ ->
-          Just
-            simpleCorsResourcePolicy
-              { corsRequestHeaders = ["content-type"]
-              })
+      cors (\_ -> Just simpleCorsResourcePolicy)
 
 
 printUsage :: IO ()

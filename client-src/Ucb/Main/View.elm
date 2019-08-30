@@ -117,7 +117,7 @@ viewSearchPrototype model =
     column
         []
         [ text "Hi, I'm your friendly neighborhood search box"
-        , text "I was implemented by a backend developer so I'm a bit visually challenged"
+        , text "While I look great just the way I am, we are excited for colorful UI improvements coming soon!"
         , text "Anywho please give me a spin!"
         , Element.Input.text
             []

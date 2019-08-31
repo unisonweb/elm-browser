@@ -62,7 +62,7 @@ getRawCausal isDev hash =
         { decoder = V1.rawCausalDecoder
         , headers = []
         , timeout = Nothing
-        , url = prefixIfDev isDev ("branch/" ++ hash)
+        , url = prefixIfDev isDev ("/branch/" ++ hash)
         }
         |> Task.map (\response -> ( hash, response ))
 

@@ -26,6 +26,7 @@ import Unison.Symbol exposing (..)
 import Unison.Term exposing (..)
 import Unison.Type exposing (..)
 import Url
+import Url.Parser as UrlParser exposing ((</>))
 import Util.HashSet as HashSet
 
 
@@ -123,12 +124,28 @@ update message model =
         User_DebugButton ->
             update_User_DebugButton model
 
-        UrlChanged _ ->
-            ( model, Cmd.none )
+        UrlChanged url ->
+          let maybeHash =
+                UrlParser.parse branchParser url
+          in
+              case maybeHash of
+                Nothing ->
+                  update_User_FocusBranch "head" model
+                Just hash ->
+                  update_User_FocusBranch hash model
 
-        LinkClicked _ ->
-            ( model, Cmd.none )
+        LinkClicked urlFromWhere ->
+          case urlFromWhere of
+            Browser.Internal ->
+              let maybeHash =
+                UrlParser.parse branchParser url
+              in 
 
+
+
+branchParser : UrlParser.Parser (String -> a) a
+branchParser = 
+  UrlParser.s "branch" </> UrlParser.string
 
 {-| Whatever you're debugging. Might be nothing!
 -}

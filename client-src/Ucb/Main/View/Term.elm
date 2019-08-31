@@ -7,9 +7,7 @@ import HashingContainers.HashSet as HashSet
 import Int64 exposing (..)
 import Misc exposing (..)
 import Ucb.Main.Model exposing (..)
-import Ucb.Main.View.Reference exposing (viewReference)
 import Ucb.Main.View.Referent exposing (viewReferent)
-import Ucb.Main.View.Type exposing (viewType)
 import Ucb.Unison.Name exposing (..)
 import Ucb.Unison.NameDict exposing (..)
 import Ucb.Unison.ReferentSet exposing (..)
@@ -172,7 +170,7 @@ viewTermAnn :
     -> Term Symbol
     -> Type Symbol
     -> Element message
-viewTermAnn env term type_ =
+viewTermAnn env term _ =
     viewTerm2 env term
 
 
@@ -263,15 +261,6 @@ viewTermHandle :
     -> Term Symbol
     -> Element message
 viewTermHandle env t1 t2 =
-    let
-        env2 : Env
-        env2 =
-            { model = env.model
-            , precedence = 10
-            , blockContext = Normal
-            , infixContext = NonInfix
-            }
-    in
     ppParen (env.precedence >= 2)
         (column []
             [ row []

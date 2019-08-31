@@ -1,7 +1,5 @@
 module Int64 exposing (..)
 
-import Bitwise
-
 
 type Int64
     = SmallInt64 Int
@@ -31,5 +29,5 @@ unsafeInt64ToInt53 word =
         SmallInt64 n ->
             n
 
-        BigInt64 n m ->
+        BigInt64 _ _ ->
             Debug.todo "unsafeInt64ToInt53: BigInt64"

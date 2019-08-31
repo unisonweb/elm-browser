@@ -30,7 +30,15 @@ getFile { owner, repo, ref, path, decoder } =
         { decoder = decoder
         , headers = []
         , timeout = Nothing
-        , url = "https://raw.githubusercontent.com/" ++ owner ++ "/" ++ repo ++ "/master/" ++ path
+        , url =
+            String.join
+                "/"
+                [ "https://raw.githubusercontent.com"
+                , owner
+                , repo
+                , ref
+                , path
+                ]
         }
 
 

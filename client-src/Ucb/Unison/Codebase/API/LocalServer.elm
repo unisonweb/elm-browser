@@ -1,6 +1,5 @@
 module Ucb.Unison.Codebase.API.LocalServer exposing (makeLocalServerUnisonCodebaseAPI)
 
-import Array exposing (Array)
 import Bytes exposing (Bytes)
 import Json.Decode
 import Task exposing (Task)

@@ -4,9 +4,8 @@ import Browser exposing (Document)
 import Element exposing (..)
 import Element.Font as Font
 import Element.Input exposing (labelLeft)
-import HashingContainers.HashDict as HashDict exposing (HashDict)
-import HashingContainers.HashSet as HashSet exposing (HashSet)
-import Html exposing (Html)
+import HashingContainers.HashDict as HashDict
+import HashingContainers.HashSet as HashSet
 import Ucb.Main.Message exposing (..)
 import Ucb.Main.Model exposing (..)
 import Ucb.Main.View.Branch exposing (..)

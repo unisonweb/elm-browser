@@ -1,0 +1,13 @@
+{
+  "checks": {
+    "DebugTodo": false,
+    "ExposeAll": false,
+    "ImportAll": false,
+    "MultiLineRecordFormatting": false,
+    "SingleFieldRecord": false
+  },
+
+  "TriggerWords": {
+    "words": [ ]
+  }
+}

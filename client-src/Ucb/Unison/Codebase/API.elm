@@ -6,7 +6,7 @@ module Ucb.Unison.Codebase.API exposing
     )
 
 import Bytes exposing (Bytes)
-import HashingContainers.HashDict as HashDict exposing (HashDict)
+import HashingContainers.HashDict as HashDict
 import HashingContainers.HashSet as HashSet exposing (HashSet)
 import Misc exposing (..)
 import Task exposing (Task)
@@ -86,7 +86,7 @@ getBranch2 api cache hash =
             api.getRawCausal hash
                 |> Task.andThen (getBranch3 api cache)
 
-        Just branch ->
+        Just _ ->
             Task.succeed
                 { branches = cache.branches
                 , parents = cache.parents

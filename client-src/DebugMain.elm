@@ -2,12 +2,8 @@ module Main exposing (..)
 
 import Browser
 import Bytes exposing (Bytes)
-import Dict
-import HashingContainers.HashDict as HashDict exposing (HashDict)
-import HashingContainers.HashSet as HashSet exposing (HashSet)
 import Html exposing (Html)
 import Misc exposing (..)
-import Task exposing (Task)
 import Ucb.Unison.BranchDict exposing (..)
 import Ucb.Unison.Codebase.API exposing (..)
 import Ucb.Unison.Codebase.API.GitHub exposing (..)
@@ -58,7 +54,7 @@ init _ =
 
 
 update : Message -> Model -> ( Model, Cmd Message )
-update (Message message) model =
+update (Message message) _ =
     ( Just message, Cmd.none )
 
 

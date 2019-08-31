@@ -125,38 +125,46 @@ update message model =
             update_User_DebugButton model
 
         UrlChanged url ->
-          let maybeHash = UrlParser.parse branchParser url
-          in
-              case maybeHash of
+            let
+                maybeHash =
+                    UrlParser.parse branchParser url
+            in
+            case maybeHash of
                 Nothing ->
-                  update_User_FocusBranch "head" model
+                    update_User_FocusBranch "head" model
+
                 Just hash ->
-                  update_User_FocusBranch hash model
+                    update_User_FocusBranch hash model
 
         LinkClicked urlFromWhere ->
-          case urlFromWhere of
-            Browser.Internal url ->
-              let maybeHash = UrlParser.parse branchParser url
-              in 
-                  case maybeHash of
-                    Nothing ->
-                      ( model, model.api.unison.getHeadHash 
-                      |> Task.attempt Http_GetHeadHash
-                      )
-                    Just hash ->
-                      let path = "/branch/" ++ hash
-                      in
-                          ( model, Nav.pushUrl model.ui.key path )
-            Browser.External link ->
-              ( model, Nav.load link )
+            case urlFromWhere of
+                Browser.Internal url ->
+                    let
+                        maybeHash =
+                            UrlParser.parse branchParser url
+                    in
+                    case maybeHash of
+                        Nothing ->
+                            ( model
+                            , model.api.unison.getHeadHash
+                                |> Task.attempt Http_GetHeadHash
+                            )
 
-                      
+                        Just hash ->
+                            let
+                                path =
+                                    "/branch/" ++ hash
+                            in
+                            ( model, Nav.pushUrl model.ui.key path )
 
+                Browser.External link ->
+                    ( model, Nav.load link )
 
 
 branchParser : UrlParser.Parser (String -> a) a
-branchParser = 
-  UrlParser.s "branch" </> UrlParser.string
+branchParser =
+    UrlParser.s "branch" </> UrlParser.string
+
 
 {-| Whatever you're debugging. Might be nothing!
 -}

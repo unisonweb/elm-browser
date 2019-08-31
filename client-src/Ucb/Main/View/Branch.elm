@@ -308,7 +308,7 @@ viewCausal model hash causal =
                 , width (px 100)
                 , clipX
                 ]
-                (link [] {url = "/branch/" ++ hash_, label = text hash_} )
+                (link [] { url = "/branch/" ++ hash_, label = text hash_ })
 
         viewParents : Element Message
         viewParents =

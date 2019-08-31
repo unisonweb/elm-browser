@@ -17,6 +17,7 @@ import Ucb.Unison.Codebase.API.LocalServer exposing (..)
 import Ucb.Util.Http as Http
 import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)
+import Unison.Codebase.Patch exposing (..)
 import Unison.Declaration exposing (..)
 import Unison.Hash exposing (..)
 import Unison.Reference exposing (..)
@@ -101,6 +102,9 @@ update message model =
         Http_GetBranch result ->
             update_Http_GetBranch result model
 
+        Http_GetPatches result ->
+            update_Http_GetPatches result model
+
         Http_GetTerm result ->
             update_Http_GetTerm result model
 
@@ -118,9 +122,6 @@ update message model =
 
         User_ToggleTerm id ->
             update_User_ToggleTerm id model
-
-        User_DebugButton ->
-            update_User_DebugButton model
 
         UrlChanged _ ->
             ( model, Cmd.none )
@@ -243,6 +244,29 @@ update_Http_GetBranch2 ( hash, { branches, parents, successors } ) model =
                 (getMissingTypeDecls model branch)
                 |> Task.attempt Http_GetTermTypesAndTypeDecls
     )
+
+
+update_Http_GetPatches :
+    Result (Http.Error Bytes) (List ( PatchHash, Patch ))
+    -> Model
+    -> ( Model, Cmd Message )
+update_Http_GetPatches result model =
+    case result of
+        Err err ->
+            ( { model | errors = Err_GetPatches err :: model.errors }
+            , Cmd.none
+            )
+
+        Ok result2 ->
+            update_Http_GetPatches2 result2 model
+
+
+update_Http_GetPatches2 :
+    List ( PatchHash, Patch )
+    -> Model
+    -> ( Model, Cmd message )
+update_Http_GetPatches2 =
+    Debug.todo "update_Http_GetPatches2"
 
 
 update_Http_GetTerm :

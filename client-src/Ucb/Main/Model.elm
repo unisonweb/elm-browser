@@ -23,6 +23,7 @@ import Util.HashSet as HashSet
 type Error
     = Err_GetHeadHash (Http.Error String)
     | Err_GetBranch (Http.Error Bytes)
+    | Err_GetPatches (Http.Error Bytes)
     | Err_GetRawCausal (Http.Error Bytes)
     | Err_GetTerm (Http.Error Bytes)
     | Err_GetTermTypes (Http.Error Bytes)

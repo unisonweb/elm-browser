@@ -119,6 +119,14 @@ app request respond = do
           [(hContentType, "application/json")]
           (LazyByteString.Char8.pack (show head)))
 
+    GET ["patch", patch] ->
+      respond
+        (responseFile
+          status200
+          [(hContentType, "application/octet-stream")]
+          (".unison/v1/patches/" <> Text.unpack patch <> ".up")
+          Nothing)
+
     GET ["term", term, "term"] ->
       respond
         (responseFile

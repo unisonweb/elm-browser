@@ -12,6 +12,7 @@ import Ucb.Unison.ReferentDict as ReferentDict exposing (ReferentDict)
 import Ucb.Unison.ReferentSet as ReferentSet exposing (ReferentSet)
 import Unison.Codebase.Causal exposing (..)
 import Unison.Codebase.NameSegment exposing (..)
+import Unison.Codebase.Patch exposing (..)
 import Unison.Hash exposing (..)
 import Unison.Name exposing (..)
 import Unison.Reference exposing (..)
@@ -41,7 +42,7 @@ type alias Branch0 =
     { terms : Star Referent NameSegment
     , types : Star Reference NameSegment
     , children : NameSegmentDict ( BranchHash, Branch )
-    , edits : NameSegmentDict Hash32 -- TODO
+    , patches : NameSegmentDict PatchHash
 
     -- Derived info
     , cache :
@@ -66,7 +67,7 @@ type alias RawBranch =
     { terms : Star Referent NameSegment
     , types : Star Reference NameSegment
     , children : NameSegmentDict BranchHash
-    , edits : NameSegmentDict BranchHash
+    , patches : NameSegmentDict PatchHash
     }
 
 
@@ -106,7 +107,7 @@ rawBranchToBranch0 hashToBranch rawBranch =
     { terms = rawBranch.terms
     , types = rawBranch.types
     , children = children
-    , edits = rawBranch.edits
+    , patches = rawBranch.patches
     , cache =
         { termToName = termToName
         , nameToTerm = makeNameToTerm termToName

@@ -23,6 +23,7 @@ makeGitHubUnisonCodebaseAPI :
 makeGitHubUnisonCodebaseAPI owner repo =
     { getHeadHash = getHeadHash owner repo
     , getRawCausal = getRawCausal owner repo
+    , getPatch = Debug.todo "GitHub getPatch"
     , getTerm = Debug.todo "GitHub getTerm"
     , getTermType = Debug.todo "GitHub getTermType"
     , getTypeDecl = getTypeDecl owner repo

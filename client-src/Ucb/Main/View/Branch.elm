@@ -37,7 +37,7 @@ viewBranch0 :
     Model
     -> Branch0
     -> Element Message
-viewBranch0 model { terms, types, children, edits } =
+viewBranch0 model { terms, types, children, patches } =
     column
         [ spacing 30 ]
         [ case relationToList types.d1 of
@@ -90,7 +90,7 @@ viewBranch0 model { terms, types, children, edits } =
                             )
                     )
         , -- TODO
-          case edits of
+          case patches of
             _ ->
                 none
         ]

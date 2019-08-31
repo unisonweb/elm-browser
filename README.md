@@ -34,11 +34,11 @@ directory with a `.unison` folder.
 
 For a slightly optimized workflow, you can have live reloading with [elm-live](https://github.com/wking-io/elm-live)
 
-- Start the haskell server in dev mode
+- Start the haskell server
 
       // One or the other
-      DEV=true cabal v2-run
-      DEV=true stack run
+      cabal v2-run
+      stack run
 
 - Use elm-live
 

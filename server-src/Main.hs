@@ -15,7 +15,7 @@ import Data.Text (Text)
 import Network.HTTP.Types hiding (StdMethod(..))
 import Network.Wai
 import Network.Wai.Handler.Warp
-import Network.Wai.Middleware.Cors
+import Network.Wai.Middleware.Cors (cors, simpleCorsResourcePolicy)
 import Paths_unison_browser (getDataFileName)
 import Prelude hiding (head)
 import System.Directory
@@ -58,24 +58,19 @@ main =
             _ ->
               throwIO err
 
-      isDev :: Bool <-
-        isJust <$> lookupEnv "DEV"
-
       runSettings
         (defaultSettings
-          & setBeforeMainLoop (do
-              putStrLn ("Running on 127.0.0.1:" ++ show port)
-              when isDev do
-                putStrLn "Developer mode: allowing cross-origin requests")
+          & setBeforeMainLoop
+              (putStrLn
+                (concat
+                  [ "Running on 127.0.0.1:"
+                  , show port
+                  , ", allowing cross-origin requests"
+                  ]))
           & setHost "127.0.0.1"
           & setPort port)
-        ((if isDev then simpleCorsWithContentType else id) app)
+        (cors (\_ -> Just simpleCorsResourcePolicy) app)
         `catchIOError` handler
-
-  where
-    simpleCorsWithContentType :: Middleware
-    simpleCorsWithContentType =
-      cors (\_ -> Just simpleCorsResourcePolicy)
 
 
 printUsage :: IO ()

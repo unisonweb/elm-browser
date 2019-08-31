@@ -4,7 +4,8 @@ module Unison.Codebase.Branch exposing
     , BranchHash
     , RawBranch
     , Star
-    , branchPatchNames
+    , branchPatchHashes
+    , branchPatches
     , rawBranchToBranch0
     )
 
@@ -316,21 +317,21 @@ makeNameToType =
         foo.blah  = Patch3
 
 -}
-branchPatchNames :
+branchPatches :
     Branch
-    -> NameDict BranchHash
-branchPatchNames (Branch causal) =
-    branchPatchNames0 (rawCausalHead causal)
+    -> NameDict PatchHash
+branchPatches (Branch causal) =
+    branchPatches0 (rawCausalHead causal)
 
 
 {-| Compute the full names of all the patches in a Branch0.
 -}
-branchPatchNames0 :
+branchPatches0 :
     Branch0
-    -> NameDict BranchHash
-branchPatchNames0 branch =
+    -> NameDict PatchHash
+branchPatches0 branch =
     let
-        initial : NameDict BranchHash
+        initial : NameDict PatchHash
         initial =
             NameDict.mapKeys
                 List.singleton
@@ -338,8 +339,8 @@ branchPatchNames0 branch =
 
         step :
             ( NameSegment, ( BranchHash, Branch ) )
-            -> NameDict BranchHash
-            -> NameDict BranchHash
+            -> NameDict PatchHash
+            -> NameDict PatchHash
         step ( name, ( _, child ) ) acc =
             HashDict.foldl
                 (\( suffix, hash ) ->
@@ -348,9 +349,21 @@ branchPatchNames0 branch =
                         hash
                 )
                 acc
-                (branchPatchNames child)
+                (branchPatches child)
     in
     HashDict.foldl
         step
         initial
         branch.children
+
+
+{-| Like 'branchPatches', but throw away the names and just return the hashes.
+-}
+branchPatchHashes :
+    Branch
+    -> HashSet PatchHash
+branchPatchHashes =
+    branchPatches
+        >> HashDict.toList
+        >> List.map Tuple.second
+        >> HashSet.fromList hash32Equality hash32Hashing

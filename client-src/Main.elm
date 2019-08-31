@@ -68,6 +68,7 @@ init _ url key =
             , codebase =
                 { head = Nothing
                 , branches = BranchDict.empty
+                , patches = HashDict.empty hash32Equality hash32Hashing
                 , terms = HashDict.empty idEquality idHashing
                 , termTypes = HashDict.empty idEquality idHashing
                 , typeDecls = HashDict.empty idEquality idHashing
@@ -113,6 +114,9 @@ update message model =
 
         User_FocusBranch hash ->
             update_User_FocusBranch hash model
+
+        User_GetPatches hash ->
+            update_User_GetPatches hash model
 
         User_Search search ->
             update_User_Search search model
@@ -212,6 +216,18 @@ update_Http_GetBranch2 ( hash, { branches, parents, successors } ) model =
                 )
                 model.codebase.branches
                 branches
+
+        -- TODO(elliott) type sig
+        newParents =
+            (BranchDict.monoid HashSet.semigroup).semigroup.prepend
+                parents
+                model.codebase.parents
+
+        -- TODO(elliot) type sig
+        newSuccessors =
+            (BranchDict.monoid HashSet.semigroup).semigroup.prepend
+                successors
+                model.codebase.successors
     in
     ( { model
         | codebase =
@@ -219,14 +235,11 @@ update_Http_GetBranch2 ( hash, { branches, parents, successors } ) model =
               -- focus it.
               head = Just hash
             , branches = newBranches
-            , parents =
-                (BranchDict.monoid HashSet.semigroup).semigroup.prepend
-                    parents
-                    model.codebase.parents
-            , successors =
-                (BranchDict.monoid HashSet.semigroup).semigroup.prepend
-                    successors
-                    model.codebase.successors
+            , parents = newParents
+            , successors = newSuccessors
+
+            -- unchanged
+            , patches = model.codebase.patches
             , terms = model.codebase.terms
             , termTypes = model.codebase.termTypes
             , typeDecls = model.codebase.typeDecls
@@ -265,8 +278,30 @@ update_Http_GetPatches2 :
     List ( PatchHash, Patch )
     -> Model
     -> ( Model, Cmd message )
-update_Http_GetPatches2 =
-    Debug.todo "update_Http_GetPatches2"
+update_Http_GetPatches2 patches model =
+    let
+        newModel : Model
+        newModel =
+            { model
+                | codebase =
+                    { patches =
+                        List.foldl
+                            (\( hash, patch ) ->
+                                HashDict.insert hash patch
+                            )
+                            model.codebase.patches
+                            patches
+                    , head = model.codebase.head
+                    , branches = model.codebase.branches
+                    , terms = model.codebase.terms
+                    , termTypes = model.codebase.termTypes
+                    , typeDecls = model.codebase.typeDecls
+                    , parents = model.codebase.parents
+                    , successors = model.codebase.successors
+                    }
+            }
+    in
+    ( newModel, Cmd.none )
 
 
 update_Http_GetTerm :
@@ -296,6 +331,7 @@ update_Http_GetTerm2 ( id, response ) model =
             -- unchanged
             , head = model.codebase.head
             , branches = model.codebase.branches
+            , patches = model.codebase.patches
             , termTypes = model.codebase.termTypes
             , typeDecls = model.codebase.typeDecls
             , parents = model.codebase.parents
@@ -328,11 +364,14 @@ update_Http_GetTermTypesAndTypeDecls2 :
 update_Http_GetTermTypesAndTypeDecls2 ( termTypes, types ) model =
     ( { model
         | codebase =
-            { termTypes =
+            { -- TODO(elliot) lift this to "newTermTypes" in let-binding
+              termTypes =
                 List.foldl
                     (\( id, type_ ) -> HashDict.insert id type_)
                     model.codebase.termTypes
                     termTypes
+
+            -- TODO(elliot) same here
             , typeDecls =
                 List.foldl
                     (\( id, declaration ) -> HashDict.insert id declaration)
@@ -342,6 +381,7 @@ update_Http_GetTermTypesAndTypeDecls2 ( termTypes, types ) model =
             -- unchanged
             , head = model.codebase.head
             , branches = model.codebase.branches
+            , patches = model.codebase.patches
             , terms = model.codebase.terms
             , parents = model.codebase.parents
             , successors = model.codebase.successors
@@ -404,6 +444,7 @@ update_User_FocusBranch hash model =
 
                     -- unchanged
                     , branches = model.codebase.branches
+                    , patches = model.codebase.patches
                     , terms = model.codebase.terms
                     , termTypes = model.codebase.termTypes
                     , typeDecls = model.codebase.typeDecls
@@ -417,6 +458,25 @@ update_User_FocusBranch hash model =
                 (getMissingTypeDecls model branch)
                 |> Task.attempt Http_GetTermTypesAndTypeDecls
             )
+
+
+update_User_GetPatches :
+    BranchHash
+    -> Model
+    -> ( Model, Cmd Message )
+update_User_GetPatches hash model =
+    ( model
+    , case HashDict.get hash model.codebase.branches of
+        -- Should never be the case
+        Nothing ->
+            Cmd.none
+
+        Just branch ->
+            getMissingPatches
+                model
+                branch
+                |> Task.attempt Http_GetPatches
+    )
 
 
 update_User_ToggleBranch :

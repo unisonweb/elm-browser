@@ -1,6 +1,6 @@
 module Ucb.Util.List exposing (..)
 
-import Task exposing (Task)
+import Task as Task exposing (Task)
 
 
 traverseTask :
@@ -8,4 +8,12 @@ traverseTask :
     -> List a
     -> Task x (List b)
 traverseTask f xs =
-    Debug.todo ""
+    case xs of
+        [] ->
+            Task.succeed []
+
+        y :: ys ->
+            Task.map2
+                (::)
+                (f y)
+                (traverseTask f ys)

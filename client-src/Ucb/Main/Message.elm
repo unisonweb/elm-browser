@@ -20,6 +20,7 @@ import Url
 
 type Message
     = User_FocusBranch BranchHash
+    | User_GetPatches BranchHash
     | User_ToggleBranch BranchHash
     | User_ToggleTerm Id
     | User_Search String

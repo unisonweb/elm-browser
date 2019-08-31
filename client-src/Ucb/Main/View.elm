@@ -2,8 +2,9 @@ module Ucb.Main.View exposing (view)
 
 import Browser exposing (Document)
 import Element exposing (..)
+import Element.Border as Border
 import Element.Font as Font
-import Element.Input exposing (labelLeft)
+import Element.Input exposing (button, labelLeft)
 import HashingContainers.HashDict as HashDict
 import HashingContainers.HashSet as HashSet
 import Ucb.Main.Message exposing (..)
@@ -13,6 +14,7 @@ import Ucb.Main.View.Palette exposing (mainFont)
 import Ucb.Unison.NameSet as NameSet
 import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)
+import Unison.Codebase.Patch exposing (..)
 import Unison.Name exposing (..)
 
 
@@ -34,7 +36,12 @@ view2 model =
             [ branches model
             , viewSearchPrototype model
             ]
+
+        -- Debug info and WIP UI
+        , el [ width fill, Border.width 1, Border.solid ] none
         , errors model
+        , el [ width fill, Border.width 1, Border.solid ] none
+        , viewPatchesPrototype model
         ]
 
 
@@ -51,6 +58,41 @@ branches model =
                             (HashDict.get head model.codebase.branches)
                     )
             ]
+
+
+viewPatchesPrototype :
+    Model
+    -> Element Message
+viewPatchesPrototype model =
+    let
+        viewPatch : ( PatchHash, Patch ) -> Element message
+        viewPatch ( hash, { termEdits, typeEdits } ) =
+            column
+                []
+                [ text "hash"
+                , text hash
+                , text "term edits"
+                , text (Debug.toString termEdits)
+                , text "type edits"
+                , text (Debug.toString typeEdits)
+                ]
+    in
+    column
+        []
+        [ button []
+            { onPress =
+                case model.codebase.head of
+                    Nothing ->
+                        Nothing
+
+                    Just head ->
+                        Just (User_GetPatches head)
+            , label = text "Get patches"
+            }
+        , text "patches:"
+        , column []
+            (List.map viewPatch (HashDict.toList model.codebase.patches))
+        ]
 
 
 viewSearchPrototype :

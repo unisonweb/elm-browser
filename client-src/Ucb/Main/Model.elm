@@ -10,6 +10,7 @@ import Ucb.Unison.Codebase.API exposing (..)
 import Ucb.Util.Http as Http
 import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)
+import Unison.Codebase.Patch exposing (..)
 import Unison.Declaration exposing (..)
 import Unison.Hash exposing (..)
 import Unison.Reference exposing (..)
@@ -42,6 +43,7 @@ type alias Model =
         { -- This data we've fetched directly from the codebase
           head : Maybe BranchHash
         , branches : BranchDict Branch
+        , patches : HashDict PatchHash Patch
         , terms : HashDict Id (Term Symbol)
         , termTypes : HashDict Id (Type Symbol)
         , typeDecls : HashDict Id (Declaration Symbol)
@@ -77,6 +79,30 @@ type alias Model =
     -- Whether we're running in dev and need to use CORS headers
     , isDevMode : Bool
     }
+
+
+{-| Given a branch, fetch all of its patches that we haven't already.
+-}
+getMissingPatches :
+    Model
+    -> Branch
+    -> Task (Http.Error Bytes) (List ( PatchHash, Patch ))
+getMissingPatches model branch =
+    getPatches
+        model.api.unison
+        (branch
+            |> branchPatchHashes
+            |> HashSet.toList
+            |> List.filterMap
+                (\hash ->
+                    case HashDict.get hash model.codebase.patches of
+                        Nothing ->
+                            Just hash
+
+                        Just _ ->
+                            Nothing
+                )
+        )
 
 
 {-| Given a branch we just switched to, fetch all of the (shallow) terms' types

@@ -1,12 +1,8 @@
 module Util.HashSet exposing (..)
 
-import Bitwise
-import Bytes exposing (Bytes)
-import Bytes.Encode
-import HashingContainers.HashDict as HashDict exposing (HashDict)
 import HashingContainers.HashSet as HashSet exposing (HashSet)
-import Typeclasses.Classes.Equality as Equality exposing (Equality)
-import Typeclasses.Classes.Hashing as Hashing exposing (Hashing)
+import Typeclasses.Classes.Equality exposing (Equality)
+import Typeclasses.Classes.Hashing exposing (Hashing)
 import Typeclasses.Classes.Monoid as Monoid exposing (Monoid)
 import Typeclasses.Classes.Semigroup exposing (Semigroup)
 

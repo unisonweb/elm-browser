@@ -11,8 +11,6 @@ import Typeclasses.Classes.Hashing as Hashing
 import Ucb.Main.Message exposing (..)
 import Ucb.Main.Model exposing (..)
 import Ucb.Main.View.Palette exposing (codeFont)
-import Ucb.Main.View.Reference exposing (viewId, viewReference)
-import Ucb.Main.View.Referent exposing (viewReferent)
 import Ucb.Main.View.Term exposing (viewTerm)
 import Ucb.Main.View.Type exposing (viewType)
 import Unison.Codebase.Branch exposing (..)
@@ -39,7 +37,7 @@ viewBranch0 :
     Model
     -> Branch0
     -> Element Message
-viewBranch0 model { terms, types, children, edits, cache } =
+viewBranch0 model { terms, types, children, edits } =
     column
         [ spacing 30 ]
         [ case relationToList types.d1 of
@@ -91,8 +89,10 @@ viewBranch0 model { terms, types, children, edits, cache } =
                                 viewBranchChild model name hash branch
                             )
                     )
-
-        -- , column [] (List.map text edits)
+        , -- TODO
+          case edits of
+            _ ->
+                none
         ]
 
 
@@ -151,7 +151,7 @@ viewBranchTerm2 :
     -> NameSegment
     -> Maybe (HashSet ( Reference, Reference ))
     -> Element Message
-viewBranchTerm2 model reference name links =
+viewBranchTerm2 model reference name _ =
     let
         -- Surround by parens if it begins with a symboly character
         name2 : String
@@ -249,7 +249,7 @@ viewBranchType2 :
     -> DataDeclaration Symbol
     -> ConstructorType
     -> Element message
-viewBranchType2 model name links id declaration constructorType =
+viewBranchType2 model name _ _ declaration constructorType =
     column
         []
         [ row
@@ -384,28 +384,6 @@ viewCausal model hash causal =
                     , viewBranch0 model branch
                     ]
         )
-
-
-viewLinks :
-    Maybe (HashSet ( Reference, Reference ))
-    -> Element message
-viewLinks maybeLinks =
-    case maybeLinks of
-        Nothing ->
-            none
-
-        Just links ->
-            row [ spacing 5 ]
-                (text "links"
-                    :: List.map
-                        (Tuple.second
-                            >> viewReference
-                                { showBuiltin = True
-                                , take = Just 7
-                                }
-                        )
-                        (HashSet.toList links)
-                )
 
 
 symbolyIdChars : HashSet Char

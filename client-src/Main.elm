@@ -3,11 +3,10 @@ module Main exposing (..)
 import Browser
 import Browser.Navigation as Nav
 import Bytes exposing (Bytes)
-import Dict
 import HashingContainers.HashDict as HashDict exposing (HashDict)
 import HashingContainers.HashSet as HashSet exposing (HashSet)
 import Misc exposing (..)
-import Task exposing (Task)
+import Task
 import Ucb.Main.Message exposing (Message(..))
 import Ucb.Main.Model exposing (..)
 import Ucb.Main.View exposing (view)

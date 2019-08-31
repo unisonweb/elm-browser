@@ -1,9 +1,8 @@
 module Unison.Codebase.Branch exposing (..)
 
-import HashingContainers.HashDict as HashDict exposing (HashDict)
+import HashingContainers.HashDict as HashDict
 import HashingContainers.HashSet as HashSet exposing (HashSet)
 import Misc exposing (..)
-import Typeclasses.Classes.Monoid exposing (Monoid)
 import Ucb.Unison.NameDict as NameDict exposing (NameDict)
 import Ucb.Unison.NameSegmentDict as NameSegmentDict exposing (NameSegmentDict)
 import Ucb.Unison.NameSet as NameSet exposing (NameSet)

@@ -1,8 +1,8 @@
 module Util.HashDict exposing (..)
 
 import HashingContainers.HashDict as HashDict exposing (HashDict)
-import Typeclasses.Classes.Equality as Equality exposing (Equality)
-import Typeclasses.Classes.Hashing as Hashing exposing (Hashing)
+import Typeclasses.Classes.Equality exposing (Equality)
+import Typeclasses.Classes.Hashing exposing (Hashing)
 import Typeclasses.Classes.Monoid as Monoid exposing (Monoid)
 import Typeclasses.Classes.Semigroup exposing (Semigroup)
 

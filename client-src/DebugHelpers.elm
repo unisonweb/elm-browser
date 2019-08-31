@@ -7,7 +7,6 @@ import Bitwise
 import Bytes exposing (Bytes)
 import Bytes.Decode
 import Bytes.Encode
-import Misc exposing (emptyBytes)
 
 
 run : Bytes.Decode.Decoder a -> String -> Maybe a

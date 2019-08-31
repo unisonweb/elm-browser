@@ -1,6 +1,5 @@
 module Word64 exposing (..)
 
-import Bitwise
 import Misc exposing (tumble)
 import Typeclasses.Classes.Equality as Equality exposing (Equality)
 import Typeclasses.Classes.Hashing as Hashing exposing (Hashing)
@@ -47,5 +46,5 @@ unsafeWord64ToInt53 word =
         SmallWord64 n ->
             n
 
-        BigWord64 n m ->
+        BigWord64 _ _ ->
             Debug.todo "unsafeWord64ToInt53: BigWord64"

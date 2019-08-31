@@ -8,7 +8,6 @@ module Unison.Reference exposing
     , referenceHashing
     )
 
-import Bytes.Encode
 import Misc exposing (tumble)
 import Typeclasses.Classes.Equality as Equality exposing (Equality)
 import Typeclasses.Classes.Hashing as Hashing exposing (Hashing)

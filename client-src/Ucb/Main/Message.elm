@@ -2,7 +2,6 @@ module Ucb.Main.Message exposing (..)
 
 import Browser
 import Bytes exposing (Bytes)
-import HashingContainers.HashDict exposing (HashDict)
 import HashingContainers.HashSet exposing (HashSet)
 import Ucb.Unison.BranchDict exposing (..)
 import Ucb.Util.Http as Http

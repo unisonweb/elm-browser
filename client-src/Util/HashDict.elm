@@ -42,6 +42,18 @@ map equality hashing f =
         (HashDict.empty equality hashing)
 
 
+mapKeys :
+    Equality k2
+    -> Hashing k2
+    -> (k1 -> k2)
+    -> HashDict k1 a
+    -> HashDict k2 a
+mapKeys equality hashing f =
+    HashDict.foldl
+        (\( k, v ) -> HashDict.insert (f k) v)
+        (HashDict.empty equality hashing)
+
+
 monoid :
     Equality k
     -> Hashing k

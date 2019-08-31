@@ -26,8 +26,8 @@ type Error
     | Err_GetRawCausal (Http.Error Bytes)
     | Err_GetTerm (Http.Error Bytes)
     | Err_GetTermTypes (Http.Error Bytes)
-    | Err_GetType (Http.Error Bytes)
-    | Err_GetTypes (Http.Error Bytes)
+    | Err_GetTypeDecl (Http.Error Bytes)
+    | Err_GetTypeDecls (Http.Error Bytes)
 
 
 type alias Model =
@@ -43,7 +43,7 @@ type alias Model =
         , branches : BranchDict Branch
         , terms : HashDict Id (Term Symbol)
         , termTypes : HashDict Id (Type Symbol)
-        , types : HashDict Id (Declaration Symbol)
+        , typeDecls : HashDict Id (Declaration Symbol)
 
         -- Mapping from branch to its parent(s). The codebase doesn't provide
         -- this, we just discover and cache it lazily as you move down into
@@ -112,12 +112,12 @@ getMissingTermTypes model (Branch causal) =
 {-| Given a branch we just switched to, fetch all of the (shallow) type
 declarations that we haven't already.
 -}
-getMissingTypes :
+getMissingTypeDecls :
     Model
     -> Branch
     -> Task (Http.Error Bytes) (List ( Id, Declaration Symbol ))
-getMissingTypes model (Branch causal) =
-    getTypes
+getMissingTypeDecls model (Branch causal) =
+    getTypeDecls
         model.api.unison
         (List.filterMap
             (\reference ->
@@ -126,7 +126,7 @@ getMissingTypes model (Branch causal) =
                         Nothing
 
                     Derived id ->
-                        case HashDict.get id model.codebase.types of
+                        case HashDict.get id model.codebase.typeDecls of
                             Nothing ->
                                 Just id
 

@@ -2,7 +2,7 @@ module Ucb.Unison.Codebase.API exposing
     ( UnisonCodebaseAPI
     , getBranch
     , getTermTypes
-    , getTypes
+    , getTypeDecls
     )
 
 import Bytes exposing (Bytes)
@@ -32,7 +32,7 @@ type alias UnisonCodebaseAPI =
     , getRawCausal : BranchHash -> Task (Http.Error Bytes) ( BranchHash, Http.Response (RawCausal RawBranch) )
     , getTerm : Id -> Task (Http.Error Bytes) ( Id, Http.Response (Term Symbol) )
     , getTermType : Id -> Task (Http.Error Bytes) ( Id, Http.Response (Type Symbol) )
-    , getType : Id -> Task (Http.Error Bytes) ( Id, Http.Response (Declaration Symbol) )
+    , getTypeDecl : Id -> Task (Http.Error Bytes) ( Id, Http.Response (Declaration Symbol) )
     }
 
 
@@ -300,13 +300,13 @@ getTermTypes api ids =
                 (getTermTypes api ids_)
 
 
-{-| Batch getType
+{-| Batch getTypeDecl
 -}
-getTypes :
+getTypeDecls :
     UnisonCodebaseAPI
     -> List Id
     -> Task (Http.Error Bytes) (List ( Id, Declaration Symbol ))
-getTypes api ids =
+getTypeDecls api ids =
     case ids of
         [] ->
             Task.succeed []
@@ -314,5 +314,5 @@ getTypes api ids =
         id :: ids_ ->
             Task.map2
                 (\( r, s ) rs -> ( r, s.body ) :: rs)
-                (api.getType id)
-                (getTypes api ids_)
+                (api.getTypeDecl id)
+                (getTypeDecls api ids_)

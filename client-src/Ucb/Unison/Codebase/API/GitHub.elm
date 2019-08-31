@@ -25,7 +25,7 @@ makeGitHubUnisonCodebaseAPI owner repo =
     , getRawCausal = getRawCausal owner repo
     , getTerm = Debug.todo "GitHub getTerm"
     , getTermType = Debug.todo "GitHub getTermType"
-    , getType = getType owner repo
+    , getTypeDecl = getTypeDecl owner repo
     }
 
 
@@ -86,12 +86,12 @@ getRawCausal owner repo hash =
         |> Task.map (\response -> ( hash, response ))
 
 
-getType :
+getTypeDecl :
     String
     -> String
     -> Id
     -> Task (Http.Error Bytes) ( Id, Http.Response (Declaration Symbol) )
-getType owner repo id =
+getTypeDecl owner repo id =
     GitHub.getFile
         { owner = owner
         , repo = repo

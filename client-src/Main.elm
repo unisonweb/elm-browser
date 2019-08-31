@@ -70,7 +70,7 @@ init _ url key =
                 , branches = BranchDict.empty
                 , terms = HashDict.empty idEquality idHashing
                 , termTypes = HashDict.empty idEquality idHashing
-                , types = HashDict.empty idEquality idHashing
+                , typeDecls = HashDict.empty idEquality idHashing
                 , parents = BranchDict.empty
                 , successors = BranchDict.empty
                 }
@@ -107,8 +107,8 @@ update message model =
         Http_GetTerm result ->
             updateHttpGetTerm result model
 
-        Http_GetTermTypesAndTypes result ->
-            updateHttpGetTermTypesAndTypes result model
+        Http_GetTermTypesAndTypeDecls result ->
+            updateHttpGetTermTypesAndTypeDecls result model
 
         User_FocusBranch hash ->
             updateUserFocusBranch hash model
@@ -231,7 +231,7 @@ updateHttpGetBranch2 ( hash, { branches, parents, successors } ) model =
                     model.codebase.successors
             , terms = model.codebase.terms
             , termTypes = model.codebase.termTypes
-            , types = model.codebase.types
+            , typeDecls = model.codebase.typeDecls
             }
       }
     , case HashDict.get hash newBranches of
@@ -243,8 +243,8 @@ updateHttpGetBranch2 ( hash, { branches, parents, successors } ) model =
             Task.map2
                 Tuple.pair
                 (getMissingTermTypes model branch)
-                (getMissingTypes model branch)
-                |> Task.attempt Http_GetTermTypesAndTypes
+                (getMissingTypeDecls model branch)
+                |> Task.attempt Http_GetTermTypesAndTypeDecls
     )
 
 
@@ -276,7 +276,7 @@ updateHttpGetTerm2 ( id, response ) model =
             , head = model.codebase.head
             , branches = model.codebase.branches
             , termTypes = model.codebase.termTypes
-            , types = model.codebase.types
+            , typeDecls = model.codebase.typeDecls
             , parents = model.codebase.parents
             , successors = model.codebase.successors
             }
@@ -285,26 +285,26 @@ updateHttpGetTerm2 ( id, response ) model =
     )
 
 
-updateHttpGetTermTypesAndTypes :
+updateHttpGetTermTypesAndTypeDecls :
     Result (Http.Error Bytes) ( List ( Id, Type Symbol ), List ( Id, Declaration Symbol ) )
     -> Model
     -> ( Model, Cmd message )
-updateHttpGetTermTypesAndTypes result model =
+updateHttpGetTermTypesAndTypeDecls result model =
     case result of
         Err err ->
-            ( { model | errors = Err_GetTypes err :: model.errors }
+            ( { model | errors = Err_GetTypeDecls err :: model.errors }
             , Cmd.none
             )
 
         Ok response ->
-            updateHttpGetTermTypesAndTypes2 response model
+            updateHttpGetTermTypesAndTypeDecls2 response model
 
 
-updateHttpGetTermTypesAndTypes2 :
+updateHttpGetTermTypesAndTypeDecls2 :
     ( List ( Id, Type Symbol ), List ( Id, Declaration Symbol ) )
     -> Model
     -> ( Model, Cmd message )
-updateHttpGetTermTypesAndTypes2 ( termTypes, types ) model =
+updateHttpGetTermTypesAndTypeDecls2 ( termTypes, types ) model =
     ( { model
         | codebase =
             { termTypes =
@@ -312,10 +312,10 @@ updateHttpGetTermTypesAndTypes2 ( termTypes, types ) model =
                     (\( id, type_ ) -> HashDict.insert id type_)
                     model.codebase.termTypes
                     termTypes
-            , types =
+            , typeDecls =
                 List.foldl
                     (\( id, declaration ) -> HashDict.insert id declaration)
-                    model.codebase.types
+                    model.codebase.typeDecls
                     types
 
             -- unchanged
@@ -385,7 +385,7 @@ updateUserFocusBranch hash model =
                     , branches = model.codebase.branches
                     , terms = model.codebase.terms
                     , termTypes = model.codebase.termTypes
-                    , types = model.codebase.types
+                    , typeDecls = model.codebase.typeDecls
                     , parents = model.codebase.parents
                     , successors = model.codebase.successors
                     }
@@ -393,8 +393,8 @@ updateUserFocusBranch hash model =
             , Task.map2
                 Tuple.pair
                 (getMissingTermTypes model branch)
-                (getMissingTypes model branch)
-                |> Task.attempt Http_GetTermTypesAndTypes
+                (getMissingTypeDecls model branch)
+                |> Task.attempt Http_GetTermTypesAndTypeDecls
             )
 
 
@@ -426,8 +426,8 @@ updateUserToggleBranch hash model =
             Task.map2
                 Tuple.pair
                 (getMissingTermTypes model branch)
-                (getMissingTypes model branch)
-                |> Task.attempt Http_GetTermTypesAndTypes
+                (getMissingTypeDecls model branch)
+                |> Task.attempt Http_GetTermTypesAndTypeDecls
     )
 
 

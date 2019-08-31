@@ -304,12 +304,11 @@ viewCausal model hash causal =
         viewHash : BranchHash -> Element Message
         viewHash hash_ =
             el
-                [ onClick (User_FocusBranch hash_)
-                , pointer
+                [ pointer
                 , width (px 100)
                 , clipX
                 ]
-                (text hash_)
+                (link [] {url = "/branch/" ++ hash_, label = text hash_} )
 
         viewParents : Element Message
         viewParents =

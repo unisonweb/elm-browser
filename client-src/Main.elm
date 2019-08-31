@@ -125,8 +125,7 @@ update message model =
             update_User_DebugButton model
 
         UrlChanged url ->
-          let maybeHash =
-                UrlParser.parse branchParser url
+          let maybeHash = UrlParser.parse branchParser url
           in
               case maybeHash of
                 Nothing ->
@@ -136,10 +135,22 @@ update message model =
 
         LinkClicked urlFromWhere ->
           case urlFromWhere of
-            Browser.Internal ->
-              let maybeHash =
-                UrlParser.parse branchParser url
+            Browser.Internal url ->
+              let maybeHash = UrlParser.parse branchParser url
               in 
+                  case maybeHash of
+                    Nothing ->
+                      ( model, model.api.unison.getHeadHash 
+                      |> Task.attempt Http_GetHeadHash
+                      )
+                    Just hash ->
+                      let path = "/branch/" ++ hash
+                      in
+                          ( model, Nav.pushUrl model.ui.key path )
+            Browser.External link ->
+              ( model, Nav.load link )
+
+                      
 
 
 

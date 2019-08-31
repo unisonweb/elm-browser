@@ -35,6 +35,6 @@ type Message
         )
     | Http_GetHeadHash (Result (Http.Error String) (Http.Response BranchHash))
     | Http_GetTerm (Result (Http.Error Bytes) ( Id, Http.Response (Term Symbol) ))
-    | Http_GetTermTypesAndTypes (Result (Http.Error Bytes) ( List ( Id, Type Symbol ), List ( Id, Declaration Symbol ) ))
+    | Http_GetTermTypesAndTypeDecls (Result (Http.Error Bytes) ( List ( Id, Type Symbol ), List ( Id, Declaration Symbol ) ))
     | UrlChanged Url.Url
     | LinkClicked Browser.UrlRequest

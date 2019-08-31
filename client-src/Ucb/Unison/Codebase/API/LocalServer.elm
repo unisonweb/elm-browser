@@ -39,7 +39,7 @@ makeLocalServerUnisonCodebaseAPI isDev =
     , getRawCausal = getRawCausal isDev
     , getTerm = getTerm isDev
     , getTermType = getTermType isDev
-    , getType = getType isDev
+    , getTypeDecl = getTypeDecl isDev
     }
 
 
@@ -95,11 +95,11 @@ getTermType isDev id =
         |> Task.map (\response -> ( id, response ))
 
 
-getType :
+getTypeDecl :
     Bool
     -> Id
     -> Task (Http.Error Bytes) ( Id, Http.Response (Declaration Symbol) )
-getType isDev id =
+getTypeDecl isDev id =
     Http.getBytes
         { decoder = V1.declarationDecoder
         , headers = []

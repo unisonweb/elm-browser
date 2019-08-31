@@ -234,7 +234,7 @@ viewBranchType model reference name links =
                 ]
 
         Derived id ->
-            case HashDict.get id model.codebase.types of
+            case HashDict.get id model.codebase.typeDecls of
                 Nothing ->
                     none
 

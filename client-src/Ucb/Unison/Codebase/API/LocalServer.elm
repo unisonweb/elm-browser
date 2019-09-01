@@ -8,6 +8,7 @@ import Ucb.Util.Http as Http
 import Ucb.Util.Task as Task
 import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)
+import Unison.Codebase.Patch exposing (..)
 import Unison.Codebase.Serialization.V1 as V1
 import Unison.Declaration exposing (..)
 import Unison.Reference exposing (..)
@@ -35,6 +36,7 @@ prefixIfDev isDev path =
 makeLocalServerUnisonCodebaseAPI : Bool -> UnisonCodebaseAPI
 makeLocalServerUnisonCodebaseAPI isDev =
     { getHeadHash = getHeadHash isDev
+    , getPatch = getPatch isDev
     , getRawCausal = getRawCausal isDev
     , getTerm = getTerm isDev
     , getTermType = getTermType isDev
@@ -50,6 +52,20 @@ getHeadHash isDev =
         , timeout = Nothing
         , url = prefixIfDev isDev "head"
         }
+
+
+getPatch :
+    Bool
+    -> PatchHash
+    -> Task (Http.Error Bytes) ( PatchHash, Http.Response Patch )
+getPatch isDev hash =
+    Http.getBytes
+        { decoder = V1.patchDecoder
+        , headers = []
+        , timeout = Nothing
+        , url = prefixIfDev isDev ("patch/" ++ hash)
+        }
+        |> Task.map (\response -> ( hash, response ))
 
 
 getRawCausal :

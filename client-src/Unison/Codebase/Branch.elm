@@ -1,4 +1,13 @@
-module Unison.Codebase.Branch exposing (..)
+module Unison.Codebase.Branch exposing
+    ( Branch(..)
+    , Branch0
+    , BranchHash
+    , RawBranch
+    , Star
+    , branchPatchHashes
+    , branchPatches
+    , rawBranchToBranch0
+    )
 
 import HashingContainers.HashDict as HashDict
 import HashingContainers.HashSet as HashSet exposing (HashSet)
@@ -12,6 +21,7 @@ import Ucb.Unison.ReferentDict as ReferentDict exposing (ReferentDict)
 import Ucb.Unison.ReferentSet as ReferentSet exposing (ReferentSet)
 import Unison.Codebase.Causal exposing (..)
 import Unison.Codebase.NameSegment exposing (..)
+import Unison.Codebase.Patch exposing (..)
 import Unison.Hash exposing (..)
 import Unison.Name exposing (..)
 import Unison.Reference exposing (..)
@@ -41,7 +51,7 @@ type alias Branch0 =
     { terms : Star Referent NameSegment
     , types : Star Reference NameSegment
     , children : NameSegmentDict ( BranchHash, Branch )
-    , edits : NameSegmentDict Hash32 -- TODO
+    , patches : NameSegmentDict PatchHash
 
     -- Derived info
     , cache :
@@ -66,7 +76,7 @@ type alias RawBranch =
     { terms : Star Referent NameSegment
     , types : Star Reference NameSegment
     , children : NameSegmentDict BranchHash
-    , edits : NameSegmentDict BranchHash
+    , patches : NameSegmentDict PatchHash
     }
 
 
@@ -106,7 +116,7 @@ rawBranchToBranch0 hashToBranch rawBranch =
     { terms = rawBranch.terms
     , types = rawBranch.types
     , children = children
-    , edits = rawBranch.edits
+    , patches = rawBranch.patches
     , cache =
         { termToName = termToName
         , nameToTerm = makeNameToTerm termToName
@@ -286,3 +296,74 @@ makeNameToType =
                 (nameTails name)
     in
     HashDict.foldl f1 NameDict.empty
+
+
+{-| Compute the full names of all the patches in a Branch.
+
+    Conceptually it's very simple. A branch has top-level patches, and its
+    children have patches. Say our patches are:
+
+        patch = Patch1
+
+    and we have one child, "foo", whose patches are:
+
+        patch = Patch2
+        blah  = Patch3
+
+    then, this function computes:
+
+        patch     = Patch1
+        foo.patch = Patch2
+        foo.blah  = Patch3
+
+-}
+branchPatches :
+    Branch
+    -> NameDict PatchHash
+branchPatches (Branch causal) =
+    branchPatches0 (rawCausalHead causal)
+
+
+{-| Compute the full names of all the patches in a Branch0.
+-}
+branchPatches0 :
+    Branch0
+    -> NameDict PatchHash
+branchPatches0 branch =
+    let
+        initial : NameDict PatchHash
+        initial =
+            NameDict.mapKeys
+                List.singleton
+                branch.patches
+
+        step :
+            ( NameSegment, ( BranchHash, Branch ) )
+            -> NameDict PatchHash
+            -> NameDict PatchHash
+        step ( name, ( _, child ) ) acc =
+            HashDict.foldl
+                (\( suffix, hash ) ->
+                    HashDict.insert
+                        (name :: suffix)
+                        hash
+                )
+                acc
+                (branchPatches child)
+    in
+    HashDict.foldl
+        step
+        initial
+        branch.children
+
+
+{-| Like 'branchPatches', but throw away the names and just return the hashes.
+-}
+branchPatchHashes :
+    Branch
+    -> HashSet PatchHash
+branchPatchHashes =
+    branchPatches
+        >> HashDict.toList
+        >> List.map Tuple.second
+        >> HashSet.fromList hash32Equality hash32Hashing

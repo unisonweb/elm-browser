@@ -1,6 +1,7 @@
 module Ucb.Unison.Codebase.API exposing
     ( UnisonCodebaseAPI
     , getBranch
+    , getPatches
     , getTermTypes
     , getTypeDecls
     )
@@ -12,8 +13,10 @@ import Misc exposing (..)
 import Task exposing (Task)
 import Ucb.Unison.BranchDict exposing (..)
 import Ucb.Util.Http as Http
+import Ucb.Util.List as List
 import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)
+import Unison.Codebase.Patch exposing (..)
 import Unison.Declaration exposing (..)
 import Unison.Hash exposing (..)
 import Unison.Reference exposing (..)
@@ -29,6 +32,7 @@ type alias UnisonCodebaseAPI =
     { -- Get the head namespace hash, that is, the name of the file located at
       -- .unison/v1/paths/\_head/<namespace-hash>
       getHeadHash : Task (Http.Error String) (Http.Response BranchHash)
+    , getPatch : PatchHash -> Task (Http.Error Bytes) ( PatchHash, Http.Response Patch )
     , getRawCausal : BranchHash -> Task (Http.Error Bytes) ( BranchHash, Http.Response (RawCausal RawBranch) )
     , getTerm : Id -> Task (Http.Error Bytes) ( Id, Http.Response (Term Symbol) )
     , getTermType : Id -> Task (Http.Error Bytes) ( Id, Http.Response (Type Symbol) )
@@ -282,22 +286,26 @@ tasks xs f s0 =
                 |> Task.andThen (tasks ys f)
 
 
+{-| Batch getPatch
+-}
+getPatches :
+    UnisonCodebaseAPI
+    -> List PatchHash
+    -> Task (Http.Error Bytes) (List ( PatchHash, Patch ))
+getPatches api =
+    List.traverseTask
+        (api.getPatch >> Task.map (Tuple.mapSecond .body))
+
+
 {-| Batch getTermType
 -}
 getTermTypes :
     UnisonCodebaseAPI
     -> List Id
     -> Task (Http.Error Bytes) (List ( Id, Type Symbol ))
-getTermTypes api ids =
-    case ids of
-        [] ->
-            Task.succeed []
-
-        id :: ids_ ->
-            Task.map2
-                (\( r, s ) rs -> ( r, s.body ) :: rs)
-                (api.getTermType id)
-                (getTermTypes api ids_)
+getTermTypes api =
+    List.traverseTask
+        (api.getTermType >> Task.map (Tuple.mapSecond .body))
 
 
 {-| Batch getTypeDecl
@@ -306,13 +314,6 @@ getTypeDecls :
     UnisonCodebaseAPI
     -> List Id
     -> Task (Http.Error Bytes) (List ( Id, Declaration Symbol ))
-getTypeDecls api ids =
-    case ids of
-        [] ->
-            Task.succeed []
-
-        id :: ids_ ->
-            Task.map2
-                (\( r, s ) rs -> ( r, s.body ) :: rs)
-                (api.getTypeDecl id)
-                (getTypeDecls api ids_)
+getTypeDecls api =
+    List.traverseTask
+        (api.getTypeDecl >> Task.map (Tuple.mapSecond .body))

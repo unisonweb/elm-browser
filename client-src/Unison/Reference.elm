@@ -30,8 +30,7 @@ referenceEquality =
                     x == y
 
                 ( Derived x, Derived y ) ->
-                    -- hash implies size
-                    x.hash == y.hash && x.pos == y.pos
+                    idEquality.eq x y
 
                 _ ->
                     False
@@ -68,8 +67,7 @@ idEquality =
     Equality.eq
         (\id1 id2 ->
             hash32Equality.eq id1.hash id2.hash
-                && id1.pos
-                == id2.pos
+                && (id1.pos == id2.pos)
         )
 
 

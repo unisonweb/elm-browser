@@ -217,13 +217,13 @@ update_Http_GetBranch2 ( hash, { branches, parents, successors } ) model =
                 model.codebase.branches
                 branches
 
-        -- TODO(elliott) type sig
+        newParents : BranchDict (HashSet BranchHash)
         newParents =
             (BranchDict.monoid HashSet.semigroup).semigroup.prepend
                 parents
                 model.codebase.parents
 
-        -- TODO(elliot) type sig
+        newSuccessors : BranchDict (HashSet BranchHash)
         newSuccessors =
             (BranchDict.monoid HashSet.semigroup).semigroup.prepend
                 successors
@@ -362,21 +362,25 @@ update_Http_GetTermTypesAndTypeDecls2 :
     -> Model
     -> ( Model, Cmd message )
 update_Http_GetTermTypesAndTypeDecls2 ( termTypes, types ) model =
+    let
+        newTermTypes : HashDict Id (Type Symbol)
+        newTermTypes =
+            List.foldl
+                (\( id, type_ ) -> HashDict.insert id type_)
+                model.codebase.termTypes
+                termTypes
+
+        newTypeDecls : HashDict Id (Declaration Symbol)
+        newTypeDecls =
+            List.foldl
+                (\( id, declaration ) -> HashDict.insert id declaration)
+                model.codebase.typeDecls
+                types
+    in
     ( { model
         | codebase =
-            { -- TODO(elliot) lift this to "newTermTypes" in let-binding
-              termTypes =
-                List.foldl
-                    (\( id, type_ ) -> HashDict.insert id type_)
-                    model.codebase.termTypes
-                    termTypes
-
-            -- TODO(elliot) same here
-            , typeDecls =
-                List.foldl
-                    (\( id, declaration ) -> HashDict.insert id declaration)
-                    model.codebase.typeDecls
-                    types
+            { termTypes = newTermTypes
+            , typeDecls = newTypeDecls
 
             -- unchanged
             , head = model.codebase.head

@@ -1,14 +1,8 @@
-{-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE ViewPatterns #-}
-
 module Main where
 
 import Control.Exception (throwIO)
 import Control.Monad
+import Data.ByteString (ByteString)
 import Data.Function ((&))
 import Data.Maybe
 import Data.Text (Text)
@@ -25,9 +19,13 @@ import System.IO
 import System.IO.Error
 import Text.Read
 
+import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Char8 as ByteString.Char8
+import qualified Data.ByteString.Lazy as LazyByteString
 import qualified Data.ByteString.Lazy.Char8 as LazyByteString.Char8
 import qualified Data.Text as Text
+
+import Cache
 
 
 main :: IO ()
@@ -58,6 +56,9 @@ main =
             _ ->
               throwIO err
 
+      cache :: Cache <-
+        newCache
+
       runSettings
         (defaultSettings
           & setBeforeMainLoop
@@ -69,7 +70,7 @@ main =
                   ]))
           & setHost "127.0.0.1"
           & setPort port)
-        (cors (\_ -> Just simpleCorsResourcePolicy) app)
+        (cors (\_ -> Just simpleCorsResourcePolicy) (app cache))
         `catchIOError` handler
 
 
@@ -78,10 +79,11 @@ printUsage = do
   putStrLn "Usage: unison-browser [PORT]"
 
 app
-  :: Request
+  :: Cache
+  -> Request
   -> (Response -> IO ResponseReceived)
   -> IO ResponseReceived
-app request respond = do
+app cache request respond = do
   ByteString.Char8.putStrLn
     (requestMethod request <> " " <> rawPathInfo request)
 
@@ -96,20 +98,10 @@ app request respond = do
           Nothing)
 
     GET ["branch", branch] ->
-      respond
-        (responseFile
-          status200
-          [(hContentType, "application/octet-stream")]
-          (".unison/v1/paths/" <> Text.unpack branch <> ".ub")
-          Nothing)
+      handleGetBranch cache branch >>= respond
 
     GET ["declaration", declaration] ->
-      respond
-        (responseFile
-          status200
-          [(hContentType, "application/octet-stream")]
-          (".unison/v1/types/#" <> Text.unpack declaration <> "/compiled.ub")
-          Nothing)
+      handleGetDeclaration cache declaration >>= respond
 
     GET ["head"] -> do
       [head] <- listDirectory ".unison/v1/paths/_head"
@@ -120,24 +112,82 @@ app request respond = do
           (LazyByteString.Char8.pack (show head)))
 
     GET ["term", term, "term"] ->
-      respond
-        (responseFile
-          status200
-          [(hContentType, "application/octet-stream")]
-          (".unison/v1/terms/#" <> Text.unpack term <> "/compiled.ub")
-          Nothing)
+      handleGetTerm cache term >>= respond
 
     GET ["term", term, "type"] ->
-      respond
-        (responseFile
-          status200
-          [(hContentType, "application/octet-stream")]
-          (".unison/v1/terms/#" <> Text.unpack term <> "/type.ub")
-          Nothing)
+      handleGetTermType cache term >>= respond
 
     _ ->
       respond (responseLBS status404 [] "")
 
+handleGetBranch
+  :: Cache
+  -> Text
+  -> IO Response
+handleGetBranch cache branch =
+  handleGetCachedThing
+    cache
+    (KeyBranch branch)
+    (".unison/v1/paths/" <> Text.unpack branch <> ".ub")
+
+handleGetDeclaration
+  :: Cache
+  -> Text
+  -> IO Response
+handleGetDeclaration cache declaration =
+  handleGetCachedThing
+    cache
+    (KeyDeclaration declaration)
+    (".unison/v1/types/#" <> Text.unpack declaration <> "/compiled.ub")
+
+handleGetTerm
+  :: Cache
+  -> Text
+  -> IO Response
+handleGetTerm cache term =
+  handleGetCachedThing
+    cache
+    (KeyTerm term)
+    (".unison/v1/terms/#" <> Text.unpack term <> "/compiled.ub")
+
+handleGetTermType
+  :: Cache
+  -> Text
+  -> IO Response
+handleGetTermType cache term =
+  handleGetCachedThing
+    cache
+    (KeyTermType term)
+    (".unison/v1/terms/#" <> Text.unpack term <> "/type.ub")
+
+
+handleGetCachedThing
+  :: Cache
+  -> Key
+  -> FilePath
+  -> IO Response
+handleGetCachedThing cache key path =
+  readCache cache key >>= \case
+    Nothing -> do
+      -- TODO(elliott) we should 404 on file-not-found, not 500
+      bytes <- ByteString.readFile path
+      writeCache cache key bytes
+      pure (makeResponse bytes)
+
+    Just bytes ->
+      pure (makeResponse bytes)
+
+  where
+    makeResponse :: ByteString -> Response
+    makeResponse bytes =
+      responseLBS
+        status200
+        [hContentTypeOctetStream]
+        (LazyByteString.fromStrict bytes)
+
+hContentTypeOctetStream :: Header
+hContentTypeOctetStream =
+  (hContentType, "application/octet-stream")
 
 pattern GET :: [Text] -> Request
 pattern GET path <- (asGetRequest -> Just path)

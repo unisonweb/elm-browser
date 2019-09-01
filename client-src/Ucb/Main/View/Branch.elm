@@ -97,6 +97,9 @@ viewBranch0 model { terms, types, children, edits } =
 
 
 {-| View a child branch.
+TODO(elliott) instead pass in the whole Name prefix leading up to this branch.
+Right now for child e.g. "base.List" we only pass in the last segment "List" but
+we want the whole name for tooltip purposes.
 -}
 viewBranchChild :
     Model

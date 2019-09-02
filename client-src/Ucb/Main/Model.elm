@@ -69,6 +69,9 @@ type alias Model =
 
         -- Search box
         , search : String
+
+        -- hover tracking
+        , hoveredTerm : Maybe Id
         , key : Nav.Key
         }
 

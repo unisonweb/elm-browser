@@ -79,6 +79,7 @@ init _ url key =
                 { branches = BranchDict.empty
                 , terms = HashDict.empty idEquality idHashing
                 , search = ""
+                , hoveredTerm = Nothing
                 , key = key
                 }
             , errors = []
@@ -126,6 +127,12 @@ update message model =
 
         User_ToggleTerm id ->
             update_User_ToggleTerm id model
+
+        User_HoverTerm id ->
+            updateUserHoverTerm id model
+
+        User_LeaveTerm ->
+            updateUserLeaveTerm model
 
         UrlChanged _ ->
             ( model, Cmd.none )
@@ -402,15 +409,12 @@ update_User_Search :
     -> Model
     -> ( Model, Cmd msg )
 update_User_Search search model =
+    let
+        updateSearch oldUi =
+            { oldUi | search = String.toLower search }
+    in
     ( { model
-        | ui =
-            { search = String.toLower search
-
-            -- unchanged
-            , branches = model.ui.branches
-            , terms = model.ui.terms
-            , key = model.ui.key
-            }
+        | ui = updateSearch model.ui
       }
     , Cmd.none
     )
@@ -488,19 +492,19 @@ update_User_ToggleBranch :
     -> Model
     -> ( Model, Cmd Message )
 update_User_ToggleBranch hash model =
+    let
+        updateBranches oldUi =
+            { oldUi
+                | branches =
+                    HashDict.update
+                        hash
+                        (maybe True not >> Just)
+                        model.ui.branches
+            }
+    in
     ( { model
         | ui =
-            { branches =
-                HashDict.update
-                    hash
-                    (maybe True not >> Just)
-                    model.ui.branches
-
-            -- unchanged
-            , search = model.ui.search
-            , terms = model.ui.terms
-            , key = model.ui.key
-            }
+            updateBranches model.ui
       }
     , case HashDict.get hash model.codebase.branches of
         -- Should never be the case
@@ -538,19 +542,30 @@ update_User_ToggleTerm id model =
                 id
                 (maybe True not >> Just)
                 model.ui.terms
+
+        updateTerms oldUi =
+            { oldUi | terms = newTerms }
     in
     ( { model
         | ui =
-            { terms = newTerms
-
-            -- unchanged
-            , branches = model.ui.branches
-            , search = model.ui.search
-            , key = model.ui.key
-            }
+            updateTerms model.ui
       }
     , command
     )
+
+
+updateUserHoverTerm : Id -> Model -> ( Model, Cmd Message )
+updateUserHoverTerm id model =
+    model.ui
+        |> (\oldUi -> { oldUi | hoveredTerm = Just id })
+        |> (\newUi -> ( { model | ui = newUi }, Cmd.none ))
+
+
+updateUserLeaveTerm : Model -> ( Model, Cmd Message )
+updateUserLeaveTerm model =
+    model.ui
+        |> (\oldUi -> { oldUi | hoveredTerm = Nothing })
+        |> (\newUi -> ( { model | ui = newUi }, Cmd.none ))
 
 
 subscriptions :

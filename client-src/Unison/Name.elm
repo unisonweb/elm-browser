@@ -1,8 +1,10 @@
 module Unison.Name exposing (..)
 
+import Array exposing (Array)
 import Misc exposing (..)
 import Typeclasses.Classes.Equality as Equality exposing (Equality)
 import Typeclasses.Classes.Hashing as Hashing exposing (Hashing)
+import Ucb.Util.Array as Array
 import Unison.Codebase.NameSegment exposing (..)
 
 
@@ -11,24 +13,31 @@ import Unison.Codebase.NameSegment exposing (..)
 
 Invariant: non-empty
 
+TODO(elliott) make this an opaque type, don't export its constructor
+
 -}
 type alias Name =
-    List NameSegment
+    Array NameSegment
 
 
 nameEquality : Equality Name
 nameEquality =
-    Equality.list nameSegmentEquality
+    Equality.array nameSegmentEquality
 
 
 nameHashing : Hashing Name
 nameHashing =
-    Hashing.list nameSegmentHashing
+    Hashing.array nameSegmentHashing 10
 
 
 nameToString : Name -> String
 nameToString =
-    String.join "."
+    Array.toList >> String.join "."
+
+
+nameFromNameSegment : NameSegment -> Name
+nameFromNameSegment =
+    Array.singleton
 
 
 {-|
@@ -43,12 +52,17 @@ nameToString =
 -}
 nameTails : Name -> List Name
 nameTails name =
-    case name of
-        [] ->
-            impossible "nameTails: empty name"
+    let
+        n : Int
+        n =
+            Array.length name
 
-        [ x ] ->
-            [ [ x ] ]
+        loop : Int -> List Name -> List Name
+        loop m acc =
+            if m == 0 then
+                name :: acc
 
-        x :: xs ->
-            (x :: xs) :: nameTails xs
+            else
+                loop (m - 1) (Array.slice m n name :: acc)
+    in
+    loop (n - 1) []

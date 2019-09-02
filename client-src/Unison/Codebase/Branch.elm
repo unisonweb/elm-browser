@@ -9,6 +9,7 @@ module Unison.Codebase.Branch exposing
     , rawBranchToBranch0
     )
 
+import Array
 import HashingContainers.HashDict as HashDict
 import HashingContainers.HashSet as HashSet exposing (HashSet)
 import Misc exposing (..)
@@ -159,12 +160,12 @@ makeTermToName branch =
             HashDict.union
                 HashSet.semigroup
                 (ReferentDict.map
-                    (NameSet.map (\names -> name :: names))
+                    (NameSet.map (Array.push name))
                     (rawCausalHead child).cache.termToName
                 )
         )
         (ReferentDict.map
-            (HashSet.map nameEquality nameHashing List.singleton)
+            (HashSet.map nameEquality nameHashing nameFromNameSegment)
             branch
         )
 
@@ -247,12 +248,12 @@ makeTypeToName branch =
             HashDict.union
                 HashSet.semigroup
                 (ReferenceDict.map
-                    (NameSet.map (\names -> name :: names))
+                    (NameSet.map (Array.push name))
                     (rawCausalHead child).cache.typeToName
                 )
         )
         (ReferenceDict.map
-            (HashSet.map nameEquality nameHashing List.singleton)
+            (HashSet.map nameEquality nameHashing nameFromNameSegment)
             branch
         )
 
@@ -334,7 +335,7 @@ branchPatches0 branch =
         initial : NameDict PatchHash
         initial =
             NameDict.mapKeys
-                List.singleton
+                nameFromNameSegment
                 branch.patches
 
         step :
@@ -345,7 +346,7 @@ branchPatches0 branch =
             HashDict.foldl
                 (\( suffix, hash ) ->
                     HashDict.insert
-                        (name :: suffix)
+                        (Array.push name suffix)
                         hash
                 )
                 acc

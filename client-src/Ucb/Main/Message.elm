@@ -24,6 +24,8 @@ type Message
     | User_ToggleBranch BranchHash
     | User_ToggleTerm Id
     | User_Search String
+    | User_HoverTerm Id
+    | User_LeaveTerm
     | Http_GetBranch
         (Result (Http.Error Bytes)
             ( BranchHash

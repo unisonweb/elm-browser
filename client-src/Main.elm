@@ -79,6 +79,7 @@ init _ url key =
                 { branches = BranchDict.empty
                 , terms = HashDict.empty idEquality idHashing
                 , search = ""
+                , hoveredTerm = Nothing
                 , key = key
                 }
             , errors = []
@@ -126,6 +127,12 @@ update message model =
 
         User_ToggleTerm id ->
             update_User_ToggleTerm id model
+
+        User_HoverTerm id ->
+            updateUserHoverTerm id model
+
+        User_LeaveTerm ->
+            updateUserLeaveTerm model
 
         UrlChanged _ ->
             ( model, Cmd.none )
@@ -545,6 +552,20 @@ update_User_ToggleTerm id model =
       }
     , command
     )
+
+
+updateUserHoverTerm : Id -> Model -> ( Model, Cmd Message )
+updateUserHoverTerm id model =
+    model.ui
+        |> (\oldUi -> { oldUi | hoveredTerm = Just id })
+        |> (\newUi -> ( { model | ui = newUi }, Cmd.none ))
+
+
+updateUserLeaveTerm : Model -> ( Model, Cmd Message )
+updateUserLeaveTerm model =
+    model.ui
+        |> (\oldUi -> { oldUi | hoveredTerm = Nothing })
+        |> (\newUi -> ( { model | ui = newUi }, Cmd.none ))
 
 
 subscriptions :

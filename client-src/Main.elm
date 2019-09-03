@@ -9,7 +9,7 @@ import Misc exposing (..)
 import Task
 import Ucb.Main.Message exposing (Message(..))
 import Ucb.Main.Model exposing (..)
-import Ucb.Main.View exposing (view)
+import Ucb.Main.View exposing (viewModel)
 import Ucb.Unison.BranchDict as BranchDict exposing (BranchDict)
 import Ucb.Unison.Codebase.API exposing (..)
 import Ucb.Unison.Codebase.API.GitHub exposing (..)
@@ -35,7 +35,7 @@ main =
         { init = init
         , subscriptions = subscriptions
         , update = update
-        , view = view
+        , view = viewModel
         , onUrlRequest = LinkClicked
         , onUrlChange = UrlChanged
         }

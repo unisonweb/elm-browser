@@ -4,7 +4,6 @@ import Element exposing (..)
 import HashingContainers.HashDict as HashDict
 import HashingContainers.HashSet as HashSet
 import Misc exposing (..)
-import Ucb.Main.Model exposing (..)
 import Ucb.Main.View.Reference exposing (viewReference)
 import Ucb.Unison.Name exposing (..)
 import Ucb.Unison.NameDict exposing (NameDict)
@@ -21,24 +20,24 @@ import Util.HashSet as HashSet
 
 
 viewType :
-    Model
+    { r | branch : Branch }
     -> Int
     -> Type Symbol
     -> Element message
-viewType model p ty0 =
+viewType view p ty0 =
     case ty0.out of
         TypeVar var ->
             text (symbolToString var)
 
         TypeTm (TypeRef reference) ->
-            viewTypeRef model reference
+            viewTypeRef view reference
 
         TypeTm (TypeArrow ty1 ty2) ->
             ppParen (p >= 0)
                 (row
                     []
-                    [ viewType model 0 ty1
-                    , viewArrows model (typeUnEffectfulArrows ty2)
+                    [ viewType view 0 ty1
+                    , viewArrows view (typeUnEffectfulArrows ty2)
                     ]
                 )
 
@@ -47,7 +46,7 @@ viewType model p ty0 =
                 TypeTm (TypeRef (Builtin "Sequence")) ->
                     row
                         []
-                        [ text "[", viewType model 0 ty2, text "]" ]
+                        [ text "[", viewType view 0 ty2, text "]" ]
 
                 _ ->
                     case typeUnApps ty0 of
@@ -58,9 +57,9 @@ viewType model p ty0 =
                             ppParen (p >= 10)
                                 (row
                                     []
-                                    [ viewType model 9 f
+                                    [ viewType view 9 f
                                     , text " "
-                                    , ppSpaced (List.map (viewType model 10) xs)
+                                    , ppSpaced (List.map (viewType view 10) xs)
                                     ]
                                 )
 
@@ -70,19 +69,19 @@ viewType model p ty0 =
                     typeUnForalls [] ty0
             in
             if p < 0 && List.all symbolIsLowercase tyvars then
-                viewType model p ty
+                viewType view p ty
 
             else
                 ppParen (p >= 0)
                     (row
                         []
                         [ text (String.join " " ("∀" :: List.map symbolToString tyvars) ++ ". ")
-                        , viewType model -1 ty
+                        , viewType view -1 ty
                         ]
                     )
 
         TypeTm (TypeIntroOuter ty) ->
-            viewType model p ty
+            viewType view p ty
 
         TypeAbs _ _ ->
             impossible "viewType: TypeAbs"
@@ -103,10 +102,10 @@ viewType model p ty0 =
 
 
 viewTypeRef :
-    Model
+    { r | branch : Branch }
     -> Reference
     -> Element message
-viewTypeRef model reference =
+viewTypeRef view reference =
     let
         fallback : Element message
         fallback =
@@ -116,33 +115,25 @@ viewTypeRef model reference =
                 }
                 reference
     in
-    case model.codebase.head of
-        Nothing ->
-            fallback
-
-        Just hash ->
-            case HashDict.get hash model.codebase.branches of
+    case view.branch of
+        Branch causal ->
+            let
+                head =
+                    rawCausalHead causal
+            in
+            case HashDict.get reference head.cache.typeToName of
                 Nothing ->
                     fallback
 
-                Just (Branch causal) ->
-                    let
-                        head =
-                            rawCausalHead causal
-                    in
-                    case HashDict.get reference head.cache.typeToName of
-                        Nothing ->
-                            fallback
+                Just names ->
+                    case HashSet.toList names of
+                        [] ->
+                            impossible "viewType: empty names"
 
-                        Just names ->
-                            case HashSet.toList names of
-                                [] ->
-                                    impossible "viewType: empty names"
-
-                                -- TODO, we should handle aliases better. this
-                                -- just takes the first name
-                                name :: _ ->
-                                    viewTypeRef2 head.cache.nameToType name
+                        -- TODO, we should handle aliases better. this
+                        -- just takes the first name
+                        name :: _ ->
+                            viewTypeRef2 head.cache.nameToType name
 
 
 viewTypeRef2 :
@@ -156,14 +147,14 @@ viewTypeRef2 nameToType fullName =
 {-| Haskell function: Unison.TypePrinter.arrow
 -}
 viewArrow :
-    Model
+    { r | branch : Branch }
     -> Maybe (List (Type Symbol))
     -> Element message
-viewArrow model maybeEffects =
+viewArrow view maybeEffects =
     row
         []
         [ text " ->"
-        , maybe none (viewEffects model) maybeEffects
+        , maybe none (viewEffects view) maybeEffects
         , text " "
         ]
 
@@ -171,30 +162,30 @@ viewArrow model maybeEffects =
 {-| Haskell function: Unison.TypePrinter.arrows
 -}
 viewArrows :
-    Model
+    { r | branch : Branch }
     -> List ( Maybe (List (Type Symbol)), Type Symbol )
     -> Element message
-viewArrows model input =
+viewArrows view input =
     case input of
         [] ->
             none
 
         ( maybeEffects, ty ) :: tys ->
             row []
-                [ viewArrow model maybeEffects
-                , viewType model 0 ty
-                , viewArrows model tys
+                [ viewArrow view maybeEffects
+                , viewType view 0 ty
+                , viewArrows view tys
                 ]
 
 
 viewEffects :
-    Model
+    { r | branch : Branch }
     -> List (Type Symbol)
     -> Element message
-viewEffects model effects =
+viewEffects view effects =
     row
         []
         [ text "{"
-        , ppCommas (List.map (viewType model 0) effects)
+        , ppCommas (List.map (viewType view 0) effects)
         , text "}"
         ]

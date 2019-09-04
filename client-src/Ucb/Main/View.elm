@@ -161,7 +161,8 @@ viewBranches view =
     let
         branchInfo : List ( List NameSegment, Branch )
         branchInfo =
-            ( [], view.head ) :: childInfo view.head
+            (( [], view.head ) :: childInfo view.head)
+                |> List.filter (Tuple.second >> shouldBeVisible)
 
         childInfo :
             Branch
@@ -171,13 +172,9 @@ viewBranches view =
                 |> HashDict.toList
                 |> List.sortWith
                     (\( n1, _ ) ( n2, _ ) -> nameCompare n1 n2)
-                |> List.filterMap
+                |> List.map
                     (\( name, ( _, b ) ) ->
-                        if shouldBeVisible b then
-                            Just ( Array.toList name, b )
-
-                        else
-                            Nothing
+                        ( Array.toList name, b )
                     )
 
         -- Should we show this branch?

@@ -7,6 +7,13 @@ import Typeclasses.Classes.Monoid as Monoid exposing (Monoid)
 import Typeclasses.Classes.Semigroup exposing (Semigroup)
 
 
+isEmpty : HashSet a -> Bool
+isEmpty =
+    HashSet.foldl
+        (\_ _ -> False)
+        True
+
+
 map :
     Equality b
     -> Hashing b

@@ -25,6 +25,7 @@ import Unison.Codebase.Patch exposing (..)
 import Unison.Declaration exposing (..)
 import Unison.Name exposing (..)
 import Unison.Reference exposing (..)
+import Unison.Referent exposing (..)
 import Unison.Symbol exposing (..)
 import Unison.Term exposing (..)
 import Unison.Type exposing (..)
@@ -169,10 +170,33 @@ viewBranches view =
                 |> HashDict.toList
                 |> List.sortWith
                     (\( n1, _ ) ( n2, _ ) -> nameCompare n1 n2)
-                |> List.map
+                |> List.filterMap
                     (\( name, ( _, b ) ) ->
-                        ( Array.toList name, b )
+                        if shouldBeVisible b then
+                            Just ( Array.toList name, b )
+
+                        else
+                            Nothing
                     )
+
+        -- Should we show this branch?
+        -- Yes if:
+        -- * It contains any types
+        -- * It contains any non-constructor terms
+        shouldBeVisible :
+            Branch
+            -> Bool
+        shouldBeVisible (Branch causal) =
+            let
+                branch0 : Branch0
+                branch0 =
+                    rawCausalHead causal
+            in
+            not (HashSet.isEmpty branch0.types.fact)
+                || HashSet.foldl
+                    (\referent acc -> referentIsReference referent || acc)
+                    False
+                    branch0.terms.fact
 
         viewInfo :
             ( List NameSegment, Branch )

@@ -227,22 +227,23 @@ update_Http_GetBranch2 ( hash, { branches, parents, successors } ) model =
             (BranchDict.monoid HashSet.semigroup).semigroup.prepend
                 successors
                 model.codebase.successors
+
+        updateCodebase oldCodebase =
+            { oldCodebase
+                | -- We assume that because we fetched this branch, we wanted to
+                  -- focus it.
+                  head = Just hash
+                , branches = newBranches
+                , parents = newParents
+                , successors = newSuccessors
+            }
+
+        updateUI oldUI =
+            { oldUI | branch = [] }
     in
     ( { model
-        | codebase =
-            { -- We assume that because we fetched this branch, we wanted to
-              -- focus it.
-              head = Just hash
-            , branches = newBranches
-            , parents = newParents
-            , successors = newSuccessors
-
-            -- unchanged
-            , patches = model.codebase.patches
-            , terms = model.codebase.terms
-            , termTypes = model.codebase.termTypes
-            , typeDecls = model.codebase.typeDecls
-            }
+        | codebase = updateCodebase model.codebase
+        , ui = updateUI model.ui
       }
     , case HashDict.get hash newBranches of
         -- This should never be the case
@@ -453,19 +454,16 @@ update_User_FocusBranch hash model =
             )
 
         Just branch ->
-            ( { model
-                | codebase =
-                    { head = Just hash
+            let
+                updateCodebase oldCodebase =
+                    { oldCodebase | head = Just hash }
 
-                    -- unchanged
-                    , branches = model.codebase.branches
-                    , patches = model.codebase.patches
-                    , terms = model.codebase.terms
-                    , termTypes = model.codebase.termTypes
-                    , typeDecls = model.codebase.typeDecls
-                    , parents = model.codebase.parents
-                    , successors = model.codebase.successors
-                    }
+                updateUI oldUI =
+                    { oldUI | branch = [] }
+            in
+            ( { model
+                | codebase = updateCodebase model.codebase
+                , ui = updateUI model.ui
               }
             , Task.map2
                 Tuple.pair

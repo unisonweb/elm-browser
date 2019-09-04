@@ -20,7 +20,7 @@ import Util.HashSet as HashSet
 
 
 viewType :
-    { r | branch : Branch }
+    { r | head : Branch }
     -> Int
     -> Type Symbol
     -> Element message
@@ -102,7 +102,7 @@ viewType view p ty0 =
 
 
 viewTypeRef :
-    { r | branch : Branch }
+    { r | head : Branch }
     -> Reference
     -> Element message
 viewTypeRef view reference =
@@ -115,7 +115,7 @@ viewTypeRef view reference =
                 }
                 reference
     in
-    case view.branch of
+    case view.head of
         Branch causal ->
             let
                 head =
@@ -147,7 +147,7 @@ viewTypeRef2 nameToType fullName =
 {-| Haskell function: Unison.TypePrinter.arrow
 -}
 viewArrow :
-    { r | branch : Branch }
+    { r | head : Branch }
     -> Maybe (List (Type Symbol))
     -> Element message
 viewArrow view maybeEffects =
@@ -162,7 +162,7 @@ viewArrow view maybeEffects =
 {-| Haskell function: Unison.TypePrinter.arrows
 -}
 viewArrows :
-    { r | branch : Branch }
+    { r | head : Branch }
     -> List ( Maybe (List (Type Symbol)), Type Symbol )
     -> Element message
 viewArrows view input =
@@ -179,7 +179,7 @@ viewArrows view input =
 
 
 viewEffects :
-    { r | branch : Branch }
+    { r | head : Branch }
     -> List (Type Symbol)
     -> Element message
 viewEffects view effects =

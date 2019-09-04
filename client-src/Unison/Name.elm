@@ -59,6 +59,16 @@ nameHashing =
     Hashing.map nameToNameSegments (Hashing.array nameSegmentHashing 10)
 
 
+{-| TODO make this more efficient
+-}
+nameCompare :
+    Name
+    -> Name
+    -> Order
+nameCompare n1 n2 =
+    compare (nameToString n1) (nameToString n2)
+
+
 nameToString : Name -> String
 nameToString =
     nameToNameSegments >> Array.toList >> String.join "."

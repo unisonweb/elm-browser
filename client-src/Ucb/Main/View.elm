@@ -1,14 +1,17 @@
 module Ucb.Main.View exposing (viewModel)
 
+import Array
 import Browser exposing (Document)
 import Element exposing (..)
+import Element.Background as Background
 import Element.Border as Border
+import Element.Events exposing (onClick)
 import Element.Font as Font
 import Element.Input exposing (button, labelLeft)
 import HashingContainers.HashDict as HashDict
 import HashingContainers.HashSet as HashSet
 import Html exposing (Html)
-import Misc exposing (maybe)
+import Misc exposing (impossible, maybe)
 import Ucb.Main.Message exposing (..)
 import Ucb.Main.Model exposing (..)
 import Ucb.Main.View.Branch exposing (..)
@@ -28,14 +31,14 @@ import Unison.Type exposing (..)
 
 
 type alias View =
-    { branch : Branch
-    , branchHash : BranchHash
+    { branch : ( List NameSegment, ( BranchHash, Branch ) )
     , errors : List Error
     , getTerm : Id -> Maybe (Term Symbol)
     , getTermType : Id -> Maybe (Type Symbol)
     , getTypeDecl : Id -> Maybe (Declaration Symbol)
+    , head : Branch
+    , headHash : BranchHash
     , hoveredTerm : Maybe Id
-    , isBranchVisible : BranchHash -> Bool
     , isTermVisible : Id -> Bool
     , parents : BranchHash -> List BranchHash
     , patches : List ( PatchHash, Patch )
@@ -55,13 +58,13 @@ makeViewFromModel model =
         Nothing ->
             Nothing
 
-        Just head ->
-            case HashDict.get head model.codebase.branches of
+        Just headHash ->
+            case HashDict.get headHash model.codebase.branches of
                 Nothing ->
                     Nothing
 
-                Just branch ->
-                    Just (makeViewFromModel2 model head branch)
+                Just head ->
+                    Just (makeViewFromModel2 model headHash head)
 
 
 makeViewFromModel2 :
@@ -69,15 +72,35 @@ makeViewFromModel2 :
     -> BranchHash
     -> Branch
     -> View
-makeViewFromModel2 model head branch =
-    { branch = branch
-    , branchHash = head
+makeViewFromModel2 model headHash head =
+    { branch =
+        ( model.ui.branch
+        , case model.ui.branch of
+            [] ->
+                ( headHash, head )
+
+            path ->
+                let
+                    branch0 : Branch0
+                    branch0 =
+                        case head of
+                            Branch branch ->
+                                rawCausalHead branch
+                in
+                case HashDict.get (Array.fromList path) branch0.cache.pathToChild of
+                    Nothing ->
+                        impossible "missing child"
+
+                    Just child ->
+                        child
+        )
     , errors = model.errors
     , getTerm = \id -> HashDict.get id model.codebase.terms
     , getTermType = \id -> HashDict.get id model.codebase.termTypes
     , getTypeDecl = \id -> HashDict.get id model.codebase.typeDecls
+    , head = head
+    , headHash = headHash
     , hoveredTerm = model.ui.hoveredTerm
-    , isBranchVisible = \hash -> HashDict.get hash model.ui.branches == Just True
     , isTermVisible = \id -> HashDict.get id model.ui.terms == Just True
     , parents = \hash -> maybe [] HashSet.toList (HashDict.get hash model.codebase.parents)
     , patches = HashDict.toList model.codebase.patches
@@ -108,15 +131,22 @@ viewView view =
         [ header
         , row [ padding 20, spaceEvenly ]
             [ viewBranches view
-            , theBranch view
-            , viewSearchPrototype view
+            , el
+                [ alignTop
+                , width (fill |> minimum 500 |> maximum 1000)
+                ]
+                (case view.branch of
+                    ( _, ( hash, branch ) ) ->
+                        viewBranch view hash branch
+                )
+            , viewSearch view
             ]
 
         -- Debug info and WIP UI
         , el [ width fill, Border.width 1, Border.solid ] none
         , errors view
         , el [ width fill, Border.width 1, Border.solid ] none
-        , viewPatchesPrototype view
+        , viewPatches view
         ]
 
 
@@ -124,45 +154,55 @@ viewView view =
 -}
 viewBranches :
     View
-    -> Element message
+    -> Element Message
 viewBranches view =
     let
-        branchNames : Branch -> List (List NameSegment)
-        branchNames (Branch causal) =
-            (rawCausalHead causal).children
+        branchInfo : List ( List NameSegment, Branch )
+        branchInfo =
+            ( [], view.head ) :: childInfo view.head
+
+        childInfo :
+            Branch
+            -> List ( List NameSegment, Branch )
+        childInfo (Branch branch) =
+            (rawCausalHead branch).cache.pathToChild
                 |> HashDict.toList
-                |> List.sortBy Tuple.first
-                |> List.concatMap
-                    (\( name, ( _, branch ) ) ->
-                        [ name ]
-                            :: List.map (List.cons name) (branchNames branch)
+                |> List.sortWith
+                    (\( n1, _ ) ( n2, _ ) -> nameCompare n1 n2)
+                |> List.map
+                    (\( name, ( _, b ) ) ->
+                        ( Array.toList name, b )
                     )
+
+        viewInfo :
+            ( List NameSegment, Branch )
+            -> Element Message
+        viewInfo ( path, branch ) =
+            el
+                [ if path == Tuple.first view.branch then
+                    Background.color (rgb 0.5 0.5 0.5)
+
+                  else
+                    Background.color (rgb 1 1 1)
+                , onClick (User_ClickBranch path)
+                , pointer
+                ]
+                (text (String.cons '.' (String.join "." path)))
     in
     column
-        [ alignTop ]
-        (branchNames view.branch
-            |> List.cons []
-            |> List.map (String.join "." >> String.cons '.')
-            |> List.map text
-        )
+        [ alignTop
+        , width (fill |> minimum 200)
+        ]
+        (List.map viewInfo branchInfo)
 
 
-theBranch :
-    View
-    -> Element Message
-theBranch view =
-    column
-        [ alignTop, width <| (fill |> minimum 500 |> maximum 1000) ]
-        [ viewBranch view view.branchHash view.branch ]
-
-
-viewPatchesPrototype :
+viewPatches :
     { r
-        | branchHash : BranchHash
+        | headHash : BranchHash
         , patches : List ( PatchHash, Patch )
     }
     -> Element Message
-viewPatchesPrototype view =
+viewPatches view =
     let
         viewPatch : ( PatchHash, Patch ) -> Element message
         viewPatch ( hash, { termEdits, typeEdits } ) =
@@ -179,7 +219,7 @@ viewPatchesPrototype view =
     column
         []
         [ button []
-            { onPress = Just (User_GetPatches view.branchHash)
+            { onPress = Just (User_GetPatches view.headHash)
             , label = text "Get patches"
             }
         , text "patches:"
@@ -188,19 +228,19 @@ viewPatchesPrototype view =
         ]
 
 
-viewSearchPrototype :
+viewSearch :
     { r
-        | branch : Branch
+        | head : Branch
         , search : String
     }
     -> Element Message
-viewSearchPrototype view =
+viewSearch view =
     let
         -- Term names, tossing the set of referent each is associated with (for
         -- now)
         termNames : List Name
         termNames =
-            case view.branch of
+            case view.head of
                 Branch causal ->
                     (rawCausalHead causal).cache.nameToTerm
                         |> HashDict.toList
@@ -212,7 +252,7 @@ viewSearchPrototype view =
         -- now)
         typeNames : List Name
         typeNames =
-            case view.branch of
+            case view.head of
                 Branch causal ->
                     (rawCausalHead causal).cache.nameToTerm
                         |> HashDict.toList

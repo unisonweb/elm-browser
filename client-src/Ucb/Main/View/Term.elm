@@ -41,7 +41,7 @@ type InfixContext
 
 
 viewTerm :
-    { r | branch : Branch }
+    { r | head : Branch }
     -> Term Symbol
     -> Element message
 viewTerm view =
@@ -54,7 +54,7 @@ viewTerm view =
 
 
 viewTerm2 :
-    { r | branch : Branch }
+    { r | head : Branch }
     -> Env
     -> Term Symbol
     -> Element message
@@ -136,7 +136,7 @@ viewTerm2 view env { out } =
 {-| Should be the same as viewTermOr
 -}
 viewTermAnd :
-    { r | branch : Branch }
+    { r | head : Branch }
     -> Env
     -> Term Symbol
     -> Term Symbol
@@ -165,7 +165,7 @@ viewTermAnd view env t1 t2 =
 
 
 viewTermAnn :
-    { r | branch : Branch }
+    { r | head : Branch }
     -> Env
     -> Term Symbol
     -> Type Symbol
@@ -175,7 +175,7 @@ viewTermAnn view env term _ =
 
 
 viewTermApp :
-    { r | branch : Branch }
+    { r | head : Branch }
     -> Env
     -> Term Symbol
     -> Term Symbol
@@ -221,7 +221,7 @@ viewTermChar c =
 
 
 viewTermConstructor :
-    { r | branch : Branch }
+    { r | head : Branch }
     -> Reference
     -> Int
     -> Element message
@@ -237,7 +237,7 @@ viewTermFloat n =
 
 
 viewTermHandle :
-    { r | branch : Branch }
+    { r | head : Branch }
     -> Env
     -> Term Symbol
     -> Term Symbol
@@ -271,7 +271,7 @@ viewTermHandle view env t1 t2 =
 
 
 viewTermIf :
-    { r | branch : Branch }
+    { r | head : Branch }
     -> Env
     -> Term Symbol
     -> Term Symbol
@@ -333,7 +333,7 @@ viewTermInt n =
 
 
 viewTermLam :
-    { r | branch : Branch }
+    { r | head : Branch }
     -> Env
     -> Term Symbol
     -> Element message
@@ -372,7 +372,7 @@ viewTermNat n =
 {-| Should be the same as viewTermAnd
 -}
 viewTermOr :
-    { r | branch : Branch }
+    { r | head : Branch }
     -> Env
     -> Term Symbol
     -> Term Symbol
@@ -401,7 +401,7 @@ viewTermOr view env t1 t2 =
 
 
 viewTermRef :
-    { r | branch : Branch }
+    { r | head : Branch }
     -> Reference
     -> Element message
 viewTermRef view reference =
@@ -409,7 +409,7 @@ viewTermRef view reference =
 
 
 viewTermRequest :
-    { r | branch : Branch }
+    { r | head : Branch }
     -> Reference
     -> Int
     -> Element message
@@ -418,7 +418,7 @@ viewTermRequest view reference n =
 
 
 viewTermSequence :
-    { r | branch : Branch }
+    { r | head : Branch }
     -> Env
     -> Array (Term Symbol)
     -> Element message
@@ -450,7 +450,7 @@ viewTermVar var =
 
 
 viewReferent_ :
-    { r | branch : Branch }
+    { r | head : Branch }
     -> Referent
     -> Element message
 viewReferent_ view referent =
@@ -463,7 +463,7 @@ viewReferent_ view referent =
                 }
                 referent
     in
-    case view.branch of
+    case view.head of
         Branch causal ->
             let
                 head =

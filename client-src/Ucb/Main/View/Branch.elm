@@ -25,14 +25,15 @@ import Unison.Type exposing (..)
 import Unison.Util.Relation exposing (..)
 
 
+{-| TODO(elliott) pass in this branch's path
+-}
 viewBranch :
     { r
-        | branch : Branch
-        , getTerm : Id -> Maybe (Term Symbol)
+        | getTerm : Id -> Maybe (Term Symbol)
         , getTermType : Id -> Maybe (Type Symbol)
         , getTypeDecl : Id -> Maybe (Declaration Symbol)
+        , head : Branch
         , hoveredTerm : Maybe Id
-        , isBranchVisible : BranchHash -> Bool
         , isTermVisible : Id -> Bool
         , parents : BranchHash -> List BranchHash
         , successors : BranchHash -> List BranchHash
@@ -46,12 +47,11 @@ viewBranch view hash (Branch causal) =
 
 viewBranch0 :
     { r
-        | branch : Branch
-        , getTerm : Id -> Maybe (Term Symbol)
+        | getTerm : Id -> Maybe (Term Symbol)
         , getTermType : Id -> Maybe (Type Symbol)
         , getTypeDecl : Id -> Maybe (Declaration Symbol)
+        , head : Branch
         , hoveredTerm : Maybe Id
-        , isBranchVisible : BranchHash -> Bool
         , isTermVisible : Id -> Bool
         , parents : BranchHash -> List BranchHash
         , successors : BranchHash -> List BranchHash
@@ -96,20 +96,6 @@ viewBranch0 view { terms, types, children, patches } =
                                     (HashDict.get referent terms.d3.domain)
                             )
                     )
-        , case HashDict.toList children of
-            [] ->
-                none
-
-            children2 ->
-                column
-                    [ spacing 20 ]
-                    (children2
-                        |> List.sortBy Tuple.first
-                        |> List.map
-                            (\( name, ( hash, branch ) ) ->
-                                viewBranchChild view name hash branch
-                            )
-                    )
         , -- TODO
           case patches of
             _ ->
@@ -117,57 +103,13 @@ viewBranch0 view { terms, types, children, patches } =
         ]
 
 
-{-| View a child branch.
-TODO(elliott) instead pass in the whole Name prefix leading up to this branch.
-Right now for child e.g. "base.List" we only pass in the last segment "List" but
-we want the whole name for tooltip purposes.
--}
-viewBranchChild :
-    { r
-        | branch : Branch
-        , getTerm : Id -> Maybe (Term Symbol)
-        , getTermType : Id -> Maybe (Type Symbol)
-        , getTypeDecl : Id -> Maybe (Declaration Symbol)
-        , hoveredTerm : Maybe Id
-        , isBranchVisible : BranchHash -> Bool
-        , isTermVisible : Id -> Bool
-        , parents : BranchHash -> List BranchHash
-        , successors : BranchHash -> List BranchHash
-    }
-    -> NameSegment
-    -> BranchHash
-    -> Branch
-    -> Element Message
-viewBranchChild view name hash branch =
-    column
-        []
-        [ el
-            [ onClick (User_ToggleBranch hash)
-            , pointer
-            ]
-            (row
-                []
-                [ el [ bold ] (text "child ")
-                , text name
-                ]
-            )
-        , if view.isBranchVisible hash then
-            el
-                [ paddingEach { bottom = 0, left = 10, right = 0, top = 0 } ]
-                (viewBranch view hash branch)
-
-          else
-            none
-        ]
-
-
 {-| View a term in a branch.
 -}
 viewBranchTerm :
     { r
-        | branch : Branch
-        , getTerm : Id -> Maybe (Term Symbol)
+        | getTerm : Id -> Maybe (Term Symbol)
         , getTermType : Id -> Maybe (Type Symbol)
+        , head : Branch
         , hoveredTerm : Maybe Id
         , isTermVisible : Id -> Bool
     }
@@ -186,9 +128,9 @@ viewBranchTerm view referent name links =
 
 viewBranchTerm2 :
     { r
-        | branch : Branch
-        , getTerm : Id -> Maybe (Term Symbol)
+        | getTerm : Id -> Maybe (Term Symbol)
         , getTermType : Id -> Maybe (Type Symbol)
+        , head : Branch
         , hoveredTerm : Maybe Id
         , isTermVisible : Id -> Bool
     }
@@ -266,8 +208,8 @@ viewBranchTerm2 view reference name _ =
 -}
 viewBranchType :
     { r
-        | branch : Branch
-        , getTypeDecl : Id -> Maybe (Declaration Symbol)
+        | getTypeDecl : Id -> Maybe (Declaration Symbol)
+        , head : Branch
     }
     -> Reference
     -> NameSegment
@@ -298,7 +240,7 @@ viewBranchType view reference name links =
 
 
 viewBranchType2 :
-    { r | branch : Branch }
+    { r | head : Branch }
     -> NameSegment
     -> Maybe (HashSet ( Reference, Reference ))
     -> Id
@@ -352,12 +294,11 @@ viewBranchType2 view name _ _ declaration constructorType =
 
 viewCausal :
     { r
-        | branch : Branch
-        , getTerm : Id -> Maybe (Term Symbol)
+        | getTerm : Id -> Maybe (Term Symbol)
         , getTermType : Id -> Maybe (Type Symbol)
         , getTypeDecl : Id -> Maybe (Declaration Symbol)
+        , head : Branch
         , hoveredTerm : Maybe Id
-        , isBranchVisible : BranchHash -> Bool
         , isTermVisible : Id -> Bool
         , parents : BranchHash -> List BranchHash
         , successors : BranchHash -> List BranchHash

@@ -17,6 +17,7 @@ import Ucb.Unison.Codebase.API.LocalServer exposing (..)
 import Ucb.Util.Http as Http
 import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)
+import Unison.Codebase.NameSegment exposing (..)
 import Unison.Codebase.Patch exposing (..)
 import Unison.Declaration exposing (..)
 import Unison.Hash exposing (..)
@@ -76,7 +77,7 @@ init _ url key =
                 , successors = BranchDict.empty
                 }
             , ui =
-                { branches = BranchDict.empty
+                { branch = []
                 , terms = HashDict.empty idEquality idHashing
                 , search = ""
                 , hoveredTerm = Nothing
@@ -113,6 +114,9 @@ update message model =
         Http_GetTermTypesAndTypeDecls result ->
             update_Http_GetTermTypesAndTypeDecls result model
 
+        User_ClickBranch path ->
+            update_User_ClickBranch path model
+
         User_FocusBranch hash ->
             update_User_FocusBranch hash model
 
@@ -121,9 +125,6 @@ update message model =
 
         User_Search search ->
             update_User_Search search model
-
-        User_ToggleBranch hash ->
-            update_User_ToggleBranch hash model
 
         User_ToggleTerm id ->
             update_User_ToggleTerm id model
@@ -139,15 +140,6 @@ update message model =
 
         LinkClicked _ ->
             ( model, Cmd.none )
-
-
-{-| Whatever you're debugging. Might be nothing!
--}
-update_User_DebugButton :
-    Model
-    -> ( Model, Cmd Message )
-update_User_DebugButton model =
-    ( model, Cmd.none )
 
 
 {-| Got the head hash. Next step: get the actual (decoded) bytes.
@@ -403,6 +395,7 @@ update_Http_GetTermTypesAndTypeDecls2 ( termTypes, types ) model =
 
 
 {-| The user has adjusted the current search.
+TODO alphabetize
 -}
 update_User_Search :
     String
@@ -416,6 +409,20 @@ update_User_Search search model =
     ( { model
         | ui = updateSearch model.ui
       }
+    , Cmd.none
+    )
+
+
+update_User_ClickBranch :
+    List NameSegment
+    -> Model
+    -> ( Model, Cmd message )
+update_User_ClickBranch path model =
+    let
+        updateUI oldUI =
+            { oldUI | branch = path }
+    in
+    ( { model | ui = updateUI model.ui }
     , Cmd.none
     )
 
@@ -484,39 +491,6 @@ update_User_GetPatches hash model =
                 model
                 branch
                 |> Task.attempt Http_GetPatches
-    )
-
-
-update_User_ToggleBranch :
-    BranchHash
-    -> Model
-    -> ( Model, Cmd Message )
-update_User_ToggleBranch hash model =
-    let
-        updateBranches oldUi =
-            { oldUi
-                | branches =
-                    HashDict.update
-                        hash
-                        (maybe True not >> Just)
-                        model.ui.branches
-            }
-    in
-    ( { model
-        | ui =
-            updateBranches model.ui
-      }
-    , case HashDict.get hash model.codebase.branches of
-        -- Should never be the case
-        Nothing ->
-            Cmd.none
-
-        Just branch ->
-            Task.map2
-                Tuple.pair
-                (getMissingTermTypes model branch)
-                (getMissingTypeDecls model branch)
-                |> Task.attempt Http_GetTermTypesAndTypeDecls
     )
 
 

@@ -34,6 +34,7 @@ type alias View =
     , getTerm : Id -> Maybe (Term Symbol)
     , getTermType : Id -> Maybe (Type Symbol)
     , getTypeDecl : Id -> Maybe (Declaration Symbol)
+    , hoveredTerm : Maybe Id
     , isBranchVisible : BranchHash -> Bool
     , isTermVisible : Id -> Bool
     , parents : BranchHash -> List BranchHash
@@ -75,6 +76,7 @@ makeViewFromModel2 model head branch =
     , getTerm = \id -> HashDict.get id model.codebase.terms
     , getTermType = \id -> HashDict.get id model.codebase.termTypes
     , getTypeDecl = \id -> HashDict.get id model.codebase.typeDecls
+    , hoveredTerm = model.ui.hoveredTerm
     , isBranchVisible = \hash -> HashDict.get hash model.ui.branches == Just True
     , isTermVisible = \id -> HashDict.get id model.ui.terms == Just True
     , parents = \hash -> maybe [] HashSet.toList (HashDict.get hash model.codebase.parents)

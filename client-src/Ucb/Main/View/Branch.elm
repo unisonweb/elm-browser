@@ -313,10 +313,9 @@ viewCausal view hash causal =
             el
                 [ onClick (User_FocusBranch hash_)
                 , pointer
-                , width (px 100)
-                , clipX
                 ]
-                (text hash_)
+                -- TODO show full hash on hover
+                (text (String.left 7 hash_))
 
         viewParents : Element Message
         viewParents =

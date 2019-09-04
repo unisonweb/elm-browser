@@ -182,6 +182,15 @@ viewBranchTerm2 model reference name _ =
                     [ codeFont
                     , onClick (User_ToggleTerm id)
                     , pointer
+                    , onMouseEnter (User_HoverTerm id)
+                    , onMouseLeave User_LeaveTerm
+                    , below <|
+                        if Just id == model.ui.hoveredTerm then
+                            -- TODO find the full name and print it
+                            el [] none
+
+                        else
+                            none
                     ]
                     [ text name2
                     , maybe

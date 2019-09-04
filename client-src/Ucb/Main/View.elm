@@ -29,6 +29,7 @@ import Unison.Referent exposing (..)
 import Unison.Symbol exposing (..)
 import Unison.Term exposing (..)
 import Unison.Type exposing (..)
+import Util.HashSet as HashSet
 
 
 type alias View =
@@ -172,6 +173,19 @@ viewBranches view =
                     (\( n1, _ ) ( n2, _ ) -> nameCompare n1 n2)
                 |> List.filterMap
                     (\( name, ( _, b ) ) ->
+                        let
+                            n =
+                                if name == Array.fromList [ "base", "Test" ] then
+                                    Debug.log
+                                        ".base.Test"
+                                        (case b of
+                                            Branch cc ->
+                                                HashSet.size (rawCausalHead cc).types.fact
+                                        )
+
+                                else
+                                    0
+                        in
                         if shouldBeVisible b then
                             Just ( Array.toList name, b )
 
@@ -208,7 +222,7 @@ viewBranches view =
 
                   else
                     Background.color (rgb 1 1 1)
-                , onClick (User_ClickBranch path)
+                , onClick (User_ClickBranch path branch)
                 , pointer
                 ]
                 (text (String.cons '.' (String.join "." path)))

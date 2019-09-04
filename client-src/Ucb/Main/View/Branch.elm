@@ -42,6 +42,14 @@ viewBranch :
     -> Branch
     -> Element Message
 viewBranch view hash (Branch causal) =
+    let
+        () =
+            if hash == "smbk0g4pcpnua8lmsk7ja37n7l2n88acm9dmrm423b2n8ilro4taccgl70eptv2l22103ph6cuvo9lnkmjunsudk79ov3cl8nq5c450" then
+                Debug.log "viewBranch .base.Test" ()
+
+            else
+                ()
+    in
     viewCausal view hash causal
 
 
@@ -56,9 +64,19 @@ viewBranch0 :
         , parents : BranchHash -> List BranchHash
         , successors : BranchHash -> List BranchHash
     }
+    -> BranchHash
     -> Branch0
     -> Element Message
-viewBranch0 view { terms, types, children, patches } =
+viewBranch0 view hash { terms, types, children, patches } =
+    let
+        _ =
+            if hash == "smbk0g4pcpnua8lmsk7ja37n7l2n88acm9dmrm423b2n8ilro4taccgl70eptv2l22103ph6cuvo9lnkmjunsudk79ov3cl8nq5c450" then
+                Debug.log "viewBranch .base.Test"
+                    ( HashSet.size types.fact, HashDict.size types.d1.domain )
+
+            else
+                ( 0, 0 )
+    in
     column
         [ spacing 30 ]
         [ case relationToList types.d1 of
@@ -66,6 +84,15 @@ viewBranch0 view { terms, types, children, patches } =
                 none
 
             types2 ->
+                let
+                    _ =
+                        if hash == "smbk0g4pcpnua8lmsk7ja37n7l2n88acm9dmrm423b2n8ilro4taccgl70eptv2l22103ph6cuvo9lnkmjunsudk79ov3cl8nq5c450" then
+                            Debug.log "types2"
+                                types2
+
+                        else
+                            []
+                in
                 column [ spacing 20 ]
                     (types2
                         |> List.sortBy Tuple.second
@@ -363,7 +390,7 @@ viewCausal view hash causal =
                         , viewParents
                         , viewSuccessors
                         ]
-                    , viewBranch0 view branch
+                    , viewBranch0 view hash branch
                     ]
 
             RawCons branch hash_ ->
@@ -375,7 +402,7 @@ viewCausal view hash causal =
                         , viewPredecessors [ hash_ ]
                         , viewSuccessors
                         ]
-                    , viewBranch0 view branch
+                    , viewBranch0 view hash branch
                     ]
 
             RawMerge branch hashes ->
@@ -387,7 +414,7 @@ viewCausal view hash causal =
                         , viewPredecessors (HashSet.toList hashes)
                         , viewSuccessors
                         ]
-                    , viewBranch0 view branch
+                    , viewBranch0 view hash branch
                     ]
         )
 

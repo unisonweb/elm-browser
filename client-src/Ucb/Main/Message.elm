@@ -21,7 +21,7 @@ import Url
 
 type Message
     = User_FocusBranch BranchHash
-    | User_ClickBranch (List NameSegment)
+    | User_ClickBranch (List NameSegment) Branch
     | User_GetPatches BranchHash
     | User_ToggleTerm Id
     | User_Search String

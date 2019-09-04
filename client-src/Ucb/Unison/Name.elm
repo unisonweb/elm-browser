@@ -1,10 +1,9 @@
 module Ucb.Unison.Name exposing (..)
 
 import HashingContainers.HashDict as HashDict
-import HashingContainers.HashSet exposing (HashSet)
+import HashingContainers.HashSet as HashSet exposing (HashSet)
 import Ucb.Unison.NameDict exposing (NameDict)
 import Unison.Name exposing (..)
-import Util.HashSet as HashSet
 
 
 shortenName :

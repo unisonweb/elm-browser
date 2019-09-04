@@ -7,13 +7,6 @@ import Typeclasses.Classes.Monoid as Monoid exposing (Monoid)
 import Typeclasses.Classes.Semigroup exposing (Semigroup)
 
 
-isEmpty : HashSet a -> Bool
-isEmpty =
-    HashSet.foldl
-        (\_ _ -> False)
-        True
-
-
 map :
     Equality b
     -> Hashing b
@@ -33,13 +26,6 @@ singleton :
     -> HashSet a
 singleton equality hashing x =
     HashSet.insert x (HashSet.empty equality hashing)
-
-
-size :
-    HashSet a
-    -> Int
-size =
-    HashSet.toList >> List.length
 
 
 monoid :

@@ -114,8 +114,8 @@ update message model =
         Http_GetTermTypesAndTypeDecls result ->
             update_Http_GetTermTypesAndTypeDecls result model
 
-        User_ClickBranch path ->
-            update_User_ClickBranch path model
+        User_ClickBranch path branch ->
+            update_User_ClickBranch path branch model
 
         User_FocusBranch hash ->
             update_User_FocusBranch hash model
@@ -414,17 +414,27 @@ update_User_Search search model =
     )
 
 
+{-| Click a branch:
+
+  - Fetch all of the new branch's types and terms.
+
+-}
 update_User_ClickBranch :
     List NameSegment
+    -> Branch
     -> Model
-    -> ( Model, Cmd message )
-update_User_ClickBranch path model =
+    -> ( Model, Cmd Message )
+update_User_ClickBranch path branch model =
     let
         updateUI oldUI =
             { oldUI | branch = path }
     in
     ( { model | ui = updateUI model.ui }
-    , Cmd.none
+    , Task.map2
+        Tuple.pair
+        (getMissingTermTypes model branch)
+        (getMissingTypeDecls model branch)
+        |> Task.attempt Http_GetTermTypesAndTypeDecls
     )
 
 
@@ -432,7 +442,7 @@ update_User_ClickBranch path model =
 
   - We might've already fetched it (e.g. it's the child of a previous root). In
     this case we have no branches to fetch, but we do want to fetch all of the
-    new branch's types and terms (currently: just types, terms is a WIP).
+    new branch's types and terms (currently: just types).
 
   - Otherwise, it's somewhere in our history. So fetch it and all of its
     children! When the request comes back, we'll switch focus.

@@ -19,13 +19,12 @@ type Name
 
 
 unsafeMakeName : Array NameSegment -> Name
-unsafeMakeName array =
-    Name array
+unsafeMakeName =
+    Name
 
 
 makeName : Array NameSegment -> Maybe Name
 makeName nameSegmentArray =
-    -- Debug.todo ""
     let
         length =
             Array.length nameSegmentArray
@@ -38,23 +37,13 @@ makeName nameSegmentArray =
             Just (Name nameSegmentArray)
 
 
-checkName : Maybe Name -> Name
-checkName maybeName =
-    case maybeName of
-        Nothing ->
-            impossible "Received empty name"
-
-        Just name ->
-            name
-
-
 empty : Name
 empty =
     Name Array.empty
 
 
-nameAsArray : Name -> Array NameSegment
-nameAsArray name =
+nameToNameSegments : Name -> Array NameSegment
+nameToNameSegments name =
     case name of
         Name array ->
             array
@@ -62,17 +51,17 @@ nameAsArray name =
 
 nameEquality : Equality Name
 nameEquality =
-    Equality.map nameAsArray (Equality.array nameSegmentEquality)
+    Equality.map nameToNameSegments (Equality.array nameSegmentEquality)
 
 
 nameHashing : Hashing Name
 nameHashing =
-    Hashing.map nameAsArray (Hashing.array nameSegmentHashing 10)
+    Hashing.map nameToNameSegments (Hashing.array nameSegmentHashing 10)
 
 
 nameToString : Name -> String
 nameToString =
-    nameAsArray >> Array.toList >> String.join "."
+    nameToNameSegments >> Array.toList >> String.join "."
 
 
 nameFromNameSegment : NameSegment -> Name
@@ -82,14 +71,14 @@ nameFromNameSegment =
 
 cons : NameSegment -> Name -> Name
 cons nameSegment name =
-    Array.push nameSegment (nameAsArray name) |> unsafeMakeName
+    Array.append (Array.singleton nameSegment) (nameToNameSegments name) |> unsafeMakeName
 
 
 last : Name -> NameSegment
 last name =
     let
         array =
-            nameAsArray name
+            nameToNameSegments name
 
         index =
             Array.length array - 1
@@ -119,7 +108,7 @@ nameTails : Name -> List Name
 nameTails name =
     let
         array =
-            nameAsArray name
+            nameToNameSegments name
 
         n : Int
         n =

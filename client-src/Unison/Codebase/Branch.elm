@@ -24,7 +24,7 @@ import Unison.Codebase.Causal exposing (..)
 import Unison.Codebase.NameSegment exposing (..)
 import Unison.Codebase.Patch exposing (..)
 import Unison.Hash exposing (..)
-import Unison.Name exposing (..)
+import Unison.Name as Name exposing (..)
 import Unison.Reference exposing (..)
 import Unison.Referent exposing (..)
 import Unison.Util.Relation exposing (..)
@@ -160,7 +160,7 @@ makeTermToName branch =
             HashDict.union
                 HashSet.semigroup
                 (ReferentDict.map
-                    (NameSet.map (Array.push name))
+                    (NameSet.map (Name.cons name))
                     (rawCausalHead child).cache.termToName
                 )
         )
@@ -248,7 +248,7 @@ makeTypeToName branch =
             HashDict.union
                 HashSet.semigroup
                 (ReferenceDict.map
-                    (NameSet.map (Array.push name))
+                    (NameSet.map (Name.cons name))
                     (rawCausalHead child).cache.typeToName
                 )
         )
@@ -346,7 +346,7 @@ branchPatches0 branch =
             HashDict.foldl
                 (\( suffix, hash ) ->
                     HashDict.insert
-                        (Array.push name suffix)
+                        (Name.cons name suffix)
                         hash
                 )
                 acc

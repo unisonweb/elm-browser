@@ -89,6 +89,6 @@ idToString { hash, pos, size } =
     else
         hash
             ++ String.fromChar '.'
-            ++ String.fromInt (pos + 1)
+            ++ String.fromInt pos
             ++ String.fromChar 'c'
             ++ String.fromInt size

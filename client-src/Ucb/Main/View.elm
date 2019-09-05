@@ -89,7 +89,7 @@ makeViewFromModel2 model headHash head =
                             Branch branch ->
                                 rawCausalHead branch
                 in
-                case HashDict.get (Array.fromList path) branch0.cache.pathToChild of
+                case HashDict.get (unsafeMakeName (Array.fromList path)) branch0.cache.pathToChild of
                     Nothing ->
                         impossible "missing child"
 
@@ -174,7 +174,7 @@ viewBranches view =
                     (\( n1, _ ) ( n2, _ ) -> nameCompare n1 n2)
                 |> List.map
                     (\( name, ( _, b ) ) ->
-                        ( Array.toList name, b )
+                        ( Array.toList (nameToNameSegments name), b )
                     )
 
         -- Should we show this branch?

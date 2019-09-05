@@ -115,11 +115,11 @@ rawBranchToBranch0 hashToBranch rawBranch =
             HashDict.foldl
                 (\( name, ( hash, Branch child ) ) acc ->
                     HashDict.insert
-                        (Array.singleton name)
+                        (nameFromNameSegment name)
                         ( hash, Branch child )
                         (HashDict.foldl
                             (\( path, grandchild ) ->
-                                HashDict.insert (Array.cons name path) grandchild
+                                HashDict.insert (nameCons name path) grandchild
                             )
                             acc
                             (rawCausalHead child).cache.pathToChild
@@ -187,7 +187,7 @@ makeTermToName branch =
             HashDict.union
                 HashSet.semigroup
                 (ReferentDict.map
-                    (NameSet.map (Name.cons name))
+                    (NameSet.map (nameCons name))
                     (rawCausalHead child).cache.termToName
                 )
         )
@@ -275,7 +275,7 @@ makeTypeToName branch =
             HashDict.union
                 HashSet.semigroup
                 (ReferenceDict.map
-                    (NameSet.map (Name.cons name))
+                    (NameSet.map (nameCons name))
                     (rawCausalHead child).cache.typeToName
                 )
         )
@@ -373,7 +373,7 @@ branchPatches0 branch =
             HashDict.foldl
                 (\( suffix, hash ) ->
                     HashDict.insert
-                        (Name.cons name suffix)
+                        (nameCons name suffix)
                         hash
                 )
                 acc

@@ -1,4 +1,16 @@
-module Unison.Name exposing (..)
+module Unison.Name exposing
+    ( Name
+    , makeName
+    , nameCompare
+    , nameCons
+    , nameEquality
+    , nameFromNameSegment
+    , nameHashing
+    , nameTails
+    , nameToNameSegments
+    , nameToString
+    , unsafeMakeName
+    )
 
 import Array exposing (Array)
 import Misc exposing (..)
@@ -79,13 +91,13 @@ nameFromNameSegment =
     Array.singleton >> unsafeMakeName
 
 
-cons : NameSegment -> Name -> Name
-cons nameSegment name =
-    Array.append (Array.singleton nameSegment) (nameToNameSegments name) |> unsafeMakeName
+nameCons : NameSegment -> Name -> Name
+nameCons nameSegment (Name name) =
+    Name (Array.cons nameSegment name)
 
 
-last : Name -> NameSegment
-last name =
+nameLast : Name -> NameSegment
+nameLast name =
     let
         array =
             nameToNameSegments name
@@ -115,21 +127,18 @@ last name =
 
 -}
 nameTails : Name -> List Name
-nameTails name =
+nameTails (Name name) =
     let
-        array =
-            nameToNameSegments name
-
         n : Int
         n =
-            Array.length array
+            Array.length name
 
         loop : Int -> List Name -> List Name
         loop m acc =
             if m == 0 then
-                unsafeMakeName array :: acc
+                Name name :: acc
 
             else
-                loop (m - 1) (unsafeMakeName (Array.slice m n array) :: acc)
+                loop (m - 1) (Name (Array.slice m n name) :: acc)
     in
     loop (n - 1) []

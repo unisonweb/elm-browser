@@ -40,41 +40,10 @@ type alias Model =
         }
 
     -- The codebase
-    , codebase :
-        { -- This data we've fetched directly from the codebase
-          head : Maybe BranchHash
-        , branches : BranchDict Branch
-        , patches : HashDict PatchHash Patch
-        , terms : HashDict Id (Term Symbol)
-        , termTypes : HashDict Id (Type Symbol)
-        , typeDecls : HashDict Id (Declaration Symbol)
-
-        -- Mapping from branch to its parent(s). The codebase doesn't provide
-        -- this, we just discover and cache it lazily as you move down into
-        -- children.
-        , parents : BranchDict (HashSet BranchHash)
-
-        -- Mapping from branch to its successor(s). The codebase doesn't
-        -- provide this, we just discover and cache it lazily as you move
-        -- backwards in time.
-        , successors : BranchDict (HashSet BranchHash)
-        }
+    , codebase : ModelCodebase
 
     -- UI state
-    , ui :
-        { -- Branch path we're currently viewing
-          branch : List NameSegment
-
-        -- Visible?
-        , terms : HashDict Id Bool
-
-        -- Search box
-        , search : String
-
-        -- hover tracking
-        , hoveredTerm : Maybe Id
-        , key : Nav.Key
-        }
+    , ui : ModelUI
 
     -- The errors we've seen. Just slappin' them in the model to put into the
     -- HTML when something is going wrong.
@@ -82,6 +51,43 @@ type alias Model =
 
     -- Whether we're running in dev and need to use CORS headers
     , isDevMode : Bool
+    }
+
+
+type alias ModelCodebase =
+    { -- This data we've fetched directly from the codebase
+      head : Maybe BranchHash
+    , branches : BranchDict Branch
+    , patches : HashDict PatchHash Patch
+    , terms : HashDict Id (Term Symbol)
+    , termTypes : HashDict Id (Type Symbol)
+    , typeDecls : HashDict Id (Declaration Symbol)
+
+    -- Mapping from branch to its parent(s). The codebase doesn't provide
+    -- this, we just discover and cache it lazily as you move down into
+    -- children.
+    , parents : BranchDict (HashSet BranchHash)
+
+    -- Mapping from branch to its successor(s). The codebase doesn't
+    -- provide this, we just discover and cache it lazily as you move
+    -- backwards in time.
+    , successors : BranchDict (HashSet BranchHash)
+    }
+
+
+type alias ModelUI =
+    { -- Branch path we're currently viewing
+      branch : List NameSegment
+
+    -- Visible?
+    , terms : HashDict Id Bool
+
+    -- Search box
+    , search : String
+
+    -- hover tracking
+    , hoveredTerm : Maybe Id
+    , key : Nav.Key
     }
 
 

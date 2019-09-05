@@ -123,17 +123,17 @@ update message model =
         User_GetPatches hash ->
             update_User_GetPatches hash model
 
+        User_HoverTerm id ->
+            update_User_HoverTerm id model
+
+        User_LeaveTerm ->
+            update_User_LeaveTerm model
+
         User_Search search ->
             update_User_Search search model
 
         User_ToggleTerm id ->
             update_User_ToggleTerm id model
-
-        User_HoverTerm id ->
-            updateUserHoverTerm id model
-
-        User_LeaveTerm ->
-            updateUserLeaveTerm model
 
         UrlChanged _ ->
             ( model, Cmd.none )
@@ -164,12 +164,17 @@ update_Http_GetHeadHash2 :
     -> Model
     -> ( Model, Cmd Message )
 update_Http_GetHeadHash2 response model =
+    let
+        command : Cmd Message
+        command =
+            getBranch
+                model.api.unison
+                model.codebase
+                response.body
+                |> Task.attempt Http_GetBranch
+    in
     ( model
-    , getBranch
-        model.api.unison
-        model.codebase
-        response.body
-        |> Task.attempt Http_GetBranch
+    , command
     )
 
 
@@ -186,7 +191,9 @@ update_Http_GetBranch :
 update_Http_GetBranch result model =
     case result of
         Err err ->
-            ( { model | errors = Err_GetBranch err :: model.errors }
+            ( { model
+                | errors = Err_GetBranch err :: model.errors
+              }
             , Cmd.none
             )
 
@@ -205,31 +212,35 @@ update_Http_GetBranch2 :
     -> ( Model, Cmd Message )
 update_Http_GetBranch2 ( hash, { branches, parents, successors } ) model =
     let
-        newBranches : BranchDict Branch
-        newBranches =
-            HashDict.foldl
-                (\( hash_, branch ) ->
-                    HashDict.update
-                        hash_
-                        (maybe (Just branch) Just)
-                )
-                model.codebase.branches
-                branches
+        updateCodebase :
+            ModelCodebase
+            -> ModelCodebase
+        updateCodebase codebase =
+            let
+                newBranches : BranchDict Branch
+                newBranches =
+                    HashDict.foldl
+                        (\( hash_, branch ) ->
+                            HashDict.update
+                                hash_
+                                (maybe (Just branch) Just)
+                        )
+                        codebase.branches
+                        branches
 
-        newParents : BranchDict (HashSet BranchHash)
-        newParents =
-            (BranchDict.monoid HashSet.semigroup).semigroup.prepend
-                parents
-                model.codebase.parents
+                newParents : BranchDict (HashSet BranchHash)
+                newParents =
+                    (BranchDict.monoid HashSet.semigroup).semigroup.prepend
+                        parents
+                        codebase.parents
 
-        newSuccessors : BranchDict (HashSet BranchHash)
-        newSuccessors =
-            (BranchDict.monoid HashSet.semigroup).semigroup.prepend
-                successors
-                model.codebase.successors
-
-        updateCodebase oldCodebase =
-            { oldCodebase
+                newSuccessors : BranchDict (HashSet BranchHash)
+                newSuccessors =
+                    (BranchDict.monoid HashSet.semigroup).semigroup.prepend
+                        successors
+                        codebase.successors
+            in
+            { codebase
                 | -- We assume that because we fetched this branch, we wanted to
                   -- focus it.
                   head = Just hash
@@ -238,24 +249,39 @@ update_Http_GetBranch2 ( hash, { branches, parents, successors } ) model =
                 , successors = newSuccessors
             }
 
-        updateUI oldUI =
-            { oldUI | branch = [] }
-    in
-    ( { model
-        | codebase = updateCodebase model.codebase
-        , ui = updateUI model.ui
-      }
-    , case HashDict.get hash newBranches of
-        -- This should never be the case
-        Nothing ->
-            Cmd.none
+        updateUI :
+            ModelUI
+            -> ModelUI
+        updateUI ui =
+            { ui
+                | branch = []
+            }
 
-        Just branch ->
-            Task.map2
-                Tuple.pair
-                (getMissingTermTypes model branch)
-                (getMissingTypeDecls model branch)
-                |> Task.attempt Http_GetTermTypesAndTypeDecls
+        newModel : Model
+        newModel =
+            { model
+                | codebase = updateCodebase model.codebase
+                , ui = updateUI model.ui
+            }
+
+        -- Fetch missing term types and type decls for the branch we just
+        -- fetched
+        command : Cmd Message
+        command =
+            case HashDict.get hash newModel.codebase.branches of
+                -- This should never be the case
+                Nothing ->
+                    Cmd.none
+
+                Just branch ->
+                    Task.map2
+                        Tuple.pair
+                        (getMissingTermTypes newModel branch)
+                        (getMissingTypeDecls newModel branch)
+                        |> Task.attempt Http_GetTermTypesAndTypeDecls
+    in
+    ( newModel
+    , command
     )
 
 
@@ -266,7 +292,9 @@ update_Http_GetPatches :
 update_Http_GetPatches result model =
     case result of
         Err err ->
-            ( { model | errors = Err_GetPatches err :: model.errors }
+            ( { model
+                | errors = Err_GetPatches err :: model.errors
+              }
             , Cmd.none
             )
 
@@ -280,28 +308,33 @@ update_Http_GetPatches2 :
     -> ( Model, Cmd message )
 update_Http_GetPatches2 patches model =
     let
+        updateCodebase :
+            ModelCodebase
+            -> ModelCodebase
+        updateCodebase codebase =
+            let
+                newPatches : HashDict PatchHash Patch
+                newPatches =
+                    List.foldl
+                        (\( hash, patch ) ->
+                            HashDict.insert hash patch
+                        )
+                        codebase.patches
+                        patches
+            in
+            { codebase
+                | patches = newPatches
+            }
+
         newModel : Model
         newModel =
             { model
-                | codebase =
-                    { patches =
-                        List.foldl
-                            (\( hash, patch ) ->
-                                HashDict.insert hash patch
-                            )
-                            model.codebase.patches
-                            patches
-                    , head = model.codebase.head
-                    , branches = model.codebase.branches
-                    , terms = model.codebase.terms
-                    , termTypes = model.codebase.termTypes
-                    , typeDecls = model.codebase.typeDecls
-                    , parents = model.codebase.parents
-                    , successors = model.codebase.successors
-                    }
+                | codebase = updateCodebase model.codebase
             }
     in
-    ( newModel, Cmd.none )
+    ( newModel
+    , Cmd.none
+    )
 
 
 update_Http_GetTerm :
@@ -311,7 +344,9 @@ update_Http_GetTerm :
 update_Http_GetTerm result model =
     case result of
         Err err ->
-            ( { model | errors = Err_GetTerm err :: model.errors }
+            ( { model
+                | errors = Err_GetTerm err :: model.errors
+              }
             , Cmd.none
             )
 
@@ -324,20 +359,27 @@ update_Http_GetTerm2 :
     -> Model
     -> ( Model, Cmd message )
 update_Http_GetTerm2 ( id, response ) model =
-    ( { model
-        | codebase =
-            { terms = HashDict.insert id response.body model.codebase.terms
-
-            -- unchanged
-            , head = model.codebase.head
-            , branches = model.codebase.branches
-            , patches = model.codebase.patches
-            , termTypes = model.codebase.termTypes
-            , typeDecls = model.codebase.typeDecls
-            , parents = model.codebase.parents
-            , successors = model.codebase.successors
+    let
+        updateCodebase :
+            ModelCodebase
+            -> ModelCodebase
+        updateCodebase codebase =
+            let
+                newTerms : HashDict Id (Term Symbol)
+                newTerms =
+                    HashDict.insert id response.body codebase.terms
+            in
+            { codebase
+                | terms = newTerms
             }
-      }
+
+        newModel : Model
+        newModel =
+            { model
+                | codebase = updateCodebase model.codebase
+            }
+    in
+    ( newModel
     , Cmd.none
     )
 
@@ -349,7 +391,9 @@ update_Http_GetTermTypesAndTypeDecls :
 update_Http_GetTermTypesAndTypeDecls result model =
     case result of
         Err err ->
-            ( { model | errors = Err_GetTypeDecls err :: model.errors }
+            ( { model
+                | errors = Err_GetTypeDecls err :: model.errors
+              }
             , Cmd.none
             )
 
@@ -363,53 +407,37 @@ update_Http_GetTermTypesAndTypeDecls2 :
     -> ( Model, Cmd message )
 update_Http_GetTermTypesAndTypeDecls2 ( termTypes, types ) model =
     let
-        newTermTypes : HashDict Id (Type Symbol)
-        newTermTypes =
-            List.foldl
-                (\( id, type_ ) -> HashDict.insert id type_)
-                model.codebase.termTypes
-                termTypes
+        updateCodebase :
+            ModelCodebase
+            -> ModelCodebase
+        updateCodebase codebase =
+            let
+                newTermTypes : HashDict Id (Type Symbol)
+                newTermTypes =
+                    List.foldl
+                        (\( id, type_ ) -> HashDict.insert id type_)
+                        codebase.termTypes
+                        termTypes
 
-        newTypeDecls : HashDict Id (Declaration Symbol)
-        newTypeDecls =
-            List.foldl
-                (\( id, declaration ) -> HashDict.insert id declaration)
-                model.codebase.typeDecls
-                types
-    in
-    ( { model
-        | codebase =
-            { termTypes = newTermTypes
-            , typeDecls = newTypeDecls
-
-            -- unchanged
-            , head = model.codebase.head
-            , branches = model.codebase.branches
-            , patches = model.codebase.patches
-            , terms = model.codebase.terms
-            , parents = model.codebase.parents
-            , successors = model.codebase.successors
+                newTypeDecls : HashDict Id (Declaration Symbol)
+                newTypeDecls =
+                    List.foldl
+                        (\( id, declaration ) -> HashDict.insert id declaration)
+                        codebase.typeDecls
+                        types
+            in
+            { codebase
+                | termTypes = newTermTypes
+                , typeDecls = newTypeDecls
             }
-      }
-    , Cmd.none
-    )
 
-
-{-| The user has adjusted the current search.
-TODO alphabetize
--}
-update_User_Search :
-    String
-    -> Model
-    -> ( Model, Cmd msg )
-update_User_Search search model =
-    let
-        updateSearch oldUi =
-            { oldUi | search = String.toLower search }
+        newModel : Model
+        newModel =
+            { model
+                | codebase = updateCodebase model.codebase
+            }
     in
-    ( { model
-        | ui = updateSearch model.ui
-      }
+    ( newModel
     , Cmd.none
     )
 
@@ -426,15 +454,30 @@ update_User_ClickBranch :
     -> ( Model, Cmd Message )
 update_User_ClickBranch path branch model =
     let
-        updateUI oldUI =
-            { oldUI | branch = path }
+        updateUI :
+            ModelUI
+            -> ModelUI
+        updateUI ui =
+            { ui
+                | branch = path
+            }
+
+        newModel : Model
+        newModel =
+            { model
+                | ui = updateUI model.ui
+            }
+
+        command : Cmd Message
+        command =
+            Task.map2
+                Tuple.pair
+                (getMissingTermTypes model branch)
+                (getMissingTypeDecls model branch)
+                |> Task.attempt Http_GetTermTypesAndTypeDecls
     in
-    ( { model | ui = updateUI model.ui }
-    , Task.map2
-        Tuple.pair
-        (getMissingTermTypes model branch)
-        (getMissingTypeDecls model branch)
-        |> Task.attempt Http_GetTermTypesAndTypeDecls
+    ( newModel
+    , command
     )
 
 
@@ -455,31 +498,54 @@ update_User_FocusBranch :
 update_User_FocusBranch hash model =
     case HashDict.get hash model.codebase.branches of
         Nothing ->
+            let
+                command : Cmd Message
+                command =
+                    getBranch
+                        model.api.unison
+                        model.codebase
+                        hash
+                        |> Task.attempt Http_GetBranch
+            in
             ( model
-            , getBranch
-                model.api.unison
-                model.codebase
-                hash
-                |> Task.attempt Http_GetBranch
+            , command
             )
 
         Just branch ->
             let
-                updateCodebase oldCodebase =
-                    { oldCodebase | head = Just hash }
+                updateCodebase :
+                    ModelCodebase
+                    -> ModelCodebase
+                updateCodebase codebase =
+                    { codebase
+                        | head = Just hash
+                    }
 
-                updateUI oldUI =
-                    { oldUI | branch = [] }
+                updateUI :
+                    ModelUI
+                    -> ModelUI
+                updateUI ui =
+                    { ui
+                        | branch = []
+                    }
+
+                newModel : Model
+                newModel =
+                    { model
+                        | codebase = updateCodebase model.codebase
+                        , ui = updateUI model.ui
+                    }
+
+                command : Cmd Message
+                command =
+                    Task.map2
+                        Tuple.pair
+                        (getMissingTermTypes newModel branch)
+                        (getMissingTypeDecls newModel branch)
+                        |> Task.attempt Http_GetTermTypesAndTypeDecls
             in
-            ( { model
-                | codebase = updateCodebase model.codebase
-                , ui = updateUI model.ui
-              }
-            , Task.map2
-                Tuple.pair
-                (getMissingTermTypes model branch)
-                (getMissingTypeDecls model branch)
-                |> Task.attempt Http_GetTermTypesAndTypeDecls
+            ( newModel
+            , command
             )
 
 
@@ -488,17 +554,93 @@ update_User_GetPatches :
     -> Model
     -> ( Model, Cmd Message )
 update_User_GetPatches hash model =
-    ( model
-    , case HashDict.get hash model.codebase.branches of
-        -- Should never be the case
-        Nothing ->
-            Cmd.none
+    let
+        command : Cmd Message
+        command =
+            case HashDict.get hash model.codebase.branches of
+                -- Should never be the case
+                Nothing ->
+                    Cmd.none
 
-        Just branch ->
-            getMissingPatches
-                model
-                branch
-                |> Task.attempt Http_GetPatches
+                Just branch ->
+                    getMissingPatches
+                        model
+                        branch
+                        |> Task.attempt Http_GetPatches
+    in
+    ( model
+    , command
+    )
+
+
+update_User_HoverTerm : Id -> Model -> ( Model, Cmd message )
+update_User_HoverTerm id model =
+    let
+        updateUI :
+            ModelUI
+            -> ModelUI
+        updateUI ui =
+            { ui
+                | hoveredTerm = Just id
+            }
+
+        newModel : Model
+        newModel =
+            { model
+                | ui = updateUI model.ui
+            }
+    in
+    ( newModel
+    , Cmd.none
+    )
+
+
+update_User_LeaveTerm : Model -> ( Model, Cmd message )
+update_User_LeaveTerm model =
+    let
+        updateUI :
+            ModelUI
+            -> ModelUI
+        updateUI ui =
+            { ui
+                | hoveredTerm = Nothing
+            }
+
+        newModel : Model
+        newModel =
+            { model
+                | ui = updateUI model.ui
+            }
+    in
+    ( newModel
+    , Cmd.none
+    )
+
+
+{-| The user has adjusted the current search.
+-}
+update_User_Search :
+    String
+    -> Model
+    -> ( Model, Cmd msg )
+update_User_Search search model =
+    let
+        updateSearch :
+            ModelUI
+            -> ModelUI
+        updateSearch ui =
+            { ui
+                | search = String.toLower search
+            }
+
+        newModel : Model
+        newModel =
+            { model
+                | ui = updateSearch model.ui
+            }
+    in
+    ( newModel
+    , Cmd.none
     )
 
 
@@ -518,36 +660,31 @@ update_User_ToggleTerm id model =
                 Just _ ->
                     Cmd.none
 
-        newTerms : HashDict Id Bool
-        newTerms =
-            HashDict.update
-                id
-                (maybe True not >> Just)
-                model.ui.terms
+        updateUI :
+            ModelUI
+            -> ModelUI
+        updateUI ui =
+            let
+                newTerms : HashDict Id Bool
+                newTerms =
+                    HashDict.update
+                        id
+                        (maybe True not >> Just)
+                        ui.terms
+            in
+            { ui
+                | terms = newTerms
+            }
 
-        updateTerms oldUi =
-            { oldUi | terms = newTerms }
+        newModel : Model
+        newModel =
+            { model
+                | ui = updateUI model.ui
+            }
     in
-    ( { model
-        | ui =
-            updateTerms model.ui
-      }
+    ( newModel
     , command
     )
-
-
-updateUserHoverTerm : Id -> Model -> ( Model, Cmd Message )
-updateUserHoverTerm id model =
-    model.ui
-        |> (\oldUi -> { oldUi | hoveredTerm = Just id })
-        |> (\newUi -> ( { model | ui = newUi }, Cmd.none ))
-
-
-updateUserLeaveTerm : Model -> ( Model, Cmd Message )
-updateUserLeaveTerm model =
-    model.ui
-        |> (\oldUi -> { oldUi | hoveredTerm = Nothing })
-        |> (\newUi -> ( { model | ui = newUi }, Cmd.none ))
 
 
 subscriptions :

@@ -117,7 +117,7 @@ viewModel model =
     , body =
         case makeViewFromModel model of
             Nothing ->
-                []
+                [ Html.text "Loading..." ]
 
             -- Loading
             Just view ->

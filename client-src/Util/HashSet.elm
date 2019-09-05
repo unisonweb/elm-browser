@@ -28,13 +28,6 @@ singleton equality hashing x =
     HashSet.insert x (HashSet.empty equality hashing)
 
 
-size :
-    HashSet a
-    -> Int
-size =
-    HashSet.toList >> List.length
-
-
 monoid :
     Equality a
     -> Hashing a

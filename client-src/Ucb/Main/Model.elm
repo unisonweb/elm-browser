@@ -10,6 +10,7 @@ import Ucb.Unison.Codebase.API exposing (..)
 import Ucb.Util.Http as Http
 import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)
+import Unison.Codebase.NameSegment exposing (..)
 import Unison.Codebase.Patch exposing (..)
 import Unison.Declaration exposing (..)
 import Unison.Hash exposing (..)
@@ -61,8 +62,8 @@ type alias Model =
 
     -- UI state
     , ui :
-        { -- Visible?
-          branches : BranchDict Bool
+        { -- Branch path we're currently viewing
+          branch : List NameSegment
 
         -- Visible?
         , terms : HashDict Id Bool

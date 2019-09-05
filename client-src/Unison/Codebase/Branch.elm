@@ -20,6 +20,7 @@ import Ucb.Unison.ReferenceDict as ReferenceDict exposing (ReferenceDict)
 import Ucb.Unison.ReferenceSet as ReferenceSet exposing (ReferenceSet)
 import Ucb.Unison.ReferentDict as ReferentDict exposing (ReferentDict)
 import Ucb.Unison.ReferentSet as ReferentSet exposing (ReferentSet)
+import Ucb.Util.Array as Array
 import Unison.Codebase.Causal exposing (..)
 import Unison.Codebase.NameSegment exposing (..)
 import Unison.Codebase.Patch exposing (..)
@@ -31,6 +32,10 @@ import Unison.Util.Relation exposing (..)
 import Unison.Util.Star3 exposing (Star3_)
 import Util.HashDict as HashDict
 import Util.HashSet as HashSet
+
+
+
+-- TODO are all Array.push in this module meant to be Array.cons?
 
 
 type alias Star a n =
@@ -56,9 +61,12 @@ type alias Branch0 =
 
     -- Derived info
     , cache :
-        { -- Mapping from term (referent) to a set of its names.
-          -- Invariant: the sets are non-empty.
-          termToName : ReferentDict NameSet
+        { -- Mapping from name to child branch
+          pathToChild : NameDict ( BranchHash, Branch )
+
+        -- Mapping from term (referent) to a set of its names.
+        -- Invariant: the sets are non-empty.
+        , termToName : ReferentDict NameSet
 
         -- Inverted mapping, but including name suffixes. See comment on
         -- 'makeNameToTerm' below.
@@ -102,6 +110,24 @@ rawBranchToBranch0 hashToBranch rawBranch =
                 NameSegmentDict.empty
                 rawBranch.children
 
+        pathToChild : NameDict ( BranchHash, Branch )
+        pathToChild =
+            HashDict.foldl
+                (\( name, ( hash, Branch child ) ) acc ->
+                    HashDict.insert
+                        (Array.singleton name)
+                        ( hash, Branch child )
+                        (HashDict.foldl
+                            (\( path, grandchild ) ->
+                                HashDict.insert (Array.cons name path) grandchild
+                            )
+                            acc
+                            (rawCausalHead child).cache.pathToChild
+                        )
+                )
+                NameDict.empty
+                children
+
         termToName : ReferentDict NameSet
         termToName =
             makeTermToName
@@ -119,7 +145,8 @@ rawBranchToBranch0 hashToBranch rawBranch =
     , children = children
     , patches = rawBranch.patches
     , cache =
-        { termToName = termToName
+        { pathToChild = pathToChild
+        , termToName = termToName
         , nameToTerm = makeNameToTerm termToName
         , typeToName = typeToName
         , nameToType = makeNameToType typeToName

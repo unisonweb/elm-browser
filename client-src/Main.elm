@@ -17,6 +17,7 @@ import Ucb.Unison.Codebase.API.LocalServer exposing (..)
 import Ucb.Util.Http as Http
 import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)
+import Unison.Codebase.NameSegment exposing (..)
 import Unison.Codebase.Patch exposing (..)
 import Unison.Declaration exposing (..)
 import Unison.Hash exposing (..)
@@ -76,7 +77,7 @@ init _ url key =
                 , successors = BranchDict.empty
                 }
             , ui =
-                { branches = BranchDict.empty
+                { branch = []
                 , terms = HashDict.empty idEquality idHashing
                 , search = ""
                 , hoveredTerm = Nothing
@@ -113,6 +114,9 @@ update message model =
         Http_GetTermTypesAndTypeDecls result ->
             update_Http_GetTermTypesAndTypeDecls result model
 
+        User_ClickBranch path branch ->
+            update_User_ClickBranch path branch model
+
         User_FocusBranch hash ->
             update_User_FocusBranch hash model
 
@@ -121,9 +125,6 @@ update message model =
 
         User_Search search ->
             update_User_Search search model
-
-        User_ToggleBranch hash ->
-            update_User_ToggleBranch hash model
 
         User_ToggleTerm id ->
             update_User_ToggleTerm id model
@@ -139,15 +140,6 @@ update message model =
 
         LinkClicked _ ->
             ( model, Cmd.none )
-
-
-{-| Whatever you're debugging. Might be nothing!
--}
-update_User_DebugButton :
-    Model
-    -> ( Model, Cmd Message )
-update_User_DebugButton model =
-    ( model, Cmd.none )
 
 
 {-| Got the head hash. Next step: get the actual (decoded) bytes.
@@ -235,22 +227,23 @@ update_Http_GetBranch2 ( hash, { branches, parents, successors } ) model =
             (BranchDict.monoid HashSet.semigroup).semigroup.prepend
                 successors
                 model.codebase.successors
+
+        updateCodebase oldCodebase =
+            { oldCodebase
+                | -- We assume that because we fetched this branch, we wanted to
+                  -- focus it.
+                  head = Just hash
+                , branches = newBranches
+                , parents = newParents
+                , successors = newSuccessors
+            }
+
+        updateUI oldUI =
+            { oldUI | branch = [] }
     in
     ( { model
-        | codebase =
-            { -- We assume that because we fetched this branch, we wanted to
-              -- focus it.
-              head = Just hash
-            , branches = newBranches
-            , parents = newParents
-            , successors = newSuccessors
-
-            -- unchanged
-            , patches = model.codebase.patches
-            , terms = model.codebase.terms
-            , termTypes = model.codebase.termTypes
-            , typeDecls = model.codebase.typeDecls
-            }
+        | codebase = updateCodebase model.codebase
+        , ui = updateUI model.ui
       }
     , case HashDict.get hash newBranches of
         -- This should never be the case
@@ -403,6 +396,7 @@ update_Http_GetTermTypesAndTypeDecls2 ( termTypes, types ) model =
 
 
 {-| The user has adjusted the current search.
+TODO alphabetize
 -}
 update_User_Search :
     String
@@ -420,11 +414,35 @@ update_User_Search search model =
     )
 
 
+{-| Click a branch:
+
+  - Fetch all of the new branch's types and terms.
+
+-}
+update_User_ClickBranch :
+    List NameSegment
+    -> Branch
+    -> Model
+    -> ( Model, Cmd Message )
+update_User_ClickBranch path branch model =
+    let
+        updateUI oldUI =
+            { oldUI | branch = path }
+    in
+    ( { model | ui = updateUI model.ui }
+    , Task.map2
+        Tuple.pair
+        (getMissingTermTypes model branch)
+        (getMissingTypeDecls model branch)
+        |> Task.attempt Http_GetTermTypesAndTypeDecls
+    )
+
+
 {-| Focus a branch:
 
   - We might've already fetched it (e.g. it's the child of a previous root). In
     this case we have no branches to fetch, but we do want to fetch all of the
-    new branch's types and terms (currently: just types, terms is a WIP).
+    new branch's types and terms (currently: just types).
 
   - Otherwise, it's somewhere in our history. So fetch it and all of its
     children! When the request comes back, we'll switch focus.
@@ -446,19 +464,16 @@ update_User_FocusBranch hash model =
             )
 
         Just branch ->
-            ( { model
-                | codebase =
-                    { head = Just hash
+            let
+                updateCodebase oldCodebase =
+                    { oldCodebase | head = Just hash }
 
-                    -- unchanged
-                    , branches = model.codebase.branches
-                    , patches = model.codebase.patches
-                    , terms = model.codebase.terms
-                    , termTypes = model.codebase.termTypes
-                    , typeDecls = model.codebase.typeDecls
-                    , parents = model.codebase.parents
-                    , successors = model.codebase.successors
-                    }
+                updateUI oldUI =
+                    { oldUI | branch = [] }
+            in
+            ( { model
+                | codebase = updateCodebase model.codebase
+                , ui = updateUI model.ui
               }
             , Task.map2
                 Tuple.pair
@@ -484,39 +499,6 @@ update_User_GetPatches hash model =
                 model
                 branch
                 |> Task.attempt Http_GetPatches
-    )
-
-
-update_User_ToggleBranch :
-    BranchHash
-    -> Model
-    -> ( Model, Cmd Message )
-update_User_ToggleBranch hash model =
-    let
-        updateBranches oldUi =
-            { oldUi
-                | branches =
-                    HashDict.update
-                        hash
-                        (maybe True not >> Just)
-                        model.ui.branches
-            }
-    in
-    ( { model
-        | ui =
-            updateBranches model.ui
-      }
-    , case HashDict.get hash model.codebase.branches of
-        -- Should never be the case
-        Nothing ->
-            Cmd.none
-
-        Just branch ->
-            Task.map2
-                Tuple.pair
-                (getMissingTermTypes model branch)
-                (getMissingTypeDecls model branch)
-                |> Task.attempt Http_GetTermTypesAndTypeDecls
     )
 
 

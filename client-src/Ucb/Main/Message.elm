@@ -7,6 +7,7 @@ import Ucb.Unison.BranchDict exposing (..)
 import Ucb.Util.Http as Http
 import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)
+import Unison.Codebase.NameSegment exposing (..)
 import Unison.Codebase.Patch exposing (..)
 import Unison.Declaration exposing (..)
 import Unison.Hash exposing (..)
@@ -20,8 +21,8 @@ import Url
 
 type Message
     = User_FocusBranch BranchHash
+    | User_ClickBranch (List NameSegment) Branch
     | User_GetPatches BranchHash
-    | User_ToggleBranch BranchHash
     | User_ToggleTerm Id
     | User_Search String
     | User_HoverTerm Id

@@ -2,6 +2,7 @@ module Unison.Referent exposing
     ( Referent(..)
     , referentEquality
     , referentHashing
+    , referentIsReference
     )
 
 import Misc exposing (tumble)
@@ -48,3 +49,13 @@ referentHashing =
                         |> tumble (referenceHashing.hash ref)
                         |> tumble id
         )
+
+
+referentIsReference : Referent -> Bool
+referentIsReference referent =
+    case referent of
+        Ref _ ->
+            True
+
+        Con _ _ _ ->
+            False

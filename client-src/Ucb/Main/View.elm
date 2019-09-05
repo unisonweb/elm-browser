@@ -1,4 +1,4 @@
-module Ucb.Main.View exposing (view)
+module Ucb.Main.View exposing (viewModel)
 
 import Browser exposing (Document)
 import Element exposing (..)
@@ -7,6 +7,8 @@ import Element.Font as Font
 import Element.Input exposing (button, labelLeft)
 import HashingContainers.HashDict as HashDict
 import HashingContainers.HashSet as HashSet
+import Html exposing (Html)
+import Misc exposing (maybe)
 import Ucb.Main.Message exposing (..)
 import Ucb.Main.Model exposing (..)
 import Ucb.Main.View.Branch exposing (..)
@@ -15,55 +17,120 @@ import Ucb.Unison.NameSet as NameSet
 import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)
 import Unison.Codebase.Patch exposing (..)
+import Unison.Declaration exposing (..)
 import Unison.Name exposing (..)
+import Unison.Reference exposing (..)
+import Unison.Symbol exposing (..)
+import Unison.Term exposing (..)
+import Unison.Type exposing (..)
 
 
-view : Model -> Document Message
-view model =
-    { title = "Unison Code Browser"
-    , body =
-        [ layout [ width (fill |> minimum 800 |> maximum 1280), mainFont ]
-            (view2 model)
-        ]
+type alias View =
+    { branch : Branch
+    , branchHash : BranchHash
+    , errors : List Error
+    , getTerm : Id -> Maybe (Term Symbol)
+    , getTermType : Id -> Maybe (Type Symbol)
+    , getTypeDecl : Id -> Maybe (Declaration Symbol)
+    , isBranchVisible : BranchHash -> Bool
+    , isTermVisible : Id -> Bool
+    , parents : BranchHash -> List BranchHash
+    , patches : List ( PatchHash, Patch )
+    , search : String
+    , successors : BranchHash -> List BranchHash
     }
 
 
-view2 : Model -> Element Message
-view2 model =
+{-| Make a View from a Model. It returns Nothing if we haven't yet fetched the
+head branch.
+-}
+makeViewFromModel :
+    Model
+    -> Maybe View
+makeViewFromModel model =
+    case model.codebase.head of
+        Nothing ->
+            Nothing
+
+        Just head ->
+            case HashDict.get head model.codebase.branches of
+                Nothing ->
+                    Nothing
+
+                Just branch ->
+                    Just (makeViewFromModel2 model head branch)
+
+
+makeViewFromModel2 :
+    Model
+    -> BranchHash
+    -> Branch
+    -> View
+makeViewFromModel2 model head branch =
+    { branch = branch
+    , branchHash = head
+    , errors = model.errors
+    , getTerm = \id -> HashDict.get id model.codebase.terms
+    , getTermType = \id -> HashDict.get id model.codebase.termTypes
+    , getTypeDecl = \id -> HashDict.get id model.codebase.typeDecls
+    , isBranchVisible = \hash -> HashDict.get hash model.ui.branches == Just True
+    , isTermVisible = \id -> HashDict.get id model.ui.terms == Just True
+    , parents = \hash -> maybe [] HashSet.toList (HashDict.get hash model.codebase.parents)
+    , patches = HashDict.toList model.codebase.patches
+    , search = model.ui.search
+    , successors = \hash -> maybe [] HashSet.toList (HashDict.get hash model.codebase.successors)
+    }
+
+
+viewModel : Model -> Document Message
+viewModel model =
+    { title = "Unison Code Browser"
+    , body =
+        case makeViewFromModel model of
+            Nothing ->
+                []
+
+            -- Loading
+            Just view ->
+                [ layout [ width (fill |> minimum 800 |> maximum 1280), mainFont ]
+                    (viewView view)
+                ]
+    }
+
+
+viewView : View -> Element Message
+viewView view =
     column [ spacing 80, padding 20, height fill, width fill ]
         [ header
         , row [ padding 20, spaceEvenly ]
-            [ branches model
-            , viewSearchPrototype model
+            [ theBranch view
+            , viewSearchPrototype view
             ]
 
         -- Debug info and WIP UI
         , el [ width fill, Border.width 1, Border.solid ] none
-        , errors model
+        , errors view
         , el [ width fill, Border.width 1, Border.solid ] none
-        , viewPatchesPrototype model
+        , viewPatchesPrototype view
         ]
 
 
-branches : Model -> Element Message
-branches model =
-    column [ alignTop, width <| (fill |> minimum 500 |> maximum 1000) ] <|
-        List.filterMap
-            identity
-            [ model.codebase.head
-                |> Maybe.andThen
-                    (\head ->
-                        Maybe.map
-                            (viewBranch model head)
-                            (HashDict.get head model.codebase.branches)
-                    )
-            ]
+theBranch :
+    View
+    -> Element Message
+theBranch view =
+    column
+        [ alignTop, width <| (fill |> minimum 500 |> maximum 1000) ]
+        [ viewBranch view view.branchHash view.branch ]
 
 
 viewPatchesPrototype :
-    Model
+    { r
+        | branchHash : BranchHash
+        , patches : List ( PatchHash, Patch )
+    }
     -> Element Message
-viewPatchesPrototype model =
+viewPatchesPrototype view =
     let
         viewPatch : ( PatchHash, Patch ) -> Element message
         viewPatch ( hash, { termEdits, typeEdits } ) =
@@ -80,43 +147,29 @@ viewPatchesPrototype model =
     column
         []
         [ button []
-            { onPress =
-                case model.codebase.head of
-                    Nothing ->
-                        Nothing
-
-                    Just head ->
-                        Just (User_GetPatches head)
+            { onPress = Just (User_GetPatches view.branchHash)
             , label = text "Get patches"
             }
         , text "patches:"
         , column []
-            (List.map viewPatch (HashDict.toList model.codebase.patches))
+            (List.map viewPatch view.patches)
         ]
 
 
 viewSearchPrototype :
-    Model
+    { r
+        | branch : Branch
+        , search : String
+    }
     -> Element Message
-viewSearchPrototype model =
+viewSearchPrototype view =
     let
-        maybeBranch : Maybe Branch
-        maybeBranch =
-            model.codebase.head
-                |> Maybe.andThen
-                    (\head ->
-                        HashDict.get head model.codebase.branches
-                    )
-
         -- Term names, tossing the set of referent each is associated with (for
         -- now)
         termNames : List Name
         termNames =
-            case maybeBranch of
-                Nothing ->
-                    []
-
-                Just (Branch causal) ->
+            case view.branch of
+                Branch causal ->
                     (rawCausalHead causal).cache.nameToTerm
                         |> HashDict.toList
                         |> List.map Tuple.first
@@ -127,11 +180,8 @@ viewSearchPrototype model =
         -- now)
         typeNames : List Name
         typeNames =
-            case maybeBranch of
-                Nothing ->
-                    []
-
-                Just (Branch causal) ->
+            case view.branch of
+                Branch causal ->
                     (rawCausalHead causal).cache.nameToTerm
                         |> HashDict.toList
                         |> List.map Tuple.first
@@ -148,13 +198,13 @@ viewSearchPrototype model =
 
         matching : List String
         matching =
-            if String.isEmpty model.ui.search then
+            if String.isEmpty view.search then
                 []
 
             else
                 List.filterMap
                     (\string ->
-                        if String.contains model.ui.search (String.toLower string) then
+                        if String.contains view.search (String.toLower string) then
                             Just string
 
                         else
@@ -166,7 +216,7 @@ viewSearchPrototype model =
         [ Element.Input.text
             []
             { onChange = User_Search
-            , text = model.ui.search
+            , text = view.search
             , placeholder = Nothing
             , label = labelLeft [ centerX ] (text "Search")
             }
@@ -174,9 +224,11 @@ viewSearchPrototype model =
         ]
 
 
-errors : Model -> Element Message
-errors model =
-    if List.isEmpty model.errors then
+errors :
+    { r | errors : List Error }
+    -> Element Message
+errors view =
+    if List.isEmpty view.errors then
         none
 
     else
@@ -184,7 +236,7 @@ errors model =
             errHeader =
                 el [ Font.bold ] (text "Errors")
         in
-        column [] <| errHeader :: List.map viewError (List.reverse model.errors)
+        column [] <| errHeader :: List.map viewError (List.reverse view.errors)
 
 
 header : Element msg

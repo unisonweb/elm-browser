@@ -6,7 +6,6 @@ import HashingContainers.HashDict as HashDict
 import HashingContainers.HashSet as HashSet
 import Int64 exposing (..)
 import Misc exposing (..)
-import Ucb.Main.Model exposing (..)
 import Ucb.Main.View.Referent exposing (viewReferent)
 import Ucb.Unison.Name exposing (..)
 import Ucb.Unison.NameDict exposing (..)
@@ -25,8 +24,7 @@ import Word64 exposing (..)
 
 
 type alias Env =
-    { model : Model -- TODO pick out the bits we actually care about
-    , precedence : Int
+    { precedence : Int
     , blockContext : BlockContext
     , infixContext : InfixContext
     }
@@ -43,23 +41,24 @@ type InfixContext
 
 
 viewTerm :
-    Model
+    { r | branch : Branch }
     -> Term Symbol
     -> Element message
-viewTerm model =
+viewTerm view =
     viewTerm2
-        { model = model
-        , precedence = -1
+        view
+        { precedence = -1
         , blockContext = Normal
         , infixContext = NonInfix
         }
 
 
 viewTerm2 :
-    Env
+    { r | branch : Branch }
+    -> Env
     -> Term Symbol
     -> Element message
-viewTerm2 env { out } =
+viewTerm2 view env { out } =
     case out of
         TermAbs var term ->
             text "(not implemented: TermAbs)"
@@ -71,13 +70,13 @@ viewTerm2 env { out } =
             viewTermVar var
 
         TermTm (TermApp t1 t2) ->
-            viewTermApp env t1 t2
+            viewTermApp view env t1 t2
 
         TermTm (TermAnd t1 t2) ->
-            viewTermAnd env t1 t2
+            viewTermAnd view env t1 t2
 
         TermTm (TermAnn term type_) ->
-            viewTermAnn env term type_
+            viewTermAnn view env term type_
 
         TermTm (TermBlank blank) ->
             text "(not implemented: TermBlank)"
@@ -89,22 +88,22 @@ viewTerm2 env { out } =
             viewTermChar c
 
         TermTm (TermConstructor reference n) ->
-            viewTermConstructor env reference n
+            viewTermConstructor view reference n
 
         TermTm (TermFloat n) ->
             viewTermFloat n
 
         TermTm (TermHandle t1 t2) ->
-            viewTermHandle env t1 t2
+            viewTermHandle view env t1 t2
 
         TermTm (TermIf t1 t2 t3) ->
-            viewTermIf env t1 t2 t3
+            viewTermIf view env t1 t2 t3
 
         TermTm (TermInt n) ->
             viewTermInt n
 
         TermTm (TermLam term) ->
-            viewTermLam env term
+            viewTermLam view env term
 
         TermTm (TermLet _ _ _) ->
             text "(not implemented: TermLet)"
@@ -119,16 +118,16 @@ viewTerm2 env { out } =
             viewTermNat n
 
         TermTm (TermOr t1 t2) ->
-            viewTermOr env t1 t2
+            viewTermOr view env t1 t2
 
         TermTm (TermRef reference) ->
-            viewTermRef env reference
+            viewTermRef view reference
 
         TermTm (TermRequest reference n) ->
-            viewTermRequest env reference n
+            viewTermRequest view reference n
 
         TermTm (TermSequence terms) ->
-            viewTermSequence env terms
+            viewTermSequence view env terms
 
         TermTm (TermText s) ->
             text "(not implemented: TermText)"
@@ -137,16 +136,16 @@ viewTerm2 env { out } =
 {-| Should be the same as viewTermOr
 -}
 viewTermAnd :
-    Env
+    { r | branch : Branch }
+    -> Env
     -> Term Symbol
     -> Term Symbol
     -> Element message
-viewTermAnd env t1 t2 =
+viewTermAnd view env t1 t2 =
     let
         env2 : Env
         env2 =
-            { model = env.model
-            , precedence = 10
+            { precedence = 10
             , blockContext = Normal
             , infixContext = NonInfix
             }
@@ -157,8 +156,8 @@ viewTermAnd env t1 t2 =
             , row []
                 [ text "  "
                 , column []
-                    [ viewTerm2 env2 t1
-                    , viewTerm2 env2 t2
+                    [ viewTerm2 view env2 t1
+                    , viewTerm2 view env2 t2
                     ]
                 ]
             ]
@@ -166,40 +165,22 @@ viewTermAnd env t1 t2 =
 
 
 viewTermAnn :
-    Env
+    { r | branch : Branch }
+    -> Env
     -> Term Symbol
     -> Type Symbol
     -> Element message
-viewTermAnn env term _ =
-    viewTerm2 env term
-
-
-
-{-
-   ppParen
-       (env.precedence >= 0)
-       (row
-           []
-           [ viewTerm2
-               { model = env.model
-               , precedence = 0
-               , blockContext = Normal
-               , infixContext = NonInfix
-               }
-               term
-           , text " : "
-           , viewType env.model 0 type_
-           ]
-       )
--}
+viewTermAnn view env term _ =
+    viewTerm2 view env term
 
 
 viewTermApp :
-    Env
+    { r | branch : Branch }
+    -> Env
     -> Term Symbol
     -> Term Symbol
     -> Element message
-viewTermApp env t1 t2 =
+viewTermApp view env t1 t2 =
     case termUnApps t1 t2 of
         ( f, xs ) ->
             ppParen
@@ -208,8 +189,8 @@ viewTermApp env t1 t2 =
                     ((f :: xs)
                         |> List.map
                             (viewTerm2
-                                { model = env.model
-                                , precedence = 10
+                                view
+                                { precedence = 10
                                 , blockContext = Normal
                                 , infixContext = NonInfix
                                 }
@@ -240,12 +221,12 @@ viewTermChar c =
 
 
 viewTermConstructor :
-    Env
+    { r | branch : Branch }
     -> Reference
     -> Int
     -> Element message
-viewTermConstructor env reference n =
-    viewReferent_ env.model (Con reference n Data)
+viewTermConstructor view reference n =
+    viewReferent_ view (Con reference n Data)
 
 
 viewTermFloat :
@@ -256,18 +237,19 @@ viewTermFloat n =
 
 
 viewTermHandle :
-    Env
+    { r | branch : Branch }
+    -> Env
     -> Term Symbol
     -> Term Symbol
     -> Element message
-viewTermHandle env t1 t2 =
+viewTermHandle view env t1 t2 =
     ppParen (env.precedence >= 2)
         (column []
             [ row []
                 [ text "handle "
                 , viewTerm2
-                    { model = env.model
-                    , precedence = 2
+                    view
+                    { precedence = 2
                     , blockContext = Normal
                     , infixContext = NonInfix
                     }
@@ -277,8 +259,8 @@ viewTermHandle env t1 t2 =
             , row []
                 [ text "  "
                 , viewTerm2
-                    { model = env.model
-                    , precedence = 2
+                    view
+                    { precedence = 2
                     , blockContext = Block
                     , infixContext = NonInfix
                     }
@@ -289,19 +271,20 @@ viewTermHandle env t1 t2 =
 
 
 viewTermIf :
-    Env
+    { r | branch : Branch }
+    -> Env
     -> Term Symbol
     -> Term Symbol
     -> Term Symbol
     -> Element message
-viewTermIf env t1 t2 t3 =
+viewTermIf view env t1 t2 t3 =
     ppParen (env.precedence >= 2)
         (column []
             [ row []
                 [ text "if "
                 , viewTerm2
-                    { model = env.model
-                    , precedence = 2
+                    view
+                    { precedence = 2
                     , blockContext = Block
                     , infixContext = NonInfix
                     }
@@ -311,8 +294,8 @@ viewTermIf env t1 t2 t3 =
             , row []
                 [ text "  "
                 , viewTerm2
-                    { model = env.model
-                    , precedence = 0
+                    view
+                    { precedence = 0
                     , blockContext = Block
                     , infixContext = NonInfix
                     }
@@ -322,8 +305,8 @@ viewTermIf env t1 t2 t3 =
             , row []
                 [ text "  "
                 , viewTerm2
-                    { model = env.model
-                    , precedence = 0
+                    view
+                    { precedence = 0
                     , blockContext = Block
                     , infixContext = NonInfix
                     }
@@ -350,10 +333,11 @@ viewTermInt n =
 
 
 viewTermLam :
-    Env
+    { r | branch : Branch }
+    -> Env
     -> Term Symbol
     -> Element message
-viewTermLam env term =
+viewTermLam view env term =
     case termUnLams term of
         ( vars, body ) ->
             ppParen (env.precedence >= 3)
@@ -367,8 +351,8 @@ viewTermLam env term =
                     , row []
                         [ text "  "
                         , viewTerm2
-                            { model = env.model
-                            , precedence = 2
+                            view
+                            { precedence = 2
                             , blockContext = Block
                             , infixContext = NonInfix
                             }
@@ -388,16 +372,16 @@ viewTermNat n =
 {-| Should be the same as viewTermAnd
 -}
 viewTermOr :
-    Env
+    { r | branch : Branch }
+    -> Env
     -> Term Symbol
     -> Term Symbol
     -> Element message
-viewTermOr env t1 t2 =
+viewTermOr view env t1 t2 =
     let
         env2 : Env
         env2 =
-            { model = env.model
-            , precedence = 10
+            { precedence = 10
             , blockContext = Normal
             , infixContext = NonInfix
             }
@@ -408,8 +392,8 @@ viewTermOr env t1 t2 =
             , row []
                 [ text "  "
                 , column []
-                    [ viewTerm2 env2 t1
-                    , viewTerm2 env2 t2
+                    [ viewTerm2 view env2 t1
+                    , viewTerm2 view env2 t2
                     ]
                 ]
             ]
@@ -417,35 +401,36 @@ viewTermOr env t1 t2 =
 
 
 viewTermRef :
-    Env
+    { r | branch : Branch }
     -> Reference
     -> Element message
-viewTermRef env reference =
-    viewReferent_ env.model (Ref reference)
+viewTermRef view reference =
+    viewReferent_ view (Ref reference)
 
 
 viewTermRequest :
-    Env
+    { r | branch : Branch }
     -> Reference
     -> Int
     -> Element message
-viewTermRequest env reference n =
-    viewReferent_ env.model (Con reference n Effect)
+viewTermRequest view reference n =
+    viewReferent_ view (Con reference n Effect)
 
 
 viewTermSequence :
-    Env
+    { r | branch : Branch }
+    -> Env
     -> Array (Term Symbol)
     -> Element message
-viewTermSequence env terms =
+viewTermSequence view env terms =
     row []
         [ text "["
         , row []
             (terms
                 |> Array.map
                     (viewTerm2
-                        { model = env.model
-                        , precedence = 0
+                        view
+                        { precedence = 0
                         , blockContext = Normal
                         , infixContext = NonInfix
                         }
@@ -465,10 +450,10 @@ viewTermVar var =
 
 
 viewReferent_ :
-    Model
+    { r | branch : Branch }
     -> Referent
     -> Element message
-viewReferent_ model referent =
+viewReferent_ view referent =
     let
         fallback : Element message
         fallback =
@@ -478,33 +463,25 @@ viewReferent_ model referent =
                 }
                 referent
     in
-    case model.codebase.head of
-        Nothing ->
-            fallback
-
-        Just hash ->
-            case HashDict.get hash model.codebase.branches of
+    case view.branch of
+        Branch causal ->
+            let
+                head =
+                    rawCausalHead causal
+            in
+            case HashDict.get referent head.cache.termToName of
                 Nothing ->
                     fallback
 
-                Just (Branch causal) ->
-                    let
-                        head =
-                            rawCausalHead causal
-                    in
-                    case HashDict.get referent head.cache.termToName of
-                        Nothing ->
-                            fallback
+                Just names ->
+                    case HashSet.toList names of
+                        [] ->
+                            impossible "viewReferent: empty names"
 
-                        Just names ->
-                            case HashSet.toList names of
-                                [] ->
-                                    impossible "viewReferent: empty names"
-
-                                -- TODO, we should handle aliases better. this
-                                -- just takes the first name
-                                name :: _ ->
-                                    viewReferent2 head.cache.nameToTerm name
+                        -- TODO, we should handle aliases better. this
+                        -- just takes the first name
+                        name :: _ ->
+                            viewReferent2 head.cache.nameToTerm name
 
 
 viewReferent2 :

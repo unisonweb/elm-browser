@@ -9,7 +9,6 @@ import Misc exposing (maybe)
 import Typeclasses.Classes.Equality as Equality
 import Typeclasses.Classes.Hashing as Hashing
 import Ucb.Main.Message exposing (..)
-import Ucb.Main.Model exposing (..)
 import Ucb.Main.View.Palette exposing (codeFont)
 import Ucb.Main.View.Term exposing (viewTerm)
 import Ucb.Main.View.Type exposing (viewType)
@@ -21,23 +20,43 @@ import Unison.Declaration exposing (..)
 import Unison.Reference exposing (..)
 import Unison.Referent exposing (..)
 import Unison.Symbol exposing (..)
+import Unison.Term exposing (..)
+import Unison.Type exposing (..)
 import Unison.Util.Relation exposing (..)
 
 
 viewBranch :
-    Model
+    { r
+        | branch : Branch
+        , getTerm : Id -> Maybe (Term Symbol)
+        , getTermType : Id -> Maybe (Type Symbol)
+        , getTypeDecl : Id -> Maybe (Declaration Symbol)
+        , isBranchVisible : BranchHash -> Bool
+        , isTermVisible : Id -> Bool
+        , parents : BranchHash -> List BranchHash
+        , successors : BranchHash -> List BranchHash
+    }
     -> BranchHash
     -> Branch
     -> Element Message
-viewBranch model hash (Branch causal) =
-    viewCausal model hash causal
+viewBranch view hash (Branch causal) =
+    viewCausal view hash causal
 
 
 viewBranch0 :
-    Model
+    { r
+        | branch : Branch
+        , getTerm : Id -> Maybe (Term Symbol)
+        , getTermType : Id -> Maybe (Type Symbol)
+        , getTypeDecl : Id -> Maybe (Declaration Symbol)
+        , isBranchVisible : BranchHash -> Bool
+        , isTermVisible : Id -> Bool
+        , parents : BranchHash -> List BranchHash
+        , successors : BranchHash -> List BranchHash
+    }
     -> Branch0
     -> Element Message
-viewBranch0 model { terms, types, children, patches } =
+viewBranch0 view { terms, types, children, patches } =
     column
         [ spacing 30 ]
         [ case relationToList types.d1 of
@@ -51,7 +70,7 @@ viewBranch0 model { terms, types, children, patches } =
                         |> List.map
                             (\( reference, name ) ->
                                 viewBranchType
-                                    model
+                                    view
                                     reference
                                     name
                                     (HashDict.get reference types.d3.domain)
@@ -69,7 +88,7 @@ viewBranch0 model { terms, types, children, patches } =
                         |> List.map
                             (\( referent, name ) ->
                                 viewBranchTerm
-                                    model
+                                    view
                                     referent
                                     name
                                     (HashDict.get referent terms.d3.domain)
@@ -86,7 +105,7 @@ viewBranch0 model { terms, types, children, patches } =
                         |> List.sortBy Tuple.first
                         |> List.map
                             (\( name, ( hash, branch ) ) ->
-                                viewBranchChild model name hash branch
+                                viewBranchChild view name hash branch
                             )
                     )
         , -- TODO
@@ -102,12 +121,21 @@ Right now for child e.g. "base.List" we only pass in the last segment "List" but
 we want the whole name for tooltip purposes.
 -}
 viewBranchChild :
-    Model
+    { r
+        | branch : Branch
+        , getTerm : Id -> Maybe (Term Symbol)
+        , getTermType : Id -> Maybe (Type Symbol)
+        , getTypeDecl : Id -> Maybe (Declaration Symbol)
+        , isBranchVisible : BranchHash -> Bool
+        , isTermVisible : Id -> Bool
+        , parents : BranchHash -> List BranchHash
+        , successors : BranchHash -> List BranchHash
+    }
     -> NameSegment
     -> BranchHash
     -> Branch
     -> Element Message
-viewBranchChild model name hash branch =
+viewBranchChild view name hash branch =
     column
         []
         [ el
@@ -120,41 +148,50 @@ viewBranchChild model name hash branch =
                 , text name
                 ]
             )
-        , case HashDict.get hash model.ui.branches of
-            Just True ->
-                el
-                    [ paddingEach { bottom = 0, left = 10, right = 0, top = 0 } ]
-                    (viewBranch model hash branch)
+        , if view.isBranchVisible hash then
+            el
+                [ paddingEach { bottom = 0, left = 10, right = 0, top = 0 } ]
+                (viewBranch view hash branch)
 
-            _ ->
-                none
+          else
+            none
         ]
 
 
 {-| View a term in a branch.
 -}
 viewBranchTerm :
-    Model
+    { r
+        | branch : Branch
+        , getTerm : Id -> Maybe (Term Symbol)
+        , getTermType : Id -> Maybe (Type Symbol)
+        , isTermVisible : Id -> Bool
+    }
     -> Referent
     -> NameSegment
     -> Maybe (HashSet ( Reference, Reference ))
     -> Element Message
-viewBranchTerm model referent name links =
+viewBranchTerm view referent name links =
     case referent of
         Ref reference ->
-            viewBranchTerm2 model reference name links
+            viewBranchTerm2 view reference name links
 
         Con _ _ _ ->
             none
 
 
 viewBranchTerm2 :
-    Model
+    { r
+        | branch : Branch
+        , getTerm : Id -> Maybe (Term Symbol)
+        , getTermType : Id -> Maybe (Type Symbol)
+        , isTermVisible : Id -> Bool
+    }
     -> Reference
     -> NameSegment
     -> Maybe (HashSet ( Reference, Reference ))
     -> Element Message
-viewBranchTerm2 model reference name _ =
+viewBranchTerm2 view reference name _ =
     let
         -- Surround by parens if it begins with a symboly character
         name2 : String
@@ -198,38 +235,40 @@ viewBranchTerm2 model reference name _ =
                         (\type_ ->
                             row []
                                 [ text " : "
-                                , viewType model -1 type_
+                                , viewType view -1 type_
                                 ]
                         )
-                        (HashDict.get id model.codebase.termTypes)
+                        (view.getTermType id)
                     ]
-                , case HashDict.get id model.ui.terms of
-                    Just True ->
-                        maybe
-                            none
-                            (\term ->
-                                el
-                                    [ codeFont
-                                    , paddingEach { bottom = 5, left = 10, right = 0, top = 5 }
-                                    ]
-                                    (viewTerm model term)
-                            )
-                            (HashDict.get id model.codebase.terms)
-
-                    _ ->
+                , if view.isTermVisible id then
+                    maybe
                         none
+                        (\term ->
+                            el
+                                [ codeFont
+                                , paddingEach { bottom = 5, left = 10, right = 0, top = 5 }
+                                ]
+                                (viewTerm view term)
+                        )
+                        (view.getTerm id)
+
+                  else
+                    none
                 ]
 
 
 {-| View a type in a branch.
 -}
 viewBranchType :
-    Model
+    { r
+        | branch : Branch
+        , getTypeDecl : Id -> Maybe (Declaration Symbol)
+    }
     -> Reference
     -> NameSegment
     -> Maybe (HashSet ( Reference, Reference ))
     -> Element message
-viewBranchType model reference name links =
+viewBranchType view reference name links =
     case reference of
         Builtin _ ->
             row
@@ -240,28 +279,28 @@ viewBranchType model reference name links =
                 ]
 
         Derived id ->
-            case HashDict.get id model.codebase.typeDecls of
+            case view.getTypeDecl id of
                 Nothing ->
                     none
 
                 Just declaration ->
                     case declaration of
                         DataDecl dataDeclaration ->
-                            viewBranchType2 model name links id dataDeclaration Data
+                            viewBranchType2 view name links id dataDeclaration Data
 
                         EffectDecl dataDeclaration ->
-                            viewBranchType2 model name links id dataDeclaration Effect
+                            viewBranchType2 view name links id dataDeclaration Effect
 
 
 viewBranchType2 :
-    Model
+    { r | branch : Branch }
     -> NameSegment
     -> Maybe (HashSet ( Reference, Reference ))
     -> Id
     -> DataDeclaration Symbol
     -> ConstructorType
     -> Element message
-viewBranchType2 model name _ _ declaration constructorType =
+viewBranchType2 view name _ _ declaration constructorType =
     column
         []
         [ row
@@ -297,7 +336,7 @@ viewBranchType2 model name _ _ declaration constructorType =
                         row
                             []
                             [ text (symbolToString constructorName ++ " : ")
-                            , viewType model -1 type_
+                            , viewType view -1 type_
                             ]
                     )
                     declaration.constructors
@@ -307,11 +346,20 @@ viewBranchType2 model name _ _ declaration constructorType =
 
 
 viewCausal :
-    Model
+    { r
+        | branch : Branch
+        , getTerm : Id -> Maybe (Term Symbol)
+        , getTermType : Id -> Maybe (Type Symbol)
+        , getTypeDecl : Id -> Maybe (Declaration Symbol)
+        , isBranchVisible : BranchHash -> Bool
+        , isTermVisible : Id -> Bool
+        , parents : BranchHash -> List BranchHash
+        , successors : BranchHash -> List BranchHash
+    }
     -> BranchHash
     -> RawCausal Branch0
     -> Element Message
-viewCausal model hash causal =
+viewCausal view hash causal =
     let
         viewHash : BranchHash -> Element Message
         viewHash hash_ =
@@ -325,15 +373,15 @@ viewCausal model hash causal =
 
         viewParents : Element Message
         viewParents =
-            case HashDict.get hash model.codebase.parents of
-                Nothing ->
+            case view.parents hash of
+                [] ->
                     none
 
-                Just hashes ->
+                hashes ->
                     row
                         []
                         [ text "Parents "
-                        , column [] (List.map viewHash (HashSet.toList hashes))
+                        , column [] (List.map viewHash hashes)
                         ]
 
         viewPredecessors :
@@ -348,15 +396,15 @@ viewCausal model hash causal =
 
         viewSuccessors : Element Message
         viewSuccessors =
-            case HashDict.get hash model.codebase.successors of
-                Nothing ->
+            case view.successors hash of
+                [] ->
                     none
 
-                Just hashes ->
+                hashes ->
                     row
                         []
                         [ text "Successors "
-                        , column [] (List.map viewHash (HashSet.toList hashes))
+                        , column [] (List.map viewHash hashes)
                         ]
     in
     el [ padding 10 ]
@@ -369,7 +417,7 @@ viewCausal model hash causal =
                         , viewParents
                         , viewSuccessors
                         ]
-                    , viewBranch0 model branch
+                    , viewBranch0 view branch
                     ]
 
             RawCons branch hash_ ->
@@ -381,7 +429,7 @@ viewCausal model hash causal =
                         , viewPredecessors [ hash_ ]
                         , viewSuccessors
                         ]
-                    , viewBranch0 model branch
+                    , viewBranch0 view branch
                     ]
 
             RawMerge branch hashes ->
@@ -393,7 +441,7 @@ viewCausal model hash causal =
                         , viewPredecessors (HashSet.toList hashes)
                         , viewSuccessors
                         ]
-                    , viewBranch0 model branch
+                    , viewBranch0 view branch
                     ]
         )
 

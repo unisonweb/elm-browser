@@ -114,26 +114,24 @@ viewTypeRef view reference =
                 , take = Just 7
                 }
                 reference
+
+        head : Branch0
+        head =
+            branchHead view.head
     in
-    case view.head of
-        Branch causal ->
-            let
-                head =
-                    rawCausalHead causal
-            in
-            case HashDict.get reference head.cache.typeToName of
-                Nothing ->
-                    fallback
+    case HashDict.get reference head.cache.typeToName of
+        Nothing ->
+            fallback
 
-                Just names ->
-                    case HashSet.toList names of
-                        [] ->
-                            impossible "viewType: empty names"
+        Just names ->
+            case HashSet.toList names of
+                [] ->
+                    impossible "viewType: empty names"
 
-                        -- TODO, we should handle aliases better. this
-                        -- just takes the first name
-                        name :: _ ->
-                            viewTypeRef2 head.cache.nameToType name
+                -- TODO, we should handle aliases better. this
+                -- just takes the first name
+                name :: _ ->
+                    viewTypeRef2 head.cache.nameToType name
 
 
 viewTypeRef2 :

@@ -1,6 +1,8 @@
 module Ucb.Main.View.Branch exposing (viewBranch)
 
 import Element exposing (..)
+import Element.Background as Background
+import Element.Border as Border
 import Element.Events exposing (..)
 import Element.Font exposing (..)
 import HashingContainers.HashDict as HashDict
@@ -17,6 +19,7 @@ import Unison.Codebase.Causal exposing (..)
 import Unison.Codebase.NameSegment exposing (..)
 import Unison.ConstructorType exposing (..)
 import Unison.Declaration exposing (..)
+import Unison.Name exposing (..)
 import Unison.Reference exposing (..)
 import Unison.Referent exposing (..)
 import Unison.Symbol exposing (..)
@@ -37,6 +40,7 @@ viewBranch :
         , isTermVisible : Id -> Bool
         , parents : BranchHash -> List BranchHash
         , successors : BranchHash -> List BranchHash
+        , termNames : Referent -> List Name
     }
     -> BranchHash
     -> Branch
@@ -55,6 +59,7 @@ viewBranch0 :
         , isTermVisible : Id -> Bool
         , parents : BranchHash -> List BranchHash
         , successors : BranchHash -> List BranchHash
+        , termNames : Referent -> List Name
     }
     -> Branch0
     -> Element Message
@@ -112,6 +117,7 @@ viewBranchTerm :
         , head : Branch
         , hoveredTerm : Maybe Id
         , isTermVisible : Id -> Bool
+        , termNames : Referent -> List Name
     }
     -> Referent
     -> NameSegment
@@ -133,6 +139,7 @@ viewBranchTerm2 :
         , head : Branch
         , hoveredTerm : Maybe Id
         , isTermVisible : Id -> Bool
+        , termNames : Referent -> List Name
     }
     -> Reference
     -> NameSegment
@@ -163,18 +170,32 @@ viewBranchTerm2 view reference name _ =
         Derived id ->
             column []
                 [ row
-                    [ codeFont
-                    , onClick (User_ToggleTerm id)
-                    , pointer
-                    , onMouseEnter (User_HoverTerm id)
-                    , onMouseLeave User_LeaveTerm
-                    , below <|
-                        if Just id == view.hoveredTerm then
-                            -- TODO find the full name and print it
-                            el [] none
+                    [ above <|
+                        if view.hoveredTerm == Just id then
+                            el
+                                [ Background.color (rgb 1 1 1)
+                                , Border.color (rgb 0 0 0)
+                                , Border.solid
+                                , Border.width 1
+                                ]
+                                (column
+                                    []
+                                    (el
+                                        [ color (rgb 0.5 0.5 0.5) ]
+                                        (text id.hash)
+                                        :: List.map
+                                            (nameToString >> text)
+                                            (view.termNames (Ref (Derived id)))
+                                    )
+                                )
 
                         else
                             none
+                    , codeFont
+                    , onClick (User_ToggleTerm id)
+                    , onMouseEnter (User_HoverTerm id)
+                    , onMouseLeave User_LeaveTerm
+                    , pointer
                     ]
                     [ text name2
                     , maybe
@@ -302,6 +323,7 @@ viewCausal :
         , isTermVisible : Id -> Bool
         , parents : BranchHash -> List BranchHash
         , successors : BranchHash -> List BranchHash
+        , termNames : Referent -> List Name
     }
     -> BranchHash
     -> RawCausal Branch0

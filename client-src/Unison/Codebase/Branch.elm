@@ -4,6 +4,7 @@ module Unison.Codebase.Branch exposing
     , BranchHash
     , RawBranch
     , Star
+    , branchHead
     , branchPatchHashes
     , branchPatches
     , rawBranchToBranch0
@@ -113,16 +114,16 @@ rawBranchToBranch0 hashToBranch rawBranch =
         pathToChild : NameDict ( BranchHash, Branch )
         pathToChild =
             HashDict.foldl
-                (\( name, ( hash, Branch child ) ) acc ->
+                (\( name, ( hash, child ) ) acc ->
                     HashDict.insert
                         (nameFromNameSegment name)
-                        ( hash, Branch child )
+                        ( hash, child )
                         (HashDict.foldl
                             (\( path, grandchild ) ->
                                 HashDict.insert (nameCons name path) grandchild
                             )
                             acc
-                            (rawCausalHead child).cache.pathToChild
+                            (branchHead child).cache.pathToChild
                         )
                 )
                 NameDict.empty
@@ -154,6 +155,13 @@ rawBranchToBranch0 hashToBranch rawBranch =
     }
 
 
+branchHead :
+    Branch
+    -> Branch0
+branchHead (Branch branch) =
+    rawCausalHead branch
+
+
 {-| Given the current branch's referent names
 
       #foobar -> { "abc", "xyz" }  // this referent has two aliases
@@ -183,12 +191,12 @@ makeTermToName :
     -> ReferentDict NameSet
 makeTermToName branch =
     HashDict.foldl
-        (\( name, ( _, Branch child ) ) ->
+        (\( name, ( _, child ) ) ->
             HashDict.union
                 HashSet.semigroup
                 (ReferentDict.map
                     (NameSet.map (nameCons name))
-                    (rawCausalHead child).cache.termToName
+                    (branchHead child).cache.termToName
                 )
         )
         (ReferentDict.map
@@ -271,12 +279,12 @@ makeTypeToName :
     -> ReferenceDict NameSet
 makeTypeToName branch =
     HashDict.foldl
-        (\( name, ( _, Branch child ) ) ->
+        (\( name, ( _, child ) ) ->
             HashDict.union
                 HashSet.semigroup
                 (ReferenceDict.map
                     (NameSet.map (nameCons name))
-                    (rawCausalHead child).cache.typeToName
+                    (branchHead child).cache.typeToName
                 )
         )
         (ReferenceDict.map
@@ -348,8 +356,8 @@ makeNameToType =
 branchPatches :
     Branch
     -> NameDict PatchHash
-branchPatches (Branch causal) =
-    branchPatches0 (rawCausalHead causal)
+branchPatches =
+    branchHead >> branchPatches0
 
 
 {-| Compute the full names of all the patches in a Branch0.

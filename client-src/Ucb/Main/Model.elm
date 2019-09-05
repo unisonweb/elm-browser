@@ -122,7 +122,7 @@ getMissingTermTypes :
     Model
     -> Branch
     -> Task (Http.Error Bytes) (List ( Id, Type Symbol ))
-getMissingTermTypes model (Branch causal) =
+getMissingTermTypes model branch =
     getTermTypes
         model.api.unison
         (List.filterMap
@@ -142,7 +142,7 @@ getMissingTermTypes model (Branch causal) =
                             _ ->
                                 Nothing
             )
-            (HashSet.toList (rawCausalHead causal).terms.fact)
+            (HashSet.toList (branchHead branch).terms.fact)
         )
 
 
@@ -153,7 +153,7 @@ getMissingTypeDecls :
     Model
     -> Branch
     -> Task (Http.Error Bytes) (List ( Id, Declaration Symbol ))
-getMissingTypeDecls model (Branch causal) =
+getMissingTypeDecls model branch =
     getTypeDecls
         model.api.unison
         (List.filterMap
@@ -170,5 +170,5 @@ getMissingTypeDecls model (Branch causal) =
                             _ ->
                                 Nothing
             )
-            (HashSet.toList (rawCausalHead causal).types.fact)
+            (HashSet.toList (branchHead branch).types.fact)
         )

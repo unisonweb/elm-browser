@@ -46,6 +46,7 @@ type alias View =
     , patches : List ( PatchHash, Patch )
     , search : String
     , successors : BranchHash -> List BranchHash
+    , termNames : Referent -> List Name
     }
 
 
@@ -85,9 +86,7 @@ makeViewFromModel2 model headHash head =
                 let
                     branch0 : Branch0
                     branch0 =
-                        case head of
-                            Branch branch ->
-                                rawCausalHead branch
+                        branchHead head
                 in
                 case HashDict.get (unsafeMakeName (Array.fromList path)) branch0.cache.pathToChild of
                     Nothing ->
@@ -103,11 +102,29 @@ makeViewFromModel2 model headHash head =
     , head = head
     , headHash = headHash
     , hoveredTerm = model.ui.hoveredTerm
-    , isTermVisible = \id -> HashDict.get id model.ui.terms == Just True
-    , parents = \hash -> maybe [] HashSet.toList (HashDict.get hash model.codebase.parents)
+    , isTermVisible =
+        \id ->
+            HashDict.get id model.ui.terms == Just True
+    , parents =
+        \hash ->
+            maybe
+                []
+                HashSet.toList
+                (HashDict.get hash model.codebase.parents)
     , patches = HashDict.toList model.codebase.patches
     , search = model.ui.search
-    , successors = \hash -> maybe [] HashSet.toList (HashDict.get hash model.codebase.successors)
+    , successors =
+        \hash ->
+            maybe
+                []
+                HashSet.toList
+                (HashDict.get hash model.codebase.successors)
+    , termNames =
+        \referent ->
+            maybe
+                []
+                (HashSet.toList >> List.sortWith nameCompare)
+                (HashDict.get referent (branchHead head).cache.termToName)
     }
 
 
@@ -167,8 +184,8 @@ viewBranches view =
         childInfo :
             Branch
             -> List ( List NameSegment, Branch )
-        childInfo (Branch branch) =
-            (rawCausalHead branch).cache.pathToChild
+        childInfo branch =
+            (branchHead branch).cache.pathToChild
                 |> HashDict.toList
                 |> List.sortWith
                     (\( n1, _ ) ( n2, _ ) -> nameCompare n1 n2)
@@ -184,11 +201,11 @@ viewBranches view =
         shouldBeVisible :
             Branch
             -> Bool
-        shouldBeVisible (Branch causal) =
+        shouldBeVisible branch =
             let
                 branch0 : Branch0
                 branch0 =
-                    rawCausalHead causal
+                    branchHead branch
             in
             not (HashSet.isEmpty branch0.types.fact)
                 || HashSet.foldl
@@ -262,25 +279,21 @@ viewSearch view =
         -- now)
         termNames : List Name
         termNames =
-            case view.head of
-                Branch causal ->
-                    (rawCausalHead causal).cache.nameToTerm
-                        |> HashDict.toList
-                        |> List.map Tuple.first
-                        |> NameSet.fromList
-                        |> HashSet.toList
+            (branchHead view.head).cache.nameToTerm
+                |> HashDict.toList
+                |> List.map Tuple.first
+                |> NameSet.fromList
+                |> HashSet.toList
 
         -- Type names, tossing the set of reference each is associated with (for
         -- now)
         typeNames : List Name
         typeNames =
-            case view.head of
-                Branch causal ->
-                    (rawCausalHead causal).cache.nameToTerm
-                        |> HashDict.toList
-                        |> List.map Tuple.first
-                        |> NameSet.fromList
-                        |> HashSet.toList
+            (branchHead view.head).cache.nameToTerm
+                |> HashDict.toList
+                |> List.map Tuple.first
+                |> NameSet.fromList
+                |> HashSet.toList
 
         names : List Name
         names =

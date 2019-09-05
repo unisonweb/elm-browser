@@ -462,26 +462,24 @@ viewReferent_ view referent =
                 , take = Just 7
                 }
                 referent
+
+        head : Branch0
+        head =
+            branchHead view.head
     in
-    case view.head of
-        Branch causal ->
-            let
-                head =
-                    rawCausalHead causal
-            in
-            case HashDict.get referent head.cache.termToName of
-                Nothing ->
-                    fallback
+    case HashDict.get referent head.cache.termToName of
+        Nothing ->
+            fallback
 
-                Just names ->
-                    case HashSet.toList names of
-                        [] ->
-                            impossible "viewReferent: empty names"
+        Just names ->
+            case HashSet.toList names of
+                [] ->
+                    impossible "viewReferent: empty names"
 
-                        -- TODO, we should handle aliases better. this
-                        -- just takes the first name
-                        name :: _ ->
-                            viewReferent2 head.cache.nameToTerm name
+                -- TODO, we should handle aliases better. this
+                -- just takes the first name
+                name :: _ ->
+                    viewReferent2 head.cache.nameToTerm name
 
 
 viewReferent2 :

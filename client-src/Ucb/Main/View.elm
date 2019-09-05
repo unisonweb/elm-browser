@@ -138,7 +138,11 @@ viewModel model =
 
             -- Loading
             Just view ->
-                [ layout [ width (fill |> minimum 800 |> maximum 1280), mainFont ]
+                [ layout
+                    [ centerX
+                    , mainFont
+                    , width (fill |> minimum 800 |> maximum 1280)
+                    ]
                     (viewView view)
                 ]
     }
@@ -146,19 +150,45 @@ viewModel model =
 
 viewView : View -> Element Message
 viewView view =
-    column [ spacing 80, padding 20, height fill, width fill ]
+    column
+        [ Border.color (rgb 0 0 0)
+        , Border.dotted
+        , Border.width 3
+        , centerX
+        , height fill
+        , spacing 80
+        , padding 20
+        ]
         [ header
         , row [ padding 20, spaceEvenly ]
-            [ viewBranches view
+            [ el
+                [ Border.color (rgb 0 0 0)
+                , Border.dotted
+                , Border.width 3
+                , alignTop
+                ]
+                (viewBranches view)
             , el
-                [ alignTop
+                [ Border.color (rgb 0 0 0)
+                , Border.dotted
+                , Border.width 3
+                , alignTop
                 , width (fill |> minimum 500 |> maximum 1000)
                 ]
                 (case view.branch of
                     ( _, ( hash, branch ) ) ->
                         viewBranch view hash branch
                 )
-            , viewSearch view
+            , el
+                [ Border.color (rgb 0 0 0)
+                , Border.dotted
+                , Border.width 3
+                , alignRight
+                , alignTop
+                , spacing 10
+                , width <| (fill |> minimum 200 |> maximum 500)
+                ]
+                (viewSearch view)
             ]
 
         -- Debug info and WIP UI
@@ -319,7 +349,8 @@ viewSearch view =
                     )
                     strings
     in
-    column [ alignTop, width <| (fill |> minimum 200 |> maximum 500), alignRight, spacing 10 ]
+    column
+        []
         [ Element.Input.text
             []
             { onChange = User_Search

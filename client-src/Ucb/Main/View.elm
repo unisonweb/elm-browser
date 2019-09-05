@@ -14,8 +14,10 @@ import Ucb.Main.Model exposing (..)
 import Ucb.Main.View.Branch exposing (..)
 import Ucb.Main.View.Palette exposing (mainFont)
 import Ucb.Unison.NameSet as NameSet
+import Ucb.Util.List as List
 import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)
+import Unison.Codebase.NameSegment exposing (..)
 import Unison.Codebase.Patch exposing (..)
 import Unison.Declaration exposing (..)
 import Unison.Name exposing (..)
@@ -32,6 +34,7 @@ type alias View =
     , getTerm : Id -> Maybe (Term Symbol)
     , getTermType : Id -> Maybe (Type Symbol)
     , getTypeDecl : Id -> Maybe (Declaration Symbol)
+    , hoveredTerm : Maybe Id
     , isBranchVisible : BranchHash -> Bool
     , isTermVisible : Id -> Bool
     , parents : BranchHash -> List BranchHash
@@ -73,6 +76,7 @@ makeViewFromModel2 model head branch =
     , getTerm = \id -> HashDict.get id model.codebase.terms
     , getTermType = \id -> HashDict.get id model.codebase.termTypes
     , getTypeDecl = \id -> HashDict.get id model.codebase.typeDecls
+    , hoveredTerm = model.ui.hoveredTerm
     , isBranchVisible = \hash -> HashDict.get hash model.ui.branches == Just True
     , isTermVisible = \id -> HashDict.get id model.ui.terms == Just True
     , parents = \hash -> maybe [] HashSet.toList (HashDict.get hash model.codebase.parents)
@@ -103,7 +107,8 @@ viewView view =
     column [ spacing 80, padding 20, height fill, width fill ]
         [ header
         , row [ padding 20, spaceEvenly ]
-            [ theBranch view
+            [ viewBranches view
+            , theBranch view
             , viewSearchPrototype view
             ]
 
@@ -113,6 +118,33 @@ viewView view =
         , el [ width fill, Border.width 1, Border.solid ] none
         , viewPatchesPrototype view
         ]
+
+
+{-| Branches sidebar.
+-}
+viewBranches :
+    View
+    -> Element message
+viewBranches view =
+    let
+        branchNames : Branch -> List (List NameSegment)
+        branchNames (Branch causal) =
+            (rawCausalHead causal).children
+                |> HashDict.toList
+                |> List.sortBy Tuple.first
+                |> List.concatMap
+                    (\( name, ( _, branch ) ) ->
+                        [ name ]
+                            :: List.map (List.cons name) (branchNames branch)
+                    )
+    in
+    column
+        [ alignTop ]
+        (branchNames view.branch
+            |> List.cons []
+            |> List.map (String.join "." >> String.cons '.')
+            |> List.map text
+        )
 
 
 theBranch :

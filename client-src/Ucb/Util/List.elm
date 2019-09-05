@@ -3,6 +3,14 @@ module Ucb.Util.List exposing (..)
 import Task as Task exposing (Task)
 
 
+cons :
+    a
+    -> List a
+    -> List a
+cons x xs =
+    x :: xs
+
+
 traverseTask :
     (a -> Task x b)
     -> List a

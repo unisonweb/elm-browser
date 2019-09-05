@@ -31,6 +31,7 @@ viewBranch :
         , getTerm : Id -> Maybe (Term Symbol)
         , getTermType : Id -> Maybe (Type Symbol)
         , getTypeDecl : Id -> Maybe (Declaration Symbol)
+        , hoveredTerm : Maybe Id
         , isBranchVisible : BranchHash -> Bool
         , isTermVisible : Id -> Bool
         , parents : BranchHash -> List BranchHash
@@ -49,6 +50,7 @@ viewBranch0 :
         , getTerm : Id -> Maybe (Term Symbol)
         , getTermType : Id -> Maybe (Type Symbol)
         , getTypeDecl : Id -> Maybe (Declaration Symbol)
+        , hoveredTerm : Maybe Id
         , isBranchVisible : BranchHash -> Bool
         , isTermVisible : Id -> Bool
         , parents : BranchHash -> List BranchHash
@@ -126,6 +128,7 @@ viewBranchChild :
         , getTerm : Id -> Maybe (Term Symbol)
         , getTermType : Id -> Maybe (Type Symbol)
         , getTypeDecl : Id -> Maybe (Declaration Symbol)
+        , hoveredTerm : Maybe Id
         , isBranchVisible : BranchHash -> Bool
         , isTermVisible : Id -> Bool
         , parents : BranchHash -> List BranchHash
@@ -165,6 +168,7 @@ viewBranchTerm :
         | branch : Branch
         , getTerm : Id -> Maybe (Term Symbol)
         , getTermType : Id -> Maybe (Type Symbol)
+        , hoveredTerm : Maybe Id
         , isTermVisible : Id -> Bool
     }
     -> Referent
@@ -185,6 +189,7 @@ viewBranchTerm2 :
         | branch : Branch
         , getTerm : Id -> Maybe (Term Symbol)
         , getTermType : Id -> Maybe (Type Symbol)
+        , hoveredTerm : Maybe Id
         , isTermVisible : Id -> Bool
     }
     -> Reference
@@ -222,7 +227,7 @@ viewBranchTerm2 view reference name _ =
                     , onMouseEnter (User_HoverTerm id)
                     , onMouseLeave User_LeaveTerm
                     , below <|
-                        if Just id == model.ui.hoveredTerm then
+                        if Just id == view.hoveredTerm then
                             -- TODO find the full name and print it
                             el [] none
 
@@ -351,6 +356,7 @@ viewCausal :
         , getTerm : Id -> Maybe (Term Symbol)
         , getTermType : Id -> Maybe (Type Symbol)
         , getTypeDecl : Id -> Maybe (Declaration Symbol)
+        , hoveredTerm : Maybe Id
         , isBranchVisible : BranchHash -> Bool
         , isTermVisible : Id -> Bool
         , parents : BranchHash -> List BranchHash

@@ -56,10 +56,9 @@ viewBranch0 :
         , parents : BranchHash -> List BranchHash
         , successors : BranchHash -> List BranchHash
     }
-    -> BranchHash
     -> Branch0
     -> Element Message
-viewBranch0 view hash { terms, types, children, patches } =
+viewBranch0 view { terms, types, children, patches } =
     column
         [ spacing 30 ]
         [ case relationToList types.d1 of
@@ -364,7 +363,7 @@ viewCausal view hash causal =
                         , viewParents
                         , viewSuccessors
                         ]
-                    , viewBranch0 view hash branch
+                    , viewBranch0 view branch
                     ]
 
             RawCons branch hash_ ->
@@ -376,7 +375,7 @@ viewCausal view hash causal =
                         , viewPredecessors [ hash_ ]
                         , viewSuccessors
                         ]
-                    , viewBranch0 view hash branch
+                    , viewBranch0 view branch
                     ]
 
             RawMerge branch hashes ->
@@ -388,7 +387,7 @@ viewCausal view hash causal =
                         , viewPredecessors (HashSet.toList hashes)
                         , viewSuccessors
                         ]
-                    , viewBranch0 view hash branch
+                    , viewBranch0 view branch
                     ]
         )
 

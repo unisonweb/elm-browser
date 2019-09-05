@@ -25,7 +25,7 @@ type Message
     | User_GetPatches BranchHash
     | User_ToggleTerm Id
     | User_Search String
-    | User_HoverTerm Id
+    | User_HoverTerm Reference
     | User_LeaveTerm
     | Http_GetBranch
         (Result (Http.Error Bytes)

@@ -40,7 +40,7 @@ type alias View =
     , getTypeDecl : Id -> Maybe (Declaration Symbol)
     , head : Branch
     , headHash : BranchHash
-    , hoveredTerm : Maybe Id
+    , hoveredTerm : Maybe Reference
     , isTermVisible : Id -> Bool
     , parents : BranchHash -> List BranchHash
     , patches : List ( PatchHash, Patch )

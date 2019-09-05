@@ -36,7 +36,7 @@ viewBranch :
         , getTermType : Id -> Maybe (Type Symbol)
         , getTypeDecl : Id -> Maybe (Declaration Symbol)
         , head : Branch
-        , hoveredTerm : Maybe Id
+        , hoveredTerm : Maybe Reference
         , isTermVisible : Id -> Bool
         , parents : BranchHash -> List BranchHash
         , successors : BranchHash -> List BranchHash
@@ -55,7 +55,7 @@ viewBranch0 :
         , getTermType : Id -> Maybe (Type Symbol)
         , getTypeDecl : Id -> Maybe (Declaration Symbol)
         , head : Branch
-        , hoveredTerm : Maybe Id
+        , hoveredTerm : Maybe Reference
         , isTermVisible : Id -> Bool
         , parents : BranchHash -> List BranchHash
         , successors : BranchHash -> List BranchHash
@@ -115,7 +115,7 @@ viewBranchTerm :
         | getTerm : Id -> Maybe (Term Symbol)
         , getTermType : Id -> Maybe (Type Symbol)
         , head : Branch
-        , hoveredTerm : Maybe Id
+        , hoveredTerm : Maybe Reference
         , isTermVisible : Id -> Bool
         , termNames : Referent -> List Name
     }
@@ -137,7 +137,7 @@ viewBranchTerm2 :
         | getTerm : Id -> Maybe (Term Symbol)
         , getTermType : Id -> Maybe (Type Symbol)
         , head : Branch
-        , hoveredTerm : Maybe Id
+        , hoveredTerm : Maybe Reference
         , isTermVisible : Id -> Bool
         , termNames : Referent -> List Name
     }
@@ -164,14 +164,35 @@ viewBranchTerm2 view reference name _ =
     case reference of
         Builtin _ ->
             el
-                [ codeFont ]
+                [ above <|
+                    if view.hoveredTerm == Just reference then
+                        el
+                            [ Background.color (rgb 1 1 1)
+                            , Border.color (rgb 0 0 0)
+                            , Border.solid
+                            , Border.width 1
+                            ]
+                            (column
+                                []
+                                (List.map
+                                    (nameToString >> text)
+                                    (view.termNames (Ref reference))
+                                )
+                            )
+
+                    else
+                        none
+                , codeFont
+                , onMouseEnter (User_HoverTerm reference)
+                , onMouseLeave User_LeaveTerm
+                ]
                 (text name2)
 
         Derived id ->
             column []
                 [ row
                     [ above <|
-                        if view.hoveredTerm == Just id then
+                        if view.hoveredTerm == Just reference then
                             el
                                 [ Background.color (rgb 1 1 1)
                                 , Border.color (rgb 0 0 0)
@@ -185,7 +206,7 @@ viewBranchTerm2 view reference name _ =
                                         (text id.hash)
                                         :: List.map
                                             (nameToString >> text)
-                                            (view.termNames (Ref (Derived id)))
+                                            (view.termNames (Ref reference))
                                     )
                                 )
 
@@ -193,7 +214,7 @@ viewBranchTerm2 view reference name _ =
                             none
                     , codeFont
                     , onClick (User_ToggleTerm id)
-                    , onMouseEnter (User_HoverTerm id)
+                    , onMouseEnter (User_HoverTerm reference)
                     , onMouseLeave User_LeaveTerm
                     , pointer
                     ]
@@ -319,7 +340,7 @@ viewCausal :
         , getTermType : Id -> Maybe (Type Symbol)
         , getTypeDecl : Id -> Maybe (Declaration Symbol)
         , head : Branch
-        , hoveredTerm : Maybe Id
+        , hoveredTerm : Maybe Reference
         , isTermVisible : Id -> Bool
         , parents : BranchHash -> List BranchHash
         , successors : BranchHash -> List BranchHash

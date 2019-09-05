@@ -573,15 +573,15 @@ update_User_GetPatches hash model =
     )
 
 
-update_User_HoverTerm : Id -> Model -> ( Model, Cmd message )
-update_User_HoverTerm id model =
+update_User_HoverTerm : Reference -> Model -> ( Model, Cmd message )
+update_User_HoverTerm reference model =
     let
         updateUI :
             ModelUI
             -> ModelUI
         updateUI ui =
             { ui
-                | hoveredTerm = Just id
+                | hoveredTerm = Just reference
             }
 
         newModel : Model

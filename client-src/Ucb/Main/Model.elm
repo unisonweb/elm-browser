@@ -85,8 +85,10 @@ type alias ModelUI =
     -- Search box
     , search : String
 
-    -- hover tracking
-    , hoveredTerm : Maybe Id
+    -- Hover tracking
+    , hoveredTerm : Maybe Reference
+
+    -- mitchell: what's this thing?
     , key : Nav.Key
     }
 

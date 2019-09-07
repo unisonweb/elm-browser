@@ -61,10 +61,16 @@ viewTerm2 :
 viewTerm2 view env { out } =
     case out of
         TermAbs var term ->
-            text "(not implemented: TermAbs)"
+            row []
+                [ text "("
+                , viewTermVar var
+                , text " -> "
+                , viewTerm view term
+                , text ")"
+                ]
 
-        TermCycle _ ->
-            text "(not implemented: TermCycle)"
+        TermCycle term ->
+            viewTerm2 view env term
 
         TermVar var ->
             viewTermVar var

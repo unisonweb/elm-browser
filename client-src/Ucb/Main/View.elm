@@ -138,12 +138,11 @@ viewModel model =
 
             -- Loading
             Just view ->
-                [ layout
-                    [ centerX
-                    , mainFont
-                    , width (fill |> minimum 800 |> maximum 1280)
-                    ]
-                    (viewView view)
+                [ layout [ mainFont ]
+                    (el
+                        [ centerX, width (fill |> minimum 800 |> maximum 1280) ]
+                        (viewView view)
+                    )
                 ]
     }
 
@@ -155,40 +154,19 @@ viewView view =
         , Border.dotted
         , Border.width 3
         , centerX
+        , width fill
         , height fill
         , spacing 80
         , padding 20
         ]
         [ header
-        , row [ padding 20, spaceEvenly ]
-            [ el
-                [ Border.color (rgb 0 0 0)
-                , Border.dotted
-                , Border.width 3
-                , alignTop
-                ]
-                (viewBranches view)
-            , el
-                [ Border.color (rgb 0 0 0)
-                , Border.dotted
-                , Border.width 3
-                , alignTop
-                , width (fill |> minimum 500 |> maximum 1000)
-                ]
+        , row [ padding 20 ]
+            [ el [ alignLeft ]
                 (case view.branch of
                     ( _, ( hash, branch ) ) ->
                         viewBranch view hash branch
                 )
-            , el
-                [ Border.color (rgb 0 0 0)
-                , Border.dotted
-                , Border.width 3
-                , alignRight
-                , alignTop
-                , spacing 10
-                , width <| (fill |> minimum 200 |> maximum 500)
-                ]
-                (viewSearch view)
+            , column [ alignRight ] [ viewSearch view, viewBranches view ]
             ]
 
         -- Debug info and WIP UI
@@ -201,9 +179,7 @@ viewView view =
 
 {-| Branches sidebar.
 -}
-viewBranches :
-    View
-    -> Element Message
+viewBranches : View -> Element Message
 viewBranches view =
     let
         branchInfo : List ( List NameSegment, Branch )

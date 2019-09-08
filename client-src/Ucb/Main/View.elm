@@ -150,23 +150,35 @@ viewModel model =
 viewView : View -> Element Message
 viewView view =
     column
-        [ Border.color (rgb 0 0 0)
-        , Border.dotted
-        , Border.width 3
-        , centerX
+        [ centerX
         , width fill
         , height fill
         , spacing 80
         , padding 20
         ]
         [ header
-        , row [ padding 20 ]
-            [ el [ alignLeft ]
+
+        -- main body
+        , row [ padding 20, width fill ]
+            [ el [ alignTop, width <| fillPortion 2, scrollbars ]
                 (case view.branch of
                     ( _, ( hash, branch ) ) ->
                         viewBranch view hash branch
                 )
-            , column [ alignRight ] [ viewSearch view, viewBranches view ]
+            , column
+                [ alignTop
+                , width <| fillPortion 1
+                , spacing 10
+                , padding 20
+                , Border.solid
+                , Border.widthEach { bottom = 0, left = 1, top = 0, right = 0 }
+                ]
+                [ viewSearch view
+
+                -- spacer
+                , el [ Border.solid, Border.width 1, width fill ] none
+                , viewBranches view
+                ]
             ]
 
         -- Debug info and WIP UI
@@ -326,15 +338,21 @@ viewSearch view =
                     strings
     in
     column
-        []
+        [ scrollbarY
+        , centerX
+        , width fill
+        , height (fill |> maximum 500)
+        , spacing 10
+        ]
         [ Element.Input.text
             []
             { onChange = User_Search
             , text = view.search
-            , placeholder = Nothing
-            , label = labelLeft [ centerX ] (text "Search")
+            , placeholder = Just <| Element.Input.placeholder [] (text "Search")
+            , label = Element.Input.labelHidden "Search"
             }
-        , column [ scrollbarY, centerX, height (px 500) ] (List.map text matching)
+        , column [ scrollbarY, centerX, height (fill |> maximum 500) ]
+            (List.map text matching)
         ]
 
 

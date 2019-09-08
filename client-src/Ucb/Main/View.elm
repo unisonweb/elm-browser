@@ -138,12 +138,11 @@ viewModel model =
 
             -- Loading
             Just view ->
-                [ layout
-                    [ centerX
-                    , mainFont
-                    , width (fill |> minimum 800 |> maximum 1280)
-                    ]
-                    (viewView view)
+                [ layout [ mainFont ]
+                    (el
+                        [ centerX, width (fill |> minimum 800 |> maximum 1280) ]
+                        (viewView view)
+                    )
                 ]
     }
 
@@ -151,44 +150,35 @@ viewModel model =
 viewView : View -> Element Message
 viewView view =
     column
-        [ Border.color (rgb 0 0 0)
-        , Border.dotted
-        , Border.width 3
-        , centerX
+        [ centerX
+        , width fill
         , height fill
         , spacing 80
         , padding 20
         ]
         [ header
-        , row [ padding 20, spaceEvenly ]
-            [ el
-                [ Border.color (rgb 0 0 0)
-                , Border.dotted
-                , Border.width 3
-                , alignTop
-                ]
-                (viewBranches view)
-            , el
-                [ Border.color (rgb 0 0 0)
-                , Border.dotted
-                , Border.width 3
-                , alignTop
-                , width (fill |> minimum 500 |> maximum 1000)
-                ]
+
+        -- main body
+        , row [ padding 20, width fill ]
+            [ el [ alignTop, width <| fillPortion 2, scrollbars ]
                 (case view.branch of
                     ( _, ( hash, branch ) ) ->
                         viewBranch view hash branch
                 )
-            , el
-                [ Border.color (rgb 0 0 0)
-                , Border.dotted
-                , Border.width 3
-                , alignRight
-                , alignTop
+            , column
+                [ alignTop
+                , width <| fillPortion 1
                 , spacing 10
-                , width <| (fill |> minimum 200 |> maximum 500)
+                , padding 20
+                , Border.solid
+                , Border.widthEach { bottom = 0, left = 1, top = 0, right = 0 }
                 ]
-                (viewSearch view)
+                [ viewSearch view
+
+                -- spacer
+                , el [ Border.solid, Border.width 1, width fill ] none
+                , viewBranches view
+                ]
             ]
 
         -- Debug info and WIP UI
@@ -201,9 +191,7 @@ viewView view =
 
 {-| Branches sidebar.
 -}
-viewBranches :
-    View
-    -> Element Message
+viewBranches : View -> Element Message
 viewBranches view =
     let
         branchInfo : List ( List NameSegment, Branch )
@@ -350,15 +338,21 @@ viewSearch view =
                     strings
     in
     column
-        []
+        [ scrollbarY
+        , centerX
+        , width fill
+        , height (fill |> maximum 500)
+        , spacing 10
+        ]
         [ Element.Input.text
             []
             { onChange = User_Search
             , text = view.search
-            , placeholder = Nothing
-            , label = labelLeft [ centerX ] (text "Search")
+            , placeholder = Just <| Element.Input.placeholder [] (text "Search")
+            , label = Element.Input.labelHidden "Search"
             }
-        , column [ scrollbarY, centerX, height (px 500) ] (List.map text matching)
+        , column [ scrollbarY, centerX, height (fill |> maximum 500) ]
+            (List.map text matching)
         ]
 
 

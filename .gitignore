@@ -3,3 +3,8 @@
 dist-newstyle/
 elm-stuff/
 index.html
+
+# Useful for playing around with unison codebases during development:
+.unison
+.unisonHistory
+scratch.u

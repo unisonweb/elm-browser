@@ -213,7 +213,7 @@ viewBranches view =
                     )
 
         -- Should we show this branch?
-        -- Yes if:
+        -- Yes if, after applying the search filter,
         -- * It contains any types
         -- * It contains any non-constructor terms
         shouldBeVisible :

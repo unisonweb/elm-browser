@@ -6,6 +6,7 @@ module Unison.Name exposing
     , nameEquality
     , nameFromNameSegment
     , nameHashing
+    , nameLast
     , nameTails
     , nameToNameSegments
     , nameToString
@@ -97,23 +98,8 @@ nameCons nameSegment (Name name) =
 
 
 nameLast : Name -> NameSegment
-nameLast name =
-    let
-        array =
-            nameToNameSegments name
-
-        index =
-            Array.length array - 1
-
-        maybeLast =
-            Array.get index array
-    in
-    case maybeLast of
-        Nothing ->
-            impossible "Received empty array"
-
-        Just nameSegment ->
-            nameSegment
+nameLast (Name name) =
+    Array.unsafeLast name
 
 
 {-|

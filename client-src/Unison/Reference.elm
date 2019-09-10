@@ -4,8 +4,10 @@ module Unison.Reference exposing
     , idEquality
     , idHashing
     , idToString
+    , pairReference
     , referenceEquality
     , referenceHashing
+    , unitReference
     )
 
 import Misc exposing (tumble)
@@ -92,3 +94,21 @@ idToString { hash, pos, size } =
             ++ String.fromInt pos
             ++ String.fromChar 'c'
             ++ String.fromInt size
+
+
+pairReference : Reference
+pairReference =
+    Derived
+        { hash = "onbcm0qctbnuctpm57tkc5p16b8gfke8thjf19p4r4laokji0b606rd0frnhj103qb90lve3fohkoc1eda70491hot656s1m6kk3cn0"
+        , pos = 0
+        , size = 1
+        }
+
+
+unitReference : Reference
+unitReference =
+    Derived
+        { hash = "568rsi7o3ghq8mmbea2sf8msdk20ohasob5s2rvjtqg2lr0vs39l1hm98urrjemsr3vo3fa52pibqu0maluq7g8sfg3h5f5re6vitj8"
+        , pos = 0
+        , size = 1
+        }

@@ -225,3 +225,52 @@ typeUnForalls vars ty =
 
         _ ->
             ( List.reverse vars, ty )
+
+
+typeUnTuple :
+    Type var
+    -> List (Type var)
+typeUnTuple ty =
+    case ty.out of
+        TypeTm (TypeRef ref) ->
+            if ref == unitReference then
+                []
+
+            else
+                impossible "typeUnTuple: didn't end with ()?"
+
+        _ ->
+            case typeUnApps ty of
+                Just ( f, [ ty1, ty2 ] ) ->
+                    case f.out of
+                        TypeTm (TypeRef ref) ->
+                            if ref == pairReference then
+                                ty1 :: typeUnTuple ty2
+
+                            else
+                                impossible "typeUnTuple: not pair?"
+
+                        _ ->
+                            impossible "typeUnTuple: not pair?"
+
+                _ ->
+                    impossible "typeUnTuple: wat?"
+
+
+typeIsPairRef :
+    Type var
+    -> Bool
+typeIsPairRef ty =
+    ty.out == TypeTm (TypeRef pairReference)
+
+
+typeIsSequenceRef :
+    Type var
+    -> Bool
+typeIsSequenceRef ty =
+    case ty.out of
+        TypeTm (TypeRef (Builtin "Sequence")) ->
+            True
+
+        _ ->
+            False

@@ -42,26 +42,40 @@ viewType view p ty0 =
                 )
 
         TypeTm (TypeApp ty1 ty2) ->
-            case ty1.out of
-                TypeTm (TypeRef (Builtin "Sequence")) ->
-                    row
-                        []
-                        [ text "[", viewType view 0 ty2, text "]" ]
+            if typeIsSequenceRef ty1 then
+                row
+                    []
+                    [ text "[", viewType view 0 ty2, text "]" ]
 
-                _ ->
-                    case typeUnApps ty0 of
-                        Nothing ->
-                            impossible "viewType: unApps returned Nothing"
+            else if typeIsPairRef ty1 then
+                let
+                    tys : List (Type Symbol)
+                    tys =
+                        typeUnTuple ty2
+                in
+                -- Print a horrible looking monster because Ian is
+                -- working on a better type printer.
+                row
+                    []
+                    [ text "(TUPLE "
+                    , row [] (List.map (viewType view 10) tys)
+                    , text ")"
+                    ]
 
-                        Just ( f, xs ) ->
-                            ppParen (p >= 10)
-                                (row
-                                    []
-                                    [ viewType view 9 f
-                                    , text " "
-                                    , ppSpaced (List.map (viewType view 10) xs)
-                                    ]
-                                )
+            else
+                case typeUnApps ty0 of
+                    Nothing ->
+                        impossible "viewType: unApps returned Nothing"
+
+                    Just ( f, xs ) ->
+                        ppParen (p >= 10)
+                            (row
+                                []
+                                [ viewType view 9 f
+                                , text " "
+                                , ppSpaced (List.map (viewType view 10) xs)
+                                ]
+                            )
 
         TypeTm (TypeForall _) ->
             let

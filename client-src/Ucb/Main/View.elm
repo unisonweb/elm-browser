@@ -307,35 +307,27 @@ viewSearch view =
         -- now)
         typeNames : List Name
         typeNames =
-            (branchHead view.head).cache.nameToTerm
+            (branchHead view.head).cache.nameToType
                 |> HashDict.toList
                 |> List.map Tuple.first
                 |> NameSet.fromList
                 |> HashSet.toList
 
-        names : List Name
-        names =
-            typeNames ++ termNames
-
-        strings : List String
-        strings =
-            List.map nameToString names
-
-        matching : List String
-        matching =
+        matchingNames : List Name
+        matchingNames =
             if String.isEmpty view.search then
                 []
 
             else
                 List.filterMap
-                    (\string ->
-                        if String.contains view.search (String.toLower string) then
-                            Just string
+                    (\name ->
+                        if String.contains view.search (nameLast name) then
+                            Just name
 
                         else
                             Nothing
                     )
-                    strings
+                    (typeNames ++ termNames)
     in
     column
         [ scrollbarY
@@ -352,7 +344,7 @@ viewSearch view =
             , label = Element.Input.labelHidden "Search"
             }
         , column [ scrollbarY, centerX, height (fill |> maximum 500) ]
-            (List.map text matching)
+            (List.map (nameToString >> text) matchingNames)
         ]
 
 

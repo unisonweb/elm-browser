@@ -630,7 +630,7 @@ update_User_Search search model =
             -> ModelUI
         updateSearch ui =
             { ui
-                | search = String.toLower search
+                | search = search
             }
 
         newModel : Model

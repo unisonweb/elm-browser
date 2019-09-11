@@ -45,3 +45,8 @@ hoverStyle =
     , Border.solid
     , Border.width 1
     ]
+
+
+hashColor : Attribute message
+hashColor =
+    Font.color (rgb 0.5 0.5 0.5)

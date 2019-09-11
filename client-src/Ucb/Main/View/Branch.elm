@@ -12,7 +12,7 @@ import Typeclasses.Classes.Equality as Equality
 import Typeclasses.Classes.Hashing as Hashing
 import Ucb.Main.Message exposing (..)
 import Ucb.Main.Model exposing (..)
-import Ucb.Main.View.Palette exposing (codeFont, hoverStyle)
+import Ucb.Main.View.Palette exposing (codeFont, hashColor, hoverStyle)
 import Ucb.Main.View.Term exposing (viewTerm)
 import Ucb.Main.View.Type exposing (viewType)
 import Unison.Codebase.Branch exposing (..)
@@ -202,7 +202,7 @@ viewBranchTerm2 view reference name _ =
                                     (column
                                         []
                                         (el
-                                            [ Font.color (rgb 0.5 0.5 0.5) ]
+                                            [ hashColor ]
                                             (text id.hash)
                                             :: List.map
                                                 (nameToString >> text)

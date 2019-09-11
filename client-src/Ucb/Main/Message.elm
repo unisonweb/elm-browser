@@ -1,8 +1,9 @@
-module Ucb.Main.Message exposing (..)
+module Ucb.Main.Message exposing (Message(..))
 
 import Browser
 import Bytes exposing (Bytes)
 import HashingContainers.HashSet exposing (HashSet)
+import Ucb.Main.Model exposing (Hover)
 import Ucb.Unison.BranchDict exposing (..)
 import Ucb.Util.Http as Http
 import Unison.Codebase.Branch exposing (..)
@@ -25,8 +26,8 @@ type Message
     | User_GetPatches BranchHash
     | User_ToggleTerm Id
     | User_Search String
-    | User_HoverTerm Reference
-    | User_LeaveTerm
+    | User_Hover Hover
+    | User_Unhover
     | Http_GetBranch
         (Result (Http.Error Bytes)
             ( BranchHash

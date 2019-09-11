@@ -4,14 +4,15 @@ import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Events exposing (..)
-import Element.Font exposing (..)
+import Element.Font as Font
 import HashingContainers.HashDict as HashDict
 import HashingContainers.HashSet as HashSet exposing (HashSet)
 import Misc exposing (maybe)
 import Typeclasses.Classes.Equality as Equality
 import Typeclasses.Classes.Hashing as Hashing
 import Ucb.Main.Message exposing (..)
-import Ucb.Main.View.Palette exposing (codeFont)
+import Ucb.Main.Model exposing (..)
+import Ucb.Main.View.Palette exposing (codeFont, hoverStyle)
 import Ucb.Main.View.Term exposing (viewTerm)
 import Ucb.Main.View.Type exposing (viewType)
 import Unison.Codebase.Branch exposing (..)
@@ -36,11 +37,12 @@ viewBranch :
         , getTermType : Id -> Maybe (Type Symbol)
         , getTypeDecl : Id -> Maybe (Declaration Symbol)
         , head : Branch
-        , hoveredTerm : Maybe Reference
+        , hovered : Maybe Hover
         , isTermVisible : Id -> Bool
         , parents : BranchHash -> List BranchHash
         , successors : BranchHash -> List BranchHash
         , termNames : Referent -> List Name
+        , typeNames : Reference -> List Name
     }
     -> BranchHash
     -> Branch
@@ -55,11 +57,12 @@ viewBranch0 :
         , getTermType : Id -> Maybe (Type Symbol)
         , getTypeDecl : Id -> Maybe (Declaration Symbol)
         , head : Branch
-        , hoveredTerm : Maybe Reference
+        , hovered : Maybe Hover
         , isTermVisible : Id -> Bool
         , parents : BranchHash -> List BranchHash
         , successors : BranchHash -> List BranchHash
         , termNames : Referent -> List Name
+        , typeNames : Reference -> List Name
     }
     -> Branch0
     -> Element Message
@@ -115,9 +118,10 @@ viewBranchTerm :
         | getTerm : Id -> Maybe (Term Symbol)
         , getTermType : Id -> Maybe (Type Symbol)
         , head : Branch
-        , hoveredTerm : Maybe Reference
+        , hovered : Maybe Hover
         , isTermVisible : Id -> Bool
         , termNames : Referent -> List Name
+        , typeNames : Reference -> List Name
     }
     -> Referent
     -> NameSegment
@@ -137,9 +141,10 @@ viewBranchTerm2 :
         | getTerm : Id -> Maybe (Term Symbol)
         , getTermType : Id -> Maybe (Type Symbol)
         , head : Branch
-        , hoveredTerm : Maybe Reference
+        , hovered : Maybe Hover
         , isTermVisible : Id -> Bool
         , termNames : Referent -> List Name
+        , typeNames : Reference -> List Name
     }
     -> Reference
     -> NameSegment
@@ -165,13 +170,9 @@ viewBranchTerm2 view reference name _ =
         Builtin _ ->
             el
                 [ above <|
-                    if view.hoveredTerm == Just reference then
+                    if view.hovered == Just (HoverTerm reference) then
                         el
-                            [ Background.color (rgb 1 1 1)
-                            , Border.color (rgb 0 0 0)
-                            , Border.solid
-                            , Border.width 1
-                            ]
+                            hoverStyle
                             (column
                                 []
                                 (List.map
@@ -183,48 +184,46 @@ viewBranchTerm2 view reference name _ =
                     else
                         none
                 , codeFont
-                , onMouseEnter (User_HoverTerm reference)
-                , onMouseLeave User_LeaveTerm
+                , onMouseEnter (User_Hover (HoverTerm reference))
+                , onMouseLeave User_Unhover
                 ]
                 (text name2)
 
         Derived id ->
             column []
                 [ row
-                    [ above <|
-                        if view.hoveredTerm == Just reference then
-                            el
-                                [ Background.color (rgb 1 1 1)
-                                , Border.color (rgb 0 0 0)
-                                , Border.solid
-                                , Border.width 1
-                                ]
-                                (column
-                                    []
-                                    (el
-                                        [ color (rgb 0.5 0.5 0.5) ]
-                                        (text id.hash)
-                                        :: List.map
-                                            (nameToString >> text)
-                                            (view.termNames (Ref reference))
-                                    )
-                                )
-
-                        else
-                            none
-                    , codeFont
-                    , onClick (User_ToggleTerm id)
-                    , onMouseEnter (User_HoverTerm reference)
-                    , onMouseLeave User_LeaveTerm
-                    , pointer
+                    [ codeFont
                     ]
-                    [ text name2
+                    [ el
+                        [ above <|
+                            if view.hovered == Just (HoverTerm reference) then
+                                el
+                                    hoverStyle
+                                    (column
+                                        []
+                                        (el
+                                            [ Font.color (rgb 0.5 0.5 0.5) ]
+                                            (text id.hash)
+                                            :: List.map
+                                                (nameToString >> text)
+                                                (view.termNames (Ref reference))
+                                        )
+                                    )
+
+                            else
+                                none
+                        , onClick (User_ToggleTerm id)
+                        , onMouseEnter (User_Hover (HoverTerm reference))
+                        , onMouseLeave User_Unhover
+                        , pointer
+                        ]
+                        (text name2)
                     , maybe
                         none
                         (\type_ ->
                             row []
                                 [ text " : "
-                                , viewType view -1 type_
+                                , viewType view (Just reference) -1 type_
                                 ]
                         )
                         (view.getTermType id)
@@ -252,18 +251,20 @@ viewBranchType :
     { r
         | getTypeDecl : Id -> Maybe (Declaration Symbol)
         , head : Branch
+        , hovered : Maybe Hover
+        , typeNames : Reference -> List Name
     }
     -> Reference
     -> NameSegment
     -> Maybe (HashSet ( Reference, Reference ))
-    -> Element message
+    -> Element Message
 viewBranchType view reference name links =
     case reference of
         Builtin _ ->
             row
                 [ codeFont
                 ]
-                [ el [ bold ] (text "unique type ")
+                [ el [ Font.bold ] (text "unique type ")
                 , text name
                 ]
 
@@ -282,19 +283,23 @@ viewBranchType view reference name links =
 
 
 viewBranchType2 :
-    { r | head : Branch }
+    { r
+        | head : Branch
+        , hovered : Maybe Hover
+        , typeNames : Reference -> List Name
+    }
     -> NameSegment
     -> Maybe (HashSet ( Reference, Reference ))
     -> Id
     -> DataDeclaration Symbol
     -> ConstructorType
-    -> Element message
+    -> Element Message
 viewBranchType2 view name _ _ declaration constructorType =
     column
         []
         [ row
             [ codeFont ]
-            [ el [ bold ]
+            [ el [ Font.bold ]
                 (case constructorType of
                     Data ->
                         case declaration.modifier of
@@ -325,7 +330,7 @@ viewBranchType2 view name _ _ declaration constructorType =
                         row
                             []
                             [ text (symbolToString constructorName ++ " : ")
-                            , viewType view -1 type_
+                            , viewType view Nothing -1 type_
                             ]
                     )
                     declaration.constructors
@@ -340,11 +345,12 @@ viewCausal :
         , getTermType : Id -> Maybe (Type Symbol)
         , getTypeDecl : Id -> Maybe (Declaration Symbol)
         , head : Branch
-        , hoveredTerm : Maybe Reference
+        , hovered : Maybe Hover
         , isTermVisible : Id -> Bool
         , parents : BranchHash -> List BranchHash
         , successors : BranchHash -> List BranchHash
         , termNames : Referent -> List Name
+        , typeNames : Reference -> List Name
     }
     -> BranchHash
     -> RawCausal Branch0

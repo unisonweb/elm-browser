@@ -80,7 +80,7 @@ init _ url key =
                 { branch = []
                 , terms = HashDict.empty idEquality idHashing
                 , search = ""
-                , hoveredTerm = Nothing
+                , hovered = Nothing
                 , key = key
                 }
             , errors = []
@@ -123,11 +123,11 @@ update message model =
         User_GetPatches hash ->
             update_User_GetPatches hash model
 
-        User_HoverTerm id ->
-            update_User_HoverTerm id model
+        User_Hover hover ->
+            update_User_HoverTerm hover model
 
-        User_LeaveTerm ->
-            update_User_LeaveTerm model
+        User_Unhover ->
+            update_User_Unhover model
 
         User_Search search ->
             update_User_Search search model
@@ -573,15 +573,18 @@ update_User_GetPatches hash model =
     )
 
 
-update_User_HoverTerm : Reference -> Model -> ( Model, Cmd message )
-update_User_HoverTerm reference model =
+update_User_HoverTerm :
+    Hover
+    -> Model
+    -> ( Model, Cmd message )
+update_User_HoverTerm hover model =
     let
         updateUI :
             ModelUI
             -> ModelUI
         updateUI ui =
             { ui
-                | hoveredTerm = Just reference
+                | hovered = Just hover
             }
 
         newModel : Model
@@ -595,15 +598,15 @@ update_User_HoverTerm reference model =
     )
 
 
-update_User_LeaveTerm : Model -> ( Model, Cmd message )
-update_User_LeaveTerm model =
+update_User_Unhover : Model -> ( Model, Cmd message )
+update_User_Unhover model =
     let
         updateUI :
             ModelUI
             -> ModelUI
         updateUI ui =
             { ui
-                | hoveredTerm = Nothing
+                | hovered = Nothing
             }
 
         newModel : Model

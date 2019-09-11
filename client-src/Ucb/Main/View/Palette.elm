@@ -1,6 +1,8 @@
 module Ucb.Main.View.Palette exposing (..)
 
-import Element exposing (Attribute)
+import Element exposing (Attribute, rgb)
+import Element.Background as Background
+import Element.Border as Border
 import Element.Font as Font
 
 
@@ -32,3 +34,14 @@ codeFont =
             }
         , Font.typeface "monospace"
         ]
+
+
+{-| Styling for hovered types/terms
+-}
+hoverStyle : List (Attribute message)
+hoverStyle =
+    [ Background.color (rgb 1 1 1)
+    , Border.color (rgb 0 0 0)
+    , Border.solid
+    , Border.width 1
+    ]

@@ -1,4 +1,13 @@
-module Ucb.Main.Model exposing (..)
+module Ucb.Main.Model exposing
+    ( Error(..)
+    , Hover(..)
+    , Model
+    , ModelCodebase
+    , ModelUI
+    , getMissingPatches
+    , getMissingTermTypes
+    , getMissingTypeDecls
+    )
 
 import Browser.Navigation as Nav
 import Bytes exposing (Bytes)
@@ -86,11 +95,22 @@ type alias ModelUI =
     , search : String
 
     -- Hover tracking
-    , hoveredTerm : Maybe Reference
+    , hovered : Maybe Hover
 
     -- mitchell: what's this thing?
     , key : Nav.Key
     }
+
+
+{-| Hovering over what?
+-}
+type Hover
+    = HoverTerm Reference
+    | HoverType
+        -- The term
+        Reference
+        -- The type
+        Reference
 
 
 {-| Given a branch, fetch all of its patches that we haven't already.

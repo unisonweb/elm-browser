@@ -40,13 +40,14 @@ type alias View =
     , getTypeDecl : Id -> Maybe (Declaration Symbol)
     , head : Branch
     , headHash : BranchHash
-    , hoveredTerm : Maybe Reference
+    , hovered : Maybe Hover
     , isTermVisible : Id -> Bool
     , parents : BranchHash -> List BranchHash
     , patches : List ( PatchHash, Patch )
     , search : String
     , successors : BranchHash -> List BranchHash
     , termNames : Referent -> List Name
+    , typeNames : Reference -> List Name
     }
 
 
@@ -101,7 +102,7 @@ makeViewFromModel2 model headHash head =
     , getTypeDecl = \id -> HashDict.get id model.codebase.typeDecls
     , head = head
     , headHash = headHash
-    , hoveredTerm = model.ui.hoveredTerm
+    , hovered = model.ui.hovered
     , isTermVisible =
         \id ->
             HashDict.get id model.ui.terms == Just True
@@ -125,6 +126,12 @@ makeViewFromModel2 model headHash head =
                 []
                 (HashSet.toList >> List.sortWith nameCompare)
                 (HashDict.get referent (branchHead head).cache.termToName)
+    , typeNames =
+        \reference ->
+            maybe
+                []
+                (HashSet.toList >> List.sortWith nameCompare)
+                (HashDict.get reference (branchHead head).cache.typeToName)
     }
 
 

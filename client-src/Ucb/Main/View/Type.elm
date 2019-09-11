@@ -1,13 +1,19 @@
 module Ucb.Main.View.Type exposing (viewType)
 
 import Element exposing (..)
+import Element.Events exposing (..)
+import Element.Font as Font
 import HashingContainers.HashDict as HashDict
 import HashingContainers.HashSet as HashSet
 import Misc exposing (..)
+import Ucb.Main.Message exposing (..)
+import Ucb.Main.Model exposing (..)
+import Ucb.Main.View.Palette exposing (codeFont, hoverStyle)
 import Ucb.Main.View.Reference exposing (viewReference)
 import Ucb.Unison.Name exposing (..)
 import Ucb.Unison.NameDict exposing (NameDict)
 import Ucb.Unison.ReferenceSet exposing (ReferenceSet)
+import Ucb.Util.List as List
 import Ucb.Util.Pretty exposing (..)
 import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)
@@ -20,24 +26,32 @@ import Util.HashSet as HashSet
 
 
 viewType :
-    { r | head : Branch }
+    { r
+        | head : Branch
+        , hovered : Maybe Hover
+        , typeNames : Reference -> List Name
+    }
+    -- The term this is a type of
+    -- TODO what about data constructors :)
+    -- TODO whoops, don't want to put a tooltip over all occurrences in a term..
+    -> Maybe Reference
     -> Int
     -> Type Symbol
-    -> Element message
-viewType view p ty0 =
+    -> Element Message
+viewType view termReference p ty0 =
     case ty0.out of
         TypeVar var ->
             text (symbolToString var)
 
         TypeTm (TypeRef reference) ->
-            viewTypeRef view reference
+            viewTypeRef view termReference reference
 
         TypeTm (TypeArrow ty1 ty2) ->
             ppParen (p >= 0)
                 (row
                     []
-                    [ viewType view 0 ty1
-                    , viewArrows view (typeUnEffectfulArrows ty2)
+                    [ viewType view termReference 0 ty1
+                    , viewArrows view termReference (typeUnEffectfulArrows ty2)
                     ]
                 )
 
@@ -46,7 +60,10 @@ viewType view p ty0 =
                 TypeTm (TypeRef (Builtin "Sequence")) ->
                     row
                         []
-                        [ text "[", viewType view 0 ty2, text "]" ]
+                        [ text "["
+                        , viewType view termReference 0 ty2
+                        , text "]"
+                        ]
 
                 _ ->
                     case typeUnApps ty0 of
@@ -57,9 +74,13 @@ viewType view p ty0 =
                             ppParen (p >= 10)
                                 (row
                                     []
-                                    [ viewType view 9 f
+                                    [ viewType view termReference 9 f
                                     , text " "
-                                    , ppSpaced (List.map (viewType view 10) xs)
+                                    , ppSpaced
+                                        (List.map
+                                            (viewType view termReference 10)
+                                            xs
+                                        )
                                     ]
                                 )
 
@@ -69,19 +90,19 @@ viewType view p ty0 =
                     typeUnForalls [] ty0
             in
             if p < 0 && List.all symbolIsLowercase tyvars then
-                viewType view p ty
+                viewType view termReference p ty
 
             else
                 ppParen (p >= 0)
                     (row
                         []
                         [ text (String.join " " ("∀" :: List.map symbolToString tyvars) ++ ". ")
-                        , viewType view -1 ty
+                        , viewType view termReference -1 ty
                         ]
                     )
 
         TypeTm (TypeIntroOuter ty) ->
-            viewType view p ty
+            viewType view termReference p ty
 
         TypeAbs _ _ ->
             impossible "viewType: TypeAbs"
@@ -102,57 +123,88 @@ viewType view p ty0 =
 
 
 viewTypeRef :
-    { r | head : Branch }
+    { r
+        | head : Branch
+        , hovered : Maybe Hover
+        , typeNames : Reference -> List Name
+    }
+    -> Maybe Reference
     -> Reference
-    -> Element message
-viewTypeRef view reference =
-    let
-        fallback : Element message
-        fallback =
+    -> Element Message
+viewTypeRef view maybeTermReference reference =
+    case view.typeNames reference of
+        -- Weird.. don't think this should happen
+        [] ->
             viewReference
                 { showBuiltin = True
                 , take = Just 7
                 }
                 reference
 
-        head : Branch0
-        head =
-            branchHead view.head
-    in
-    case HashDict.get reference head.cache.typeToName of
-        Nothing ->
-            fallback
+        -- TODO, we should handle aliases better. this just displays the first
+        -- name
+        name :: names ->
+            let
+                shortName : Name
+                shortName =
+                    shortenName (branchHead view.head).cache.nameToType name
+            in
+            el
+                (case maybeTermReference of
+                    Nothing ->
+                        []
 
-        Just names ->
-            case HashSet.toList names of
-                [] ->
-                    impossible "viewType: empty names"
+                    Just termReference ->
+                        [ above <|
+                            if view.hovered == Just (HoverType termReference reference) then
+                                el
+                                    hoverStyle
+                                    (column
+                                        []
+                                        ((case reference of
+                                            Builtin _ ->
+                                                identity
 
-                -- TODO, we should handle aliases better. this
-                -- just takes the first name
-                name :: _ ->
-                    viewTypeRef2 head.cache.nameToType name
+                                            Derived { hash } ->
+                                                List.cons
+                                                    (el
+                                                        [ Font.color (rgb 0.5 0.5 0.5) ]
+                                                        (text hash)
+                                                    )
+                                         )
+                                            (List.map
+                                                (nameToString >> text)
+                                                (name :: names)
+                                            )
+                                        )
+                                    )
 
-
-viewTypeRef2 :
-    NameDict ReferenceSet
-    -> Name
-    -> Element message
-viewTypeRef2 nameToType fullName =
-    text (nameToString (shortenName nameToType fullName))
+                            else
+                                none
+                        , codeFont
+                        , onMouseEnter (User_Hover (HoverType termReference reference))
+                        , onMouseLeave User_Unhover
+                        ]
+                )
+                (text (nameToString shortName))
 
 
 {-| Haskell function: Unison.TypePrinter.arrow
 -}
 viewArrow :
-    { r | head : Branch }
+    { r
+        | head : Branch
+        , hovered : Maybe Hover
+        , typeNames : Reference -> List Name
+    }
+    -> Maybe Reference
     -> Maybe (List (Type Symbol))
-    -> Element message
-viewArrow view maybeEffects =
+    -> Element Message
+viewArrow view termReference maybeEffects =
     row
         []
         [ text " ->"
-        , maybe none (viewEffects view) maybeEffects
+        , maybe none (viewEffects view termReference) maybeEffects
         , text " "
         ]
 
@@ -160,30 +212,40 @@ viewArrow view maybeEffects =
 {-| Haskell function: Unison.TypePrinter.arrows
 -}
 viewArrows :
-    { r | head : Branch }
+    { r
+        | head : Branch
+        , hovered : Maybe Hover
+        , typeNames : Reference -> List Name
+    }
+    -> Maybe Reference
     -> List ( Maybe (List (Type Symbol)), Type Symbol )
-    -> Element message
-viewArrows view input =
+    -> Element Message
+viewArrows view termReference input =
     case input of
         [] ->
             none
 
         ( maybeEffects, ty ) :: tys ->
             row []
-                [ viewArrow view maybeEffects
-                , viewType view 0 ty
-                , viewArrows view tys
+                [ viewArrow view termReference maybeEffects
+                , viewType view termReference 0 ty
+                , viewArrows view termReference tys
                 ]
 
 
 viewEffects :
-    { r | head : Branch }
+    { r
+        | head : Branch
+        , hovered : Maybe Hover
+        , typeNames : Reference -> List Name
+    }
+    -> Maybe Reference
     -> List (Type Symbol)
-    -> Element message
-viewEffects view effects =
+    -> Element Message
+viewEffects view termReference effects =
     row
         []
         [ text "{"
-        , ppCommas (List.map (viewType view 0) effects)
+        , ppCommas (List.map (viewType view termReference 0) effects)
         , text "}"
         ]

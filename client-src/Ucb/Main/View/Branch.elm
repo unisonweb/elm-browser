@@ -15,7 +15,7 @@ import Ucb.Main.Model exposing (..)
 import Ucb.Main.View.Palette exposing (codeFont, hashColor, hoverStyle)
 import Ucb.Main.View.Term exposing (viewTerm)
 import Ucb.Main.View.Type exposing (viewType)
-import Ucb.Unison.VType exposing (makeVType)
+import Ucb.Unison.VType exposing (..)
 import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)
 import Unison.Codebase.NameSegment exposing (..)
@@ -224,7 +224,7 @@ viewBranchTerm2 view reference name _ =
                         (\type_ ->
                             row []
                                 [ text " : "
-                                , viewType view (Just reference) -1 (makeVType type_)
+                                , viewType view (Just reference) VTypePathHere -1 (makeVType type_)
                                 ]
                         )
                         (view.getTermType id)
@@ -331,7 +331,7 @@ viewBranchType2 view name _ _ declaration constructorType =
                         row
                             []
                             [ text (symbolToString constructorName ++ " : ")
-                            , viewType view Nothing -1 (makeVType type_)
+                            , viewType view Nothing VTypePathHere -1 (makeVType type_)
                             ]
                     )
                     declaration.constructors

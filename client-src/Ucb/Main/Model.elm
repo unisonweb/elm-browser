@@ -16,6 +16,7 @@ import HashingContainers.HashSet as HashSet exposing (HashSet)
 import Task exposing (Task)
 import Ucb.Unison.BranchDict exposing (..)
 import Ucb.Unison.Codebase.API exposing (..)
+import Ucb.Unison.VType exposing (VTypePath)
 import Ucb.Util.Http as Http
 import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)
@@ -107,10 +108,10 @@ type alias ModelUI =
 type Hover
     = HoverTerm Reference
     | HoverType
-        -- The term
-        Reference
-        -- The type
-        Reference
+        { term : Reference
+        , type_ : Reference
+        , path : VTypePath
+        }
 
 
 {-| Given a branch, fetch all of its patches that we haven't already.

@@ -13,7 +13,7 @@ import Ucb.Main.View.Reference exposing (viewReference)
 import Ucb.Unison.Name exposing (..)
 import Ucb.Unison.NameDict exposing (NameDict)
 import Ucb.Unison.ReferenceSet exposing (ReferenceSet)
-import Ucb.Unison.VType exposing (VType(..), makeVType)
+import Ucb.Unison.VType exposing (..)
 import Ucb.Util.List as List
 import Ucb.Util.Pretty exposing (..)
 import Unison.Codebase.Branch exposing (..)
@@ -36,20 +36,27 @@ viewType :
     -- TODO what about data constructors :)
     -- TODO whoops, don't want to put a tooltip over all occurrences in a term..
     -> Maybe Reference
+    -> VTypePath
     -> Int
     -> VType
     -> Element Message
-viewType view termReference p ty0 =
+viewType view termReference path p ty0 =
     case ty0 of
         VTypeApp (f :: xs) ->
             ppParen (p >= 10)
                 (row
                     []
-                    [ viewType view termReference 9 f
+                    [ viewType view termReference (VTypePathIndex 0 path) 9 f
                     , text " "
                     , ppSpaced
-                        (List.map
-                            (viewType view termReference 10)
+                        (List.indexedMap
+                            (\i ->
+                                viewType
+                                    view
+                                    termReference
+                                    (VTypePathIndex (i + 1) path)
+                                    10
+                            )
                             xs
                         )
                     ]
@@ -59,8 +66,8 @@ viewType view termReference p ty0 =
             ppParen (p >= 0)
                 (row
                     []
-                    [ viewType view termReference 0 ty1
-                    , viewArrows view termReference tys
+                    [ viewType view termReference (VTypePathIndex 0 path) 0 ty1
+                    , viewArrows view termReference path tys
                     ]
                 )
 
@@ -68,33 +75,38 @@ viewType view termReference p ty0 =
             ppParen (p >= 10)
                 (row
                     []
-                    [ viewEffects view termReference effects
+                    [ viewEffects view termReference (VTypePathLeft path) effects
                     , text " "
-                    , viewType view termReference 10 ty
+                    , viewType view termReference (VTypePathRight path) 10 ty
                     ]
                 )
 
         VTypeForall tyvars ty ->
             if p < 0 && List.all symbolIsLowercase tyvars then
-                viewType view termReference p ty
+                viewType view termReference path p ty
 
             else
                 ppParen (p >= 0)
                     (row
                         []
-                        [ text (String.join " " ("∀" :: List.map symbolToString tyvars) ++ ". ")
-                        , viewType view termReference -1 ty
+                        [ text
+                            (String.join
+                                " "
+                                ("∀" :: List.map symbolToString tyvars)
+                                ++ ". "
+                            )
+                        , viewType view termReference path -1 ty
                         ]
                     )
 
         VTypeRef reference ->
-            viewTypeRef view termReference reference
+            viewTypeRef view termReference path reference
 
         VTypeSequence ty ->
             row
                 []
                 [ text "["
-                , viewType view termReference 0 ty
+                , viewType view termReference (VTypePathIndex 1 path) 0 ty
                 , text "]"
                 ]
 
@@ -115,9 +127,10 @@ viewTypeRef :
         , typeNames : Reference -> List Name
     }
     -> Maybe Reference
+    -> VTypePath
     -> Reference
     -> Element Message
-viewTypeRef view maybeTermReference reference =
+viewTypeRef view maybeTermReference path reference =
     case view.typeNames reference of
         -- Weird.. don't think this should happen
         -- Or maybe it totally could if you're mid-refactor?
@@ -143,7 +156,16 @@ viewTypeRef view maybeTermReference reference =
 
                     Just termReference ->
                         [ above <|
-                            if view.hovered == Just (HoverType termReference reference) then
+                            if
+                                view.hovered
+                                    == Just
+                                        (HoverType
+                                            { term = termReference
+                                            , type_ = reference
+                                            , path = path
+                                            }
+                                        )
+                            then
                                 el
                                     hoverStyle
                                     (column
@@ -169,7 +191,15 @@ viewTypeRef view maybeTermReference reference =
                             else
                                 none
                         , codeFont
-                        , onMouseEnter (User_Hover (HoverType termReference reference))
+                        , onMouseEnter
+                            (User_Hover
+                                (HoverType
+                                    { term = termReference
+                                    , type_ = reference
+                                    , path = path
+                                    }
+                                )
+                            )
                         , onMouseLeave User_Unhover
                         ]
                 )
@@ -185,13 +215,14 @@ viewArrow :
         , typeNames : Reference -> List Name
     }
     -> Maybe Reference
+    -> VTypePath
     -> List VType
     -> Element Message
-viewArrow view termReference effects =
+viewArrow view termReference path effects =
     row
         []
         [ text " ->"
-        , viewEffects view termReference effects
+        , viewEffects view termReference path effects
         , text " "
         ]
 
@@ -205,19 +236,36 @@ viewArrows :
         , typeNames : Reference -> List Name
     }
     -> Maybe Reference
+    -> VTypePath
     -> List ( List VType, VType )
     -> Element Message
-viewArrows view termReference input =
-    case input of
-        [] ->
-            none
-
-        ( effects, ty ) :: tys ->
-            row []
-                [ viewArrow view termReference effects
-                , viewType view termReference 0 ty
-                , viewArrows view termReference tys
-                ]
+viewArrows view termReference path input =
+    row
+        []
+        (List.indexedMap
+            (\i ( effects, ty ) ->
+                let
+                    path2 : VTypePath
+                    path2 =
+                        VTypePathIndex (i + 1) path
+                in
+                row
+                    []
+                    [ viewArrow
+                        view
+                        termReference
+                        (VTypePathLeft path2)
+                        effects
+                    , viewType
+                        view
+                        termReference
+                        (VTypePathRight path2)
+                        0
+                        ty
+                    ]
+            )
+            input
+        )
 
 
 viewEffects :
@@ -227,9 +275,10 @@ viewEffects :
         , typeNames : Reference -> List Name
     }
     -> Maybe Reference
+    -> VTypePath
     -> List VType
     -> Element Message
-viewEffects view termReference effects =
+viewEffects view termReference path effects =
     if List.isEmpty effects then
         none
 
@@ -237,6 +286,16 @@ viewEffects view termReference effects =
         row
             []
             [ text "{"
-            , ppCommas (List.map (viewType view termReference 0) effects)
+            , ppCommas
+                (List.indexedMap
+                    (\i ->
+                        viewType
+                            view
+                            termReference
+                            (VTypePathIndex i path)
+                            0
+                    )
+                    effects
+                )
             , text "}"
             ]

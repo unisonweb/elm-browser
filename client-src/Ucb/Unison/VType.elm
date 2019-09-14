@@ -1,5 +1,6 @@
 module Ucb.Unison.VType exposing
     ( VType(..)
+    , VTypePath(..)
     , makeVType
     )
 
@@ -24,6 +25,13 @@ type VType
       -- WHOT, shouldn't hit this ???,
       -- If you see this, we missed a case below
     | VType___UNKNOWN (Type Symbol)
+
+
+type VTypePath
+    = VTypePathHere
+    | VTypePathIndex Int VTypePath
+    | VTypePathLeft VTypePath
+    | VTypePathRight VTypePath
 
 
 makeVType :

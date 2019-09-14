@@ -17,6 +17,7 @@ import Ucb.Main.Model exposing (..)
 import Ucb.Main.View.Branch exposing (..)
 import Ucb.Main.View.Palette exposing (mainFont)
 import Ucb.Unison.NameSet as NameSet
+import Ucb.Unison.VType
 import Ucb.Util.List as List
 import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)

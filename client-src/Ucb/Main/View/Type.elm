@@ -13,6 +13,7 @@ import Ucb.Main.View.Reference exposing (viewReference)
 import Ucb.Unison.Name exposing (..)
 import Ucb.Unison.NameDict exposing (NameDict)
 import Ucb.Unison.ReferenceSet exposing (ReferenceSet)
+import Ucb.Unison.VType exposing (VType(..), makeVType)
 import Ucb.Util.List as List
 import Ucb.Util.Pretty exposing (..)
 import Unison.Codebase.Branch exposing (..)
@@ -21,7 +22,7 @@ import Unison.Codebase.NameSegment exposing (..)
 import Unison.Name exposing (..)
 import Unison.Reference exposing (..)
 import Unison.Symbol exposing (..)
-import Unison.Type exposing (..)
+import Unison.Type exposing (Type)
 import Util.HashSet as HashSet
 
 
@@ -36,59 +37,44 @@ viewType :
     -- TODO whoops, don't want to put a tooltip over all occurrences in a term..
     -> Maybe Reference
     -> Int
-    -> Type Symbol
+    -> VType
     -> Element Message
 viewType view termReference p ty0 =
-    case ty0.out of
-        TypeVar var ->
-            text (symbolToString var)
+    case ty0 of
+        VTypeApp (f :: xs) ->
+            ppParen (p >= 10)
+                (row
+                    []
+                    [ viewType view termReference 9 f
+                    , text " "
+                    , ppSpaced
+                        (List.map
+                            (viewType view termReference 10)
+                            xs
+                        )
+                    ]
+                )
 
-        TypeTm (TypeRef reference) ->
-            viewTypeRef view termReference reference
-
-        TypeTm (TypeArrow ty1 ty2) ->
+        VTypeArrows ty1 tys ->
             ppParen (p >= 0)
                 (row
                     []
                     [ viewType view termReference 0 ty1
-                    , viewArrows view termReference (typeUnEffectfulArrows ty2)
+                    , viewArrows view termReference tys
                     ]
                 )
 
-        TypeTm (TypeApp ty1 ty2) ->
-            case ty1.out of
-                TypeTm (TypeRef (Builtin "Sequence")) ->
-                    row
-                        []
-                        [ text "["
-                        , viewType view termReference 0 ty2
-                        , text "]"
-                        ]
+        VTypeEffects effects ty ->
+            ppParen (p >= 10)
+                (row
+                    []
+                    [ viewEffects view termReference effects
+                    , text " "
+                    , viewType view termReference 10 ty
+                    ]
+                )
 
-                _ ->
-                    case typeUnApps ty0 of
-                        Nothing ->
-                            impossible "viewType: unApps returned Nothing"
-
-                        Just ( f, xs ) ->
-                            ppParen (p >= 10)
-                                (row
-                                    []
-                                    [ viewType view termReference 9 f
-                                    , text " "
-                                    , ppSpaced
-                                        (List.map
-                                            (viewType view termReference 10)
-                                            xs
-                                        )
-                                    ]
-                                )
-
-        TypeTm (TypeForall _) ->
-            let
-                ( tyvars, ty ) =
-                    typeUnForalls [] ty0
-            in
+        VTypeForall tyvars ty ->
             if p < 0 && List.all symbolIsLowercase tyvars then
                 viewType view termReference p ty
 
@@ -101,25 +87,25 @@ viewType view termReference p ty0 =
                         ]
                     )
 
-        TypeTm (TypeIntroOuter ty) ->
-            viewType view termReference p ty
+        VTypeRef reference ->
+            viewTypeRef view termReference reference
 
-        TypeAbs _ _ ->
-            impossible "viewType: TypeAbs"
+        VTypeSequence ty ->
+            row
+                []
+                [ text "["
+                , viewType view termReference 0 ty
+                , text "]"
+                ]
 
-        TypeCycle _ ->
-            -- impossible?
-            text "(not implemented: TypeCycle)"
+        VTypeVar var ->
+            text var
 
-        TypeTm (TypeAnn _ _) ->
-            -- impossible?
-            text "(not implemented: TypeAnn)"
+        VType___UNKNOWN ty ->
+            text (Debug.toString ty)
 
-        TypeTm (TypeEffect ty1 ty2) ->
-            text "(not implemented: TypeEffect)"
-
-        TypeTm (TypeEffects tys) ->
-            text "(not implemented: TypeEffects)"
+        VTypeApp [] ->
+            impossible "VTypeApp []"
 
 
 viewTypeRef :
@@ -134,6 +120,7 @@ viewTypeRef :
 viewTypeRef view maybeTermReference reference =
     case view.typeNames reference of
         -- Weird.. don't think this should happen
+        -- Or maybe it totally could if you're mid-refactor?
         [] ->
             viewReference
                 { showBuiltin = True
@@ -198,13 +185,13 @@ viewArrow :
         , typeNames : Reference -> List Name
     }
     -> Maybe Reference
-    -> Maybe (List (Type Symbol))
+    -> List VType
     -> Element Message
-viewArrow view termReference maybeEffects =
+viewArrow view termReference effects =
     row
         []
         [ text " ->"
-        , maybe none (viewEffects view termReference) maybeEffects
+        , viewEffects view termReference effects
         , text " "
         ]
 
@@ -218,16 +205,16 @@ viewArrows :
         , typeNames : Reference -> List Name
     }
     -> Maybe Reference
-    -> List ( Maybe (List (Type Symbol)), Type Symbol )
+    -> List ( List VType, VType )
     -> Element Message
 viewArrows view termReference input =
     case input of
         [] ->
             none
 
-        ( maybeEffects, ty ) :: tys ->
+        ( effects, ty ) :: tys ->
             row []
-                [ viewArrow view termReference maybeEffects
+                [ viewArrow view termReference effects
                 , viewType view termReference 0 ty
                 , viewArrows view termReference tys
                 ]
@@ -240,12 +227,16 @@ viewEffects :
         , typeNames : Reference -> List Name
     }
     -> Maybe Reference
-    -> List (Type Symbol)
+    -> List VType
     -> Element Message
 viewEffects view termReference effects =
-    row
-        []
-        [ text "{"
-        , ppCommas (List.map (viewType view termReference 0) effects)
-        , text "}"
-        ]
+    if List.isEmpty effects then
+        none
+
+    else
+        row
+            []
+            [ text "{"
+            , ppCommas (List.map (viewType view termReference 0) effects)
+            , text "}"
+            ]

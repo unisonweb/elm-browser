@@ -32,29 +32,24 @@ viewType :
         , hovered : Maybe Hover
         , typeNames : Reference -> List Name
     }
-    -- The term this is a type of
-    -- TODO what about data constructors :)
-    -- TODO whoops, don't want to put a tooltip over all occurrences in a term..
-    -> Maybe Reference
-    -> VTypePath
+    -> List Int
     -> Int
     -> VType
     -> Element Message
-viewType view termReference path p ty0 =
+viewType view path p ty0 =
     case ty0 of
         VTypeApp (f :: xs) ->
             ppParen (p >= 10)
                 (row
                     []
-                    [ viewType view termReference (VTypePathIndex 0 path) 9 f
+                    [ viewType view (0 :: path) 9 f
                     , text " "
                     , ppSpaced
                         (List.indexedMap
                             (\i ->
                                 viewType
                                     view
-                                    termReference
-                                    (VTypePathIndex (i + 1) path)
+                                    (i + 1 :: path)
                                     10
                             )
                             xs
@@ -66,8 +61,8 @@ viewType view termReference path p ty0 =
             ppParen (p >= 0)
                 (row
                     []
-                    [ viewType view termReference (VTypePathIndex 0 path) 0 ty1
-                    , viewArrows view termReference path tys
+                    [ viewType view (0 :: path) 0 ty1
+                    , viewArrows view path tys
                     ]
                 )
 
@@ -75,15 +70,15 @@ viewType view termReference path p ty0 =
             ppParen (p >= 10)
                 (row
                     []
-                    [ viewEffects view termReference (VTypePathLeft path) effects
+                    [ viewEffects view (0 :: path) effects
                     , text " "
-                    , viewType view termReference (VTypePathRight path) 10 ty
+                    , viewType view (1 :: path) 10 ty
                     ]
                 )
 
         VTypeForall tyvars ty ->
             if p < 0 && List.all symbolIsLowercase tyvars then
-                viewType view termReference path p ty
+                viewType view path p ty
 
             else
                 ppParen (p >= 0)
@@ -95,18 +90,18 @@ viewType view termReference path p ty0 =
                                 ("∀" :: List.map symbolToString tyvars)
                                 ++ ". "
                             )
-                        , viewType view termReference path -1 ty
+                        , viewType view path -1 ty
                         ]
                     )
 
         VTypeRef reference ->
-            viewTypeRef view termReference path reference
+            viewTypeRef view path reference
 
         VTypeSequence ty ->
             row
                 []
                 [ text "["
-                , viewType view termReference (VTypePathIndex 1 path) 0 ty
+                , viewType view (1 :: path) 0 ty
                 , text "]"
                 ]
 
@@ -126,11 +121,10 @@ viewTypeRef :
         , hovered : Maybe Hover
         , typeNames : Reference -> List Name
     }
-    -> Maybe Reference
-    -> VTypePath
+    -> List Int
     -> Reference
     -> Element Message
-viewTypeRef view maybeTermReference path reference =
+viewTypeRef view path reference =
     case view.typeNames reference of
         -- Weird.. don't think this should happen
         -- Or maybe it totally could if you're mid-refactor?
@@ -150,59 +144,51 @@ viewTypeRef view maybeTermReference path reference =
                     shortenName (branchHead view.head).cache.nameToType name
             in
             el
-                (case maybeTermReference of
-                    Nothing ->
-                        []
-
-                    Just termReference ->
-                        [ above <|
-                            if
-                                view.hovered
-                                    == Just
-                                        (HoverType
-                                            { term = termReference
-                                            , type_ = reference
-                                            , path = path
-                                            }
-                                        )
-                            then
-                                el
-                                    hoverStyle
-                                    (column
-                                        []
-                                        ((case reference of
-                                            Builtin _ ->
-                                                identity
-
-                                            Derived { hash } ->
-                                                List.cons
-                                                    (el
-                                                        [ Font.color (rgb 0.5 0.5 0.5) ]
-                                                        (text hash)
-                                                    )
-                                         )
-                                            (List.map
-                                                (nameToString >> text)
-                                                (name :: names)
-                                            )
-                                        )
-                                    )
-
-                            else
-                                none
-                        , codeFont
-                        , onMouseEnter
-                            (User_Hover
+                [ above <|
+                    if
+                        view.hovered
+                            == Just
                                 (HoverType
-                                    { term = termReference
-                                    , type_ = reference
+                                    { type_ = reference
                                     , path = path
                                     }
                                 )
+                    then
+                        el
+                            hoverStyle
+                            (column
+                                []
+                                ((case reference of
+                                    Builtin _ ->
+                                        identity
+
+                                    Derived { hash } ->
+                                        List.cons
+                                            (el
+                                                [ Font.color (rgb 0.5 0.5 0.5) ]
+                                                (text hash)
+                                            )
+                                 )
+                                    (List.map
+                                        (nameToString >> text)
+                                        (name :: names)
+                                    )
+                                )
                             )
-                        , onMouseLeave User_Unhover
-                        ]
-                )
+
+                    else
+                        none
+                , codeFont
+                , onMouseEnter
+                    (User_Hover
+                        (HoverType
+                            { type_ = reference
+                            , path = path
+                            }
+                        )
+                    )
+                , onMouseLeave User_Unhover
+                ]
                 (text (nameToString shortName))
 
 
@@ -214,15 +200,14 @@ viewArrow :
         , hovered : Maybe Hover
         , typeNames : Reference -> List Name
     }
-    -> Maybe Reference
-    -> VTypePath
+    -> List Int
     -> List VType
     -> Element Message
-viewArrow view termReference path effects =
+viewArrow view path effects =
     row
         []
         [ text " ->"
-        , viewEffects view termReference path effects
+        , viewEffects view path effects
         , text " "
         ]
 
@@ -235,31 +220,23 @@ viewArrows :
         , hovered : Maybe Hover
         , typeNames : Reference -> List Name
     }
-    -> Maybe Reference
-    -> VTypePath
+    -> List Int
     -> List ( List VType, VType )
     -> Element Message
-viewArrows view termReference path input =
+viewArrows view path input =
     row
         []
         (List.indexedMap
             (\i ( effects, ty ) ->
-                let
-                    path2 : VTypePath
-                    path2 =
-                        VTypePathIndex (i + 1) path
-                in
                 row
                     []
                     [ viewArrow
                         view
-                        termReference
-                        (VTypePathLeft path2)
+                        (0 :: i + 1 :: path)
                         effects
                     , viewType
                         view
-                        termReference
-                        (VTypePathRight path2)
+                        (1 :: i + 1 :: path)
                         0
                         ty
                     ]
@@ -274,11 +251,10 @@ viewEffects :
         , hovered : Maybe Hover
         , typeNames : Reference -> List Name
     }
-    -> Maybe Reference
-    -> VTypePath
+    -> List Int
     -> List VType
     -> Element Message
-viewEffects view termReference path effects =
+viewEffects view path effects =
     if List.isEmpty effects then
         none
 
@@ -291,8 +267,7 @@ viewEffects view termReference path effects =
                     (\i ->
                         viewType
                             view
-                            termReference
-                            (VTypePathIndex i path)
+                            (i :: path)
                             0
                     )
                     effects

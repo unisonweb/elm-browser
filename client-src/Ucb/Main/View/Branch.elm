@@ -78,10 +78,11 @@ viewBranch0 view { terms, types, children, patches } =
                 column [ spacing 20 ]
                     (types2
                         |> List.sortBy Tuple.second
-                        |> List.map
-                            (\( reference, name ) ->
+                        |> List.indexedMap
+                            (\i ( reference, name ) ->
                                 viewBranchType
                                     view
+                                    i
                                     reference
                                     name
                                     (HashDict.get reference types.d3.domain)
@@ -96,10 +97,11 @@ viewBranch0 view { terms, types, children, patches } =
                     [ spacing 20 ]
                     (terms2
                         |> List.sortBy Tuple.second
-                        |> List.map
-                            (\( referent, name ) ->
+                        |> List.indexedMap
+                            (\i ( referent, name ) ->
                                 viewBranchTerm
                                     view
+                                    i
                                     referent
                                     name
                                     (HashDict.get referent terms.d3.domain)
@@ -124,14 +126,15 @@ viewBranchTerm :
         , termNames : Referent -> List Name
         , typeNames : Reference -> List Name
     }
+    -> Int
     -> Referent
     -> NameSegment
     -> Maybe (HashSet ( Reference, Reference ))
     -> Element Message
-viewBranchTerm view referent name links =
+viewBranchTerm view i referent name links =
     case referent of
         Ref reference ->
-            viewBranchTerm2 view reference name links
+            viewBranchTerm2 view i reference name links
 
         Con _ _ _ ->
             none
@@ -147,11 +150,12 @@ viewBranchTerm2 :
         , termNames : Referent -> List Name
         , typeNames : Reference -> List Name
     }
+    -> Int
     -> Reference
     -> NameSegment
     -> Maybe (HashSet ( Reference, Reference ))
     -> Element Message
-viewBranchTerm2 view reference name _ =
+viewBranchTerm2 view i reference name _ =
     let
         -- Surround by parens if it begins with a symboly character
         name2 : String
@@ -224,7 +228,7 @@ viewBranchTerm2 view reference name _ =
                         (\type_ ->
                             row []
                                 [ text " : "
-                                , viewType view (Just reference) VTypePathHere -1 (makeVType type_)
+                                , viewType view [ i, 1 ] -1 (makeVType type_)
                                 ]
                         )
                         (view.getTermType id)
@@ -255,11 +259,12 @@ viewBranchType :
         , hovered : Maybe Hover
         , typeNames : Reference -> List Name
     }
+    -> Int
     -> Reference
     -> NameSegment
     -> Maybe (HashSet ( Reference, Reference ))
     -> Element Message
-viewBranchType view reference name links =
+viewBranchType view i reference name links =
     case reference of
         Builtin _ ->
             row
@@ -277,10 +282,10 @@ viewBranchType view reference name links =
                 Just declaration ->
                     case declaration of
                         DataDecl dataDeclaration ->
-                            viewBranchType2 view name links id dataDeclaration Data
+                            viewBranchType2 view i name links id dataDeclaration Data
 
                         EffectDecl dataDeclaration ->
-                            viewBranchType2 view name links id dataDeclaration Effect
+                            viewBranchType2 view i name links id dataDeclaration Effect
 
 
 viewBranchType2 :
@@ -289,13 +294,14 @@ viewBranchType2 :
         , hovered : Maybe Hover
         , typeNames : Reference -> List Name
     }
+    -> Int
     -> NameSegment
     -> Maybe (HashSet ( Reference, Reference ))
     -> Id
     -> DataDeclaration Symbol
     -> ConstructorType
     -> Element Message
-viewBranchType2 view name _ _ declaration constructorType =
+viewBranchType2 view i name _ _ declaration constructorType =
     column
         []
         [ row
@@ -326,12 +332,12 @@ viewBranchType2 view name _ _ declaration constructorType =
                 [ codeFont
                 , spacing 5
                 ]
-                (List.map
-                    (\( constructorName, type_ ) ->
+                (List.indexedMap
+                    (\j ( constructorName, type_ ) ->
                         row
                             []
                             [ text (symbolToString constructorName ++ " : ")
-                            , viewType view Nothing VTypePathHere -1 (makeVType type_)
+                            , viewType view [ j, i, 0 ] -1 (makeVType type_)
                             ]
                     )
                     declaration.constructors

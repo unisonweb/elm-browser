@@ -369,7 +369,7 @@ viewCausal view hash causal =
                 , pointer
                 ]
                 -- TODO show full hash on hover
-                (text (String.left 7 hash_))
+                (link [] { url = "/branch/" ++ hash_, label = text (String.left 7 hash_) })
 
         viewParents : Element Message
         viewParents =

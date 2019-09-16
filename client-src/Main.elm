@@ -28,6 +28,7 @@ import Unison.Symbol exposing (..)
 import Unison.Term exposing (..)
 import Unison.Type exposing (..)
 import Url
+import Url.Parser as UrlParser exposing ((</>), map, oneOf)
 import Util.HashSet as HashSet
 
 
@@ -48,6 +49,27 @@ main =
 elmLivePort : number
 elmLivePort =
     8000
+
+
+type Route
+    = HeadRoute
+    | BranchRoute String
+    | TermRoute String
+    | TypeRoute String
+    | DeclRoute String
+    | PatchRoute String
+
+
+routeParser : UrlParser.Parser (Route -> a) a
+routeParser =
+    oneOf
+        [ map HeadRoute (UrlParser.s "head")
+        , map BranchRoute (UrlParser.s "branch" </> UrlParser.string)
+        , map TermRoute (UrlParser.s "term" </> UrlParser.string)
+        , map TypeRoute (UrlParser.s "type" </> UrlParser.string)
+        , map DeclRoute (UrlParser.s "declaration" </> UrlParser.string)
+        , map PatchRoute (UrlParser.s "patch" </> UrlParser.string)
+        ]
 
 
 init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Message )
@@ -88,11 +110,48 @@ init _ url key =
             , isDevMode = isDevMode
             }
 
+        maybeRoute = UrlParser.parse routeParser url
+
+        initRoute : Route
+        initRoute = case (UrlParser.parse routeParser url) of
+          Just route ->
+            route
+          Nothing ->
+            HeadRoute
+
         -- First command: fetch _head path!
         initialCommand : Cmd Message
         initialCommand =
-            model.api.unison.getHeadHash
-                |> Task.attempt Http_GetHeadHash
+          case initRoute of
+
+            HeadRoute ->
+              model.api.unison.getHeadHash
+                  |> Task.attempt Http_GetHeadHash
+
+            BranchRoute hash ->
+              Cmd.batch [ model.api.unison.getHeadHash
+                          |> Task.attempt Http_GetHeadHash
+                        , getBranch
+                          model.api.unison
+                          model.codebase
+                          hash
+                          |> Task.attempt Http_GetBranch 
+                        ]
+
+            TermRoute hash ->
+               Debug.todo ""-- model.api.unison.getTerm hash |> Task.attempt Http_GetTerm
+
+            TypeRoute hash ->
+              Debug.todo ""-- model.api.unison.getTermType hash |> Task.attempt Http_GetTermTypesAndTypeDecls
+
+            DeclRoute hash ->
+              Debug.todo ""-- model.api.unison.getTypeDecl hash |> Task.attempt Http_GetTermTypesAndTypeDecls
+
+            _ ->
+              model.api.unison.getHeadHash
+                  |> Task.attempt Http_GetHeadHash
+
+              
     in
     ( model, initialCommand )
 
@@ -136,11 +195,75 @@ update message model =
         User_ToggleTerm id ->
             update_User_ToggleTerm id model
 
-        UrlChanged _ ->
-            ( model, Cmd.none )
+        UrlChanged url ->
+            let
+                maybeRoute =
+                    UrlParser.parse routeParser url
+            in
+            case maybeRoute of
+                Just route ->
+                    case route of
+                        HeadRoute ->
+                            let
+                                maybeHead =
+                                    model.codebase.head
+                            in
+                            case maybeHead of
+                                Just headHash ->
+                                    update_User_FocusBranch headHash model
 
-        LinkClicked _ ->
-            ( model, Cmd.none )
+                                Nothing ->
+                                    ( model, Cmd.none )
+
+                        BranchRoute hash ->
+                            update_User_FocusBranch hash model
+
+                        _ ->
+                            ( model, Cmd.none )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
+        LinkClicked urlType ->
+            case urlType of
+                Browser.Internal url ->
+                    let
+                        maybeRoute =
+                            UrlParser.parse routeParser url
+                    in
+                    case maybeRoute of
+                        Just route ->
+                            case route of
+                                HeadRoute ->
+                                    let
+                                        maybeHead =
+                                            model.codebase.head
+
+                                        path =
+                                            case maybeHead of
+                                                Just headHash ->
+                                                    "/branch/" ++ headHash
+
+                                                Nothing ->
+                                                    ""
+                                    in
+                                    ( model, Nav.pushUrl model.ui.key path )
+
+                                BranchRoute hash ->
+                                    let
+                                        path =
+                                            "/branch/" ++ hash
+                                    in
+                                    ( model, Nav.pushUrl model.ui.key path )
+
+                                _ ->
+                                    ( model, Cmd.none )
+
+                        Nothing ->
+                            ( model, Cmd.none )
+
+                Browser.External link ->
+                    ( model, Nav.load link )
 
         NoOp ->
             ( model, Cmd.none )
@@ -700,7 +823,6 @@ update_User_ToggleTerm id model =
     ( newModel
     , command
     )
-
 
 subscriptions :
     Model

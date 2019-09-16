@@ -3,6 +3,8 @@ module Ucb.Unison.Codebase.API.LocalServer exposing (makeLocalServerUnisonCodeba
 import Bytes exposing (Bytes)
 import Json.Decode
 import Task exposing (Task)
+import Url exposing (..)
+import Url.Builder as UrlBuilder exposing (..)
 import Ucb.Unison.Codebase.API exposing (..)
 import Ucb.Util.Http as Http
 import Ucb.Util.Task as Task
@@ -19,18 +21,26 @@ import Unison.Type exposing (..)
 
 {-| Haskell server localhost base url
 -}
-devBase : String
+devBase : Url
 devBase =
-    "http://localhost:8180/"
+  { protocol = Http
+  , host = "localhost"
+  , port_ = Just 8180
+  , path = ""
+  , query = Just ""
+  , fragment = Just "" 
+  }
+
+  --  "http://localhost:8180/"
 
 
 prefixIfDev : Bool -> String -> String
 prefixIfDev isDev path =
     if isDev then
-        devBase ++ path
+      Url.toString { devBase | path = path }
 
     else
-        path
+      UrlBuilder.absolute [path] []
 
 
 makeLocalServerUnisonCodebaseAPI : Bool -> UnisonCodebaseAPI

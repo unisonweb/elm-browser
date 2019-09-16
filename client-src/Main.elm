@@ -27,7 +27,9 @@ import Unison.Symbol exposing (..)
 import Unison.Term exposing (..)
 import Unison.Type exposing (..)
 import Url
+import Url.Parser as UrlParser exposing ((</>), map, oneOf)
 import Util.HashSet as HashSet
+
 
 
 main : Program () Model Message
@@ -48,6 +50,24 @@ elmLivePort : number
 elmLivePort =
     8000
 
+type Route 
+  = HeadRoute
+  | BranchRoute String
+  | TermRoute String
+  | TypeRoute String
+  | DeclRoute String
+  | PatchRoute String
+
+routeParser : UrlParser.Parser (Route -> a) a
+routeParser = 
+  oneOf
+    [ map HeadRoute   ( UrlParser.s "head" )
+    , map BranchRoute ( UrlParser.s "branch"      </> UrlParser.string )
+    , map TermRoute   ( UrlParser.s "term"        </> UrlParser.string )
+    , map TypeRoute   ( UrlParser.s "type"        </> UrlParser.string )
+    , map DeclRoute   ( UrlParser.s "declaration" </> UrlParser.string )
+    , map PatchRoute  ( UrlParser.s "patch"       </> UrlParser.string )
+    ]
 
 init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Message )
 init _ url key =
@@ -135,11 +155,43 @@ update message model =
         User_ToggleTerm id ->
             update_User_ToggleTerm id model
 
-        UrlChanged _ ->
-            ( model, Cmd.none )
+        UrlChanged url ->
+            let maybeRoute = UrlParser.parse routeParser url
+            in
+            case maybeRoute of 
+              Just route ->
+                  case route of
+                    BranchRoute hash ->
+                      update_User_FocusBranch hash model
+                    _ ->
+                      (model, Cmd.none)
+              Nothing ->
+                      (model, Cmd.none)
 
-        LinkClicked _ ->
-            ( model, Cmd.none )
+
+
+            -- ( model, Cmd.none )
+
+        LinkClicked urlType ->
+          case urlType of
+            Browser.Internal url ->
+              let maybeRoute = UrlParser.parse routeParser url in
+                  case maybeRoute of
+                    Just route ->
+                      case route of
+
+                        BranchRoute hash ->
+                          let path = "/branch/" ++ hash
+                          in
+                              ( model, Nav.pushUrl model.ui.key path)
+
+                        _ -> ( model, Cmd.none)
+
+
+                    Nothing -> (model, Cmd.none)
+
+            Browser.External link ->
+              ( model, Nav.load link )
 
 
 {-| Got the head hash. Next step: get the actual (decoded) bytes.
@@ -689,6 +741,12 @@ update_User_ToggleTerm id model =
     , command
     )
 
+{- [ map Topic   (s "topic" </> string)
+    , map Blog    (s "blog" </> int)
+        , map User    (s "user" </> string)
+            , map Comment (s "user" </> string </> s "comment" </> int)
+                ]
+--}
 
 subscriptions :
     Model

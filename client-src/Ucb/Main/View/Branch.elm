@@ -367,11 +367,11 @@ viewCausal view hash causal =
         viewHash : BranchHash -> Element Message
         viewHash hash_ =
             el
-                [ onClick (User_FocusBranch hash_)
-                , pointer
+                [ pointer -- onClick (User_FocusBranch hash_)
+                -- , pointer
                 ]
                 -- TODO show full hash on hover
-                (text (String.left 7 hash_))
+                (link [] {url = "/branch/" ++ hash_, label = text (String.left 7 hash_)})
 
         viewParents : Element Message
         viewParents =

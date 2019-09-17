@@ -428,7 +428,7 @@ viewTermSequence :
     -> Env
     -> Array (Term Symbol)
     -> Element message
-viewTermSequence view env terms =
+viewTermSequence view _ terms =
     row []
         [ text "["
         , row []

@@ -10,7 +10,6 @@ module Unison.Codebase.Branch exposing
     , rawBranchToBranch0
     )
 
-import Array
 import HashingContainers.HashDict as HashDict
 import HashingContainers.HashSet as HashSet exposing (HashSet)
 import Misc exposing (..)
@@ -21,12 +20,11 @@ import Ucb.Unison.ReferenceDict as ReferenceDict exposing (ReferenceDict)
 import Ucb.Unison.ReferenceSet as ReferenceSet exposing (ReferenceSet)
 import Ucb.Unison.ReferentDict as ReferentDict exposing (ReferentDict)
 import Ucb.Unison.ReferentSet as ReferentSet exposing (ReferentSet)
-import Ucb.Util.Array as Array
 import Unison.Codebase.Causal exposing (..)
 import Unison.Codebase.NameSegment exposing (..)
 import Unison.Codebase.Patch exposing (..)
 import Unison.Hash exposing (..)
-import Unison.Name as Name exposing (..)
+import Unison.Name exposing (..)
 import Unison.Reference exposing (..)
 import Unison.Referent exposing (..)
 import Unison.Util.Relation exposing (..)

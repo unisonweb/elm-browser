@@ -3,16 +3,12 @@ module Ucb.Main.View.Type exposing (viewType)
 import Element exposing (..)
 import Element.Events exposing (..)
 import Element.Font as Font
-import HashingContainers.HashDict as HashDict
-import HashingContainers.HashSet as HashSet
 import Misc exposing (..)
 import Ucb.Main.Message exposing (..)
 import Ucb.Main.Model exposing (..)
 import Ucb.Main.View.Palette exposing (codeFont, hoverStyle)
 import Ucb.Main.View.Reference exposing (viewReference)
 import Ucb.Unison.Name exposing (..)
-import Ucb.Unison.NameDict exposing (NameDict)
-import Ucb.Unison.ReferenceSet exposing (ReferenceSet)
 import Ucb.Unison.VType exposing (..)
 import Ucb.Util.List as List
 import Ucb.Util.Pretty exposing (..)
@@ -22,8 +18,6 @@ import Unison.Codebase.NameSegment exposing (..)
 import Unison.Name exposing (..)
 import Unison.Reference exposing (..)
 import Unison.Symbol exposing (..)
-import Unison.Type exposing (Type)
-import Util.HashSet as HashSet
 
 
 viewType :

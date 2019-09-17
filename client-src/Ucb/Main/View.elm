@@ -7,17 +7,16 @@ import Element.Background as Background
 import Element.Border as Border
 import Element.Events exposing (onClick)
 import Element.Font as Font
-import Element.Input exposing (button, labelLeft)
+import Element.Input exposing (button)
 import HashingContainers.HashDict as HashDict
 import HashingContainers.HashSet as HashSet
-import Html exposing (Html)
+import Html
 import Misc exposing (impossible, maybe)
 import Ucb.Main.Message exposing (..)
 import Ucb.Main.Model exposing (..)
 import Ucb.Main.View.Branch exposing (..)
 import Ucb.Main.View.Palette exposing (mainFont)
 import Ucb.Unison.NameSet as NameSet
-import Ucb.Unison.VType
 import Ucb.Util.List as List
 import Unison.Codebase.Branch exposing (..)
 import Unison.Codebase.Causal exposing (..)

@@ -1,10 +1,9 @@
 module Unison.Blank exposing (..)
 
-import Basics
-
-
 {-| Haskell type: Unison.Blank.Blank
 -}
+
+
 type Blank
     = Blank
     | Recorded Recorded

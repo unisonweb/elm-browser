@@ -1,7 +1,6 @@
 module Word64 exposing (..)
 
 import Misc exposing (tumble)
-import Typeclasses.Classes.Equality as Equality exposing (Equality)
 import Typeclasses.Classes.Hashing as Hashing exposing (Hashing)
 
 

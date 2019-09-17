@@ -1,8 +1,6 @@
 module Ucb.Main.View.Branch exposing (viewBranch)
 
 import Element exposing (..)
-import Element.Background as Background
-import Element.Border as Border
 import Element.Events exposing (..)
 import Element.Font as Font
 import HashingContainers.HashDict as HashDict
@@ -67,7 +65,7 @@ viewBranch0 :
     }
     -> Branch0
     -> Element Message
-viewBranch0 view { terms, types, children, patches } =
+viewBranch0 view { terms, types, patches } =
     column
         [ spacing 30 ]
         [ case relationToList types.d1 of

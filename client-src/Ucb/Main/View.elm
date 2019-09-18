@@ -350,7 +350,7 @@ viewSearch view =
             , placeholder = Just <| Element.Input.placeholder [] (text "Search")
             , label = Element.Input.labelHidden "Search"
             }
-        , column [ scrollbarY, centerX, height (fill |> maximum 500) ]
+        , column [ scrollbarY, centerX, height (fill |> maximum 500), width fill ]
             (List.map (nameToString >> text) matchingNames)
         ]
 

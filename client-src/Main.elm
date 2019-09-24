@@ -1,6 +1,7 @@
 module Main exposing (..)
 
 import Browser
+import Browser.Dom as Dom
 import Browser.Navigation as Nav
 import Bytes exposing (Bytes)
 import HashingContainers.HashDict as HashDict exposing (HashDict)
@@ -139,6 +140,9 @@ update message model =
             ( model, Cmd.none )
 
         LinkClicked _ ->
+            ( model, Cmd.none )
+
+        NoOp ->
             ( model, Cmd.none )
 
 
@@ -442,6 +446,12 @@ update_Http_GetTermTypesAndTypeDecls2 ( termTypes, types ) model =
     )
 
 
+jumpToTop : Cmd Message
+jumpToTop =
+    Dom.setViewport 0.0 0.0
+        |> Task.perform (\_ -> NoOp)
+
+
 {-| Click a branch:
 
   - Fetch all of the new branch's types and terms.
@@ -477,7 +487,7 @@ update_User_ClickBranch path branch model =
                 |> Task.attempt Http_GetTermTypesAndTypeDecls
     in
     ( newModel
-    , command
+    , Cmd.batch [ command, jumpToTop ]
     )
 
 

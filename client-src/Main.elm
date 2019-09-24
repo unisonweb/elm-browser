@@ -446,6 +446,8 @@ update_Http_GetTermTypesAndTypeDecls2 ( termTypes, types ) model =
     )
 
 
+{-| Scrolls back to the top of the browser page
+-}
 jumpToTop : Cmd Message
 jumpToTop =
     Dom.setViewport 0.0 0.0

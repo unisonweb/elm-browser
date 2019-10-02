@@ -2,7 +2,7 @@
 .stack-work
 dist-newstyle/
 elm-stuff/
-index.html
+main.js
 
 # Useful for playing around with unison codebases during development:
 .unison

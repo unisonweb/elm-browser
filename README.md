@@ -8,9 +8,9 @@ can still use it in anger. Pull requests welcome and appreciated :)
 
 To build, you need `elm` 0.19+ and either `cabal-install` 2.4+ or `stack`.
 
-* Generate the `index.html` JavaScript blob.
+* Generate the `main.js` JavaScript blob.
 
-      elm make client-src/Main.elm
+      elm make client-src/Main.elm --output main.js
 
 * If you are using `cabal`, make sure you've configured it to install
   executables somewhere on your `$PATH`. Open `~/.cabal/config` and uncomment

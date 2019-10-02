@@ -88,22 +88,15 @@ app cache request respond = do
     (requestMethod request <> " " <> rawPathInfo request)
 
   case request of
-    GET [] -> do
-      indexHtml <- getDataFileName "index.html"
-      respond
-        (responseFile
-          status200
-          [(hContentType, "text/html")]
-          indexHtml
-          Nothing)
 
-    GET ["branch", branch] ->
+    GET ["api", "branch", branch] ->
       handleGetBranch cache branch >>= respond
 
-    GET ["declaration", declaration] ->
+
+    GET ["api", "declaration", declaration] ->
       handleGetDeclaration cache declaration >>= respond
 
-    GET ["head"] -> do
+    GET ["api", "head"] -> do
       [head] <- listDirectory ".unison/v1/paths/_head"
       respond
         (responseLBS
@@ -111,7 +104,7 @@ app cache request respond = do
           [(hContentType, "application/json")]
           (LazyByteString.Char8.pack (show head)))
 
-    GET ["patch", patch] ->
+    GET ["api", "patch", patch] ->
       respond
         (responseFile
           status200
@@ -119,14 +112,20 @@ app cache request respond = do
           (".unison/v1/patches/" <> Text.unpack patch <> ".up")
           Nothing)
 
-    GET ["term", term, "term"] ->
+    GET ["api", "term", term, "term"] ->
       handleGetTerm cache term >>= respond
 
-    GET ["term", term, "type"] ->
+    GET ["api", "term", term, "type"] ->
       handleGetTermType cache term >>= respond
 
-    _ ->
-      respond (responseLBS status404 [] "")
+    _ -> do
+      indexHtml <- getDataFileName "index.html"
+      respond
+        (responseFile
+          status200
+          [(hContentType, "text/html")]
+          indexHtml
+          Nothing)
 
 handleGetBranch
   :: Cache

@@ -15,22 +15,31 @@ import Unison.Reference exposing (..)
 import Unison.Symbol exposing (Symbol)
 import Unison.Term exposing (Term)
 import Unison.Type exposing (..)
+import Url exposing (..)
+import Url.Builder as UrlBuilder exposing (..)
 
 
 {-| Haskell server localhost base url
 -}
-devBase : String
+devBase : Url
 devBase =
-    "http://localhost:8180/"
+    { protocol = Http
+    , host = "localhost"
+    , port_ = Just 8180
+    , path = ""
+    , query = Nothing
+    , fragment = Nothing
+    }
+--  "http://localhost:8180/"
 
 
 prefixIfDev : Bool -> String -> String
 prefixIfDev isDev path =
     if isDev then
-        devBase ++ path
+        Url.toString { devBase | path = "/" ++ path }
 
     else
-        path
+        UrlBuilder.absolute [ path ] []
 
 
 makeLocalServerUnisonCodebaseAPI : Bool -> UnisonCodebaseAPI
@@ -50,7 +59,7 @@ getHeadHash isDev =
         { decoder = Json.Decode.string
         , headers = []
         , timeout = Nothing
-        , url = prefixIfDev isDev "head"
+        , url = prefixIfDev isDev "api/head"
         }
 
 
@@ -63,7 +72,7 @@ getPatch isDev hash =
         { decoder = V1.patchDecoder
         , headers = []
         , timeout = Nothing
-        , url = prefixIfDev isDev ("patch/" ++ hash)
+        , url = prefixIfDev isDev ("api/patch/" ++ hash)
         }
         |> Task.map (\response -> ( hash, response ))
 
@@ -77,7 +86,7 @@ getRawCausal isDev hash =
         { decoder = V1.rawCausalDecoder
         , headers = []
         , timeout = Nothing
-        , url = prefixIfDev isDev ("branch/" ++ hash)
+        , url = prefixIfDev isDev ("api/branch/" ++ hash)
         }
         |> Task.map (\response -> ( hash, response ))
 
@@ -91,7 +100,7 @@ getTerm isDev id =
         { decoder = V1.termDecoder
         , headers = []
         , timeout = Nothing
-        , url = prefixIfDev isDev ("term/" ++ idToString id ++ "/term")
+        , url = prefixIfDev isDev ("api/term/" ++ idToString id ++ "/term")
         }
         |> Task.map (\response -> ( id, response ))
 
@@ -105,7 +114,7 @@ getTermType isDev id =
         { decoder = V1.typeDecoder
         , headers = []
         , timeout = Nothing
-        , url = prefixIfDev isDev ("term/" ++ idToString id ++ "/type")
+        , url = prefixIfDev isDev ("api/term/" ++ idToString id ++ "/type")
         }
         |> Task.map (\response -> ( id, response ))
 
@@ -119,6 +128,6 @@ getTypeDecl isDev id =
         { decoder = V1.declarationDecoder
         , headers = []
         , timeout = Nothing
-        , url = prefixIfDev isDev ("declaration/" ++ idToString id)
+        , url = prefixIfDev isDev ("api/declaration/" ++ idToString id)
         }
         |> Task.map (\response -> ( id, response ))

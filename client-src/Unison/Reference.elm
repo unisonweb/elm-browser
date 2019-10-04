@@ -4,6 +4,7 @@ module Unison.Reference exposing
     , idEquality
     , idHashing
     , idToString
+    , idFromString
     , referenceEquality
     , referenceHashing
     )
@@ -92,3 +93,23 @@ idToString { hash, pos, size } =
             ++ String.fromInt pos
             ++ String.fromChar 'c'
             ++ String.fromInt size
+
+idFromString: String -> Maybe Id
+idFromString string =
+  let 
+      parsed = String.split "." string
+  in
+  case parsed of
+      [] -> Nothing
+      "" :: xs -> Nothing
+      [hash] -> Just { hash = hash, pos = 0, size = 1}
+
+      hash :: xs ->
+          let posSizeList = List.concatMap (String.split "c") xs in
+              case posSizeList of
+                  [] -> Just {hash = hash, pos = 0, size = 1}
+                  maybePos :: sizeSingleton -> 
+                    let pos = Maybe.withDefault 0 (String.toInt maybePos)
+                        size = Maybe.withDefault 1 (String.toInt ( Maybe.withDefault "1" ( List.head sizeSingleton ))) 
+                    in
+                        Just {hash = hash, pos = pos, size = size}

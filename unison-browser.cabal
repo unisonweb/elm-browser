@@ -2,7 +2,7 @@ cabal-version: 2.4
 name: unison-browser
 version: 0
 
-data-files: index.html
+data-files: index.html, main.js
 
 executable unison-browser
   build-depends:

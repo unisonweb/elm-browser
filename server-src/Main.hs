@@ -118,6 +118,14 @@ app cache request respond = do
     GET ["api", "term", term, "type"] ->
       handleGetTermType cache term >>= respond
 
+    GET ["main.js"] -> do
+      mainJs <- getDataFileName "main.js"
+      respond
+        (responseFile
+          status200
+          [(hContentType, "text/javascript")]
+          mainJs
+          Nothing)
     _ -> do
       indexHtml <- getDataFileName "index.html"
       respond

@@ -170,7 +170,7 @@ viewBranchTerm2 view i reference name _ =
                     name
     in
     case reference of
-        Builtin builtinContents ->
+        Builtin _ ->
             el
                 [ above <|
                     if view.hovered == Just (HoverTerm i reference) then

@@ -105,7 +105,7 @@ type alias ModelUI =
 {-| Hovering over what?
 -}
 type Hover
-    = HoverTerm Reference
+    = HoverTerm Int Reference
     | HoverType
         { type_ : Reference
         , path : List Int

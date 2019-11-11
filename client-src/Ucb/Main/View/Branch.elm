@@ -173,7 +173,7 @@ viewBranchTerm2 view i reference name _ =
         Builtin _ ->
             el
                 [ above <|
-                    if view.hovered == Just (HoverTerm reference) then
+                    if view.hovered == Just (HoverTerm i reference) then
                         el
                             hoverStyle
                             (column
@@ -187,7 +187,7 @@ viewBranchTerm2 view i reference name _ =
                     else
                         none
                 , codeFont
-                , onMouseEnter (User_Hover (HoverTerm reference))
+                , onMouseEnter (User_Hover (HoverTerm i reference))
                 , onMouseLeave User_Unhover
                 ]
                 (text name2)
@@ -199,7 +199,7 @@ viewBranchTerm2 view i reference name _ =
                     ]
                     [ el
                         [ above <|
-                            if view.hovered == Just (HoverTerm reference) then
+                            if view.hovered == Just (HoverTerm i reference) then
                                 el
                                     hoverStyle
                                     (column
@@ -216,7 +216,7 @@ viewBranchTerm2 view i reference name _ =
                             else
                                 none
                         , onClick (User_ToggleTerm id)
-                        , onMouseEnter (User_Hover (HoverTerm reference))
+                        , onMouseEnter (User_Hover (HoverTerm i reference))
                         , onMouseLeave User_Unhover
                         , pointer
                         ]

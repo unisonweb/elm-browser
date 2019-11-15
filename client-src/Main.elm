@@ -1,4 +1,4 @@
-module Main exposing (..)
+module Main exposing (Route(..), elmLivePort, init, jumpToTop, main, routeParser, subscriptions, update, update_Http_GetBranch, update_Http_GetBranch2, update_Http_GetHeadHash, update_Http_GetHeadHash2, update_Http_GetPatches, update_Http_GetPatches2, update_Http_GetTerm, update_Http_GetTerm2, update_Http_GetTermTypesAndTypeDecls, update_Http_GetTermTypesAndTypeDecls2, update_User_ClickBranch, update_User_FocusBranch, update_User_GetPatches, update_User_HoverTerm, update_User_Search, update_User_ToggleTerm, update_User_Unhover)
 
 import Browser
 import Browser.Dom as Dom
@@ -110,48 +110,52 @@ init _ url key =
             , isDevMode = isDevMode
             }
 
-        maybeRoute = UrlParser.parse routeParser url
+        maybeRoute =
+            UrlParser.parse routeParser url
 
         initRoute : Route
-        initRoute = case (UrlParser.parse routeParser url) of
-          Just route ->
-            route
-          Nothing ->
-            HeadRoute
+        initRoute =
+            case UrlParser.parse routeParser url of
+                Just route ->
+                    route
+
+                Nothing ->
+                    HeadRoute
 
         -- First command: fetch _head path!
         initialCommand : Cmd Message
         initialCommand =
-          case initRoute of
+            case initRoute of
+                HeadRoute ->
+                    model.api.unison.getHeadHash
+                        |> Task.attempt Http_GetHeadHash
 
-            HeadRoute ->
-              model.api.unison.getHeadHash
-                  |> Task.attempt Http_GetHeadHash
-
-            BranchRoute hash ->
-              Cmd.batch [ model.api.unison.getHeadHash
-                          |> Task.attempt Http_GetHeadHash
+                BranchRoute hash ->
+                    Cmd.batch
+                        [ model.api.unison.getHeadHash
+                            |> Task.attempt Http_GetHeadHash
                         , getBranch
-                          model.api.unison
-                          model.codebase
-                          hash
-                          |> Task.attempt Http_GetBranch 
+                            model.api.unison
+                            model.codebase
+                            hash
+                            |> Task.attempt Http_GetBranch
                         ]
 
-            TermRoute hash ->
-               Debug.todo ""-- model.api.unison.getTerm hash |> Task.attempt Http_GetTerm
+                TermRoute hash ->
+                    Debug.todo ""
 
-            TypeRoute hash ->
-              Debug.todo ""-- model.api.unison.getTermType hash |> Task.attempt Http_GetTermTypesAndTypeDecls
+                -- model.api.unison.getTerm hash |> Task.attempt Http_GetTerm
+                TypeRoute hash ->
+                    Debug.todo ""
 
-            DeclRoute hash ->
-              Debug.todo ""-- model.api.unison.getTypeDecl hash |> Task.attempt Http_GetTermTypesAndTypeDecls
+                -- model.api.unison.getTermType hash |> Task.attempt Http_GetTermTypesAndTypeDecls
+                DeclRoute hash ->
+                    Debug.todo ""
 
-            _ ->
-              model.api.unison.getHeadHash
-                  |> Task.attempt Http_GetHeadHash
-
-              
+                -- model.api.unison.getTypeDecl hash |> Task.attempt Http_GetTermTypesAndTypeDecls
+                _ ->
+                    model.api.unison.getHeadHash
+                        |> Task.attempt Http_GetHeadHash
     in
     ( model, initialCommand )
 
@@ -823,6 +827,7 @@ update_User_ToggleTerm id model =
     ( newModel
     , command
     )
+
 
 subscriptions :
     Model

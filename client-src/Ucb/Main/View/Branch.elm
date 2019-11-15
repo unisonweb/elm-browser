@@ -28,8 +28,6 @@ import Unison.Type exposing (..)
 import Unison.Util.Relation exposing (..)
 
 
-{-| TODO(elliott) pass in this branch's path
--}
 viewBranch :
     { r
         | getTerm : Id -> Maybe (Term Symbol)
@@ -43,11 +41,98 @@ viewBranch :
         , termNames : Referent -> List Name
         , typeNames : Reference -> List Name
     }
+    -> List NameSegment
     -> BranchHash
     -> Branch
     -> Element Message
-viewBranch view hash (Branch causal) =
-    viewCausal view hash causal
+viewBranch view name hash (Branch causal) =
+    viewCausal view name hash causal
+
+
+viewCausal :
+    { r
+        | getTerm : Id -> Maybe (Term Symbol)
+        , getTermType : Id -> Maybe (Type Symbol)
+        , getTypeDecl : Id -> Maybe (Declaration Symbol)
+        , head : Branch
+        , hovered : Maybe Hover
+        , isTermVisible : Id -> Bool
+        , parents : BranchHash -> List BranchHash
+        , successors : BranchHash -> List BranchHash
+        , termNames : Referent -> List Name
+        , typeNames : Reference -> List Name
+    }
+    -> List NameSegment
+    -> BranchHash
+    -> RawCausal Branch0
+    -> Element Message
+viewCausal view name hash causal =
+    let
+        viewHash : BranchHash -> Element Message
+        viewHash hash_ =
+            el
+                [ onClick (User_FocusBranch hash_)
+                , pointer
+                ]
+                -- TODO show full hash on hover
+                (link [] { url = "/branch/" ++ hash_, label = text (String.left 7 hash_) })
+
+        viewParents : Element Message
+        viewParents =
+            case view.parents hash of
+                [] ->
+                    none
+
+                hashes ->
+                    row
+                        []
+                        [ text "Parents "
+                        , column [] (List.map viewHash hashes)
+                        ]
+
+        viewPredecessors :
+            List BranchHash
+            -> Element Message
+        viewPredecessors hashes =
+            row
+                []
+                [ text "Predecessors "
+                , column [] (List.map viewHash hashes)
+                ]
+
+        viewSuccessors : Element Message
+        viewSuccessors =
+            case view.successors hash of
+                [] ->
+                    none
+
+                hashes ->
+                    row
+                        []
+                        [ text "Successors "
+                        , column [] (List.map viewHash hashes)
+                        ]
+    in
+    el [ padding 10 ]
+        (column
+            []
+            [ column [ height (px 100) ]
+                [ viewHash hash
+                , viewParents
+                , case causal of
+                    RawOne _ ->
+                        none
+
+                    RawCons _ hash_ ->
+                        viewPredecessors [ hash_ ]
+
+                    RawMerge _ hashes ->
+                        viewPredecessors (HashSet.toList hashes)
+                , viewSuccessors
+                ]
+            , viewBranch0 view name (Unison.Codebase.Causal.rawCausalHead causal)
+            ]
+        )
 
 
 viewBranch0 :
@@ -63,12 +148,19 @@ viewBranch0 :
         , termNames : Referent -> List Name
         , typeNames : Reference -> List Name
     }
+    -> List NameSegment
     -> Branch0
     -> Element Message
-viewBranch0 view { terms, types, patches } =
+viewBranch0 view branchName { terms, types, patches } =
     column
         [ spacing 30 ]
-        [ case relationToList types.d1 of
+        [ el [ Font.bold, Font.size 32 ]
+            (text
+                ((String.cons '.' << String.join ".")
+                    branchName
+                )
+            )
+        , case relationToList types.d1 of
             [] ->
                 none
 
@@ -342,108 +434,6 @@ viewBranchType2 view i name _ _ declaration constructorType =
                 )
             )
         ]
-
-
-viewCausal :
-    { r
-        | getTerm : Id -> Maybe (Term Symbol)
-        , getTermType : Id -> Maybe (Type Symbol)
-        , getTypeDecl : Id -> Maybe (Declaration Symbol)
-        , head : Branch
-        , hovered : Maybe Hover
-        , isTermVisible : Id -> Bool
-        , parents : BranchHash -> List BranchHash
-        , successors : BranchHash -> List BranchHash
-        , termNames : Referent -> List Name
-        , typeNames : Reference -> List Name
-    }
-    -> BranchHash
-    -> RawCausal Branch0
-    -> Element Message
-viewCausal view hash causal =
-    let
-        viewHash : BranchHash -> Element Message
-        viewHash hash_ =
-            el
-                [ onClick (User_FocusBranch hash_)
-                , pointer
-                ]
-                -- TODO show full hash on hover
-                (link [] { url = "/branch/" ++ hash_, label = text (String.left 7 hash_) })
-
-        viewParents : Element Message
-        viewParents =
-            case view.parents hash of
-                [] ->
-                    none
-
-                hashes ->
-                    row
-                        []
-                        [ text "Parents "
-                        , column [] (List.map viewHash hashes)
-                        ]
-
-        viewPredecessors :
-            List BranchHash
-            -> Element Message
-        viewPredecessors hashes =
-            row
-                []
-                [ text "Predecessors "
-                , column [] (List.map viewHash hashes)
-                ]
-
-        viewSuccessors : Element Message
-        viewSuccessors =
-            case view.successors hash of
-                [] ->
-                    none
-
-                hashes ->
-                    row
-                        []
-                        [ text "Successors "
-                        , column [] (List.map viewHash hashes)
-                        ]
-    in
-    el [ padding 10 ]
-        (case causal of
-            RawOne branch ->
-                column
-                    [ spacing 40 ]
-                    [ column []
-                        [ viewHash hash
-                        , viewParents
-                        , viewSuccessors
-                        ]
-                    , viewBranch0 view branch
-                    ]
-
-            RawCons branch hash_ ->
-                column
-                    [ spacing 40 ]
-                    [ column []
-                        [ viewHash hash
-                        , viewParents
-                        , viewPredecessors [ hash_ ]
-                        , viewSuccessors
-                        ]
-                    , viewBranch0 view branch
-                    ]
-
-            RawMerge branch hashes ->
-                column
-                    [ spacing 40 ]
-                    [ column []
-                        [ viewHash hash
-                        , viewParents
-                        , viewPredecessors (HashSet.toList hashes)
-                        , viewSuccessors
-                        ]
-                    , viewBranch0 view branch
-                    ]
-        )
 
 
 symbolyIdChars : HashSet Char

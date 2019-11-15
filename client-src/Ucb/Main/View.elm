@@ -169,8 +169,8 @@ viewView view =
         , row [ padding 20, width fill ]
             [ el [ alignTop, width <| fillPortion 2, scrollbars ]
                 (case view.branch of
-                    ( _, ( hash, branch ) ) ->
-                        viewBranch view hash branch
+                    ( branchName, ( hash, branch ) ) ->
+                        viewBranch view branchName hash branch
                 )
             , column
                 [ alignTop

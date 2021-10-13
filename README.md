@@ -1,3 +1,7 @@
+# Archived
+
+See the Codebase UI for a similar and active project: https://github.com/unisonweb/codebase-ui
+
 # Unison Codebase Explorer
 
 The Unison Codebase Explorer is an Elm application and companion Haskell server
